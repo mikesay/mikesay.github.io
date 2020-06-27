@@ -116,25 +116,27 @@
 
 
 
-  <meta name="description" content="本文介绍了在Windows和Ubuntu中同时安装Python2和Python3。为什么要Python2和Python3共存？仅管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。">
+  <meta name="description" content="虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持">
 <meta name="keywords" content="Python">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【原】Python随笔(1) 安装Python">
+<meta property="og:title" content="【原】Python随笔(1) 安装Python并搭建Python的虚拟开发环境">
 <meta property="og:url" content="http://www.mikesay.com/2020/01/31/install-python/index.html">
 <meta property="og:site_name" content="云斋随笔">
-<meta property="og:description" content="本文介绍了在Windows和Ubuntu中同时安装Python2和Python3。为什么要Python2和Python3共存？仅管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。">
+<meta property="og:description" content="虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持">
 <meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/7.png">
+<meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/8.png">
 <meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/1.png">
 <meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/2.png">
 <meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/3.png">
 <meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/4.png">
 <meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/5.png">
 <meta property="og:image" content="http://www.mikesay.com/2020/01/31/install-python/6.png">
-<meta property="og:updated_time" content="2020-06-07T08:37:06.399Z">
+<meta property="og:updated_time" content="2020-06-27T14:33:41.741Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【原】Python随笔(1) 安装Python">
-<meta name="twitter:description" content="本文介绍了在Windows和Ubuntu中同时安装Python2和Python3。为什么要Python2和Python3共存？仅管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。">
-<meta name="twitter:image" content="http://www.mikesay.com/2020/01/31/install-python/1.png">
+<meta name="twitter:title" content="【原】Python随笔(1) 安装Python并搭建Python的虚拟开发环境">
+<meta name="twitter:description" content="虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持">
+<meta name="twitter:image" content="http://www.mikesay.com/2020/01/31/install-python/7.png">
 
 
 
@@ -151,7 +153,7 @@
   };
 </script>
 
-  <title>【原】Python随笔(1) 安装Python | 云斋随笔</title>
+  <title>【原】Python随笔(1) 安装Python并搭建Python的虚拟开发环境 | 云斋随笔</title>
   
 
 
@@ -372,7 +374,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">【原】Python随笔(1) 安装Python
+          <h1 class="post-title" itemprop="name headline">【原】Python随笔(1) 安装Python并搭建Python的虚拟开发环境
               
             
           </h1>
@@ -414,7 +416,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2020-06-07 16:37:06" itemprop="dateModified" datetime="2020-06-07T16:37:06+08:00">2020-06-07</time>
+                <time title="修改时间：2020-06-27 22:33:41" itemprop="dateModified" datetime="2020-06-27T22:33:41+08:00">2020-06-27</time>
               
             
           </span>
@@ -441,7 +443,7 @@
                 
                   <span class="post-meta-item-text">本文字数：</span>
                 
-                <span title="本文字数">3.1k</span>
+                <span title="本文字数">4.7k</span>
               
 
               
@@ -455,7 +457,7 @@
                 
                   <span class="post-meta-item-text">阅读时长 &asymp;</span>
                 
-                <span title="阅读时长">3 分钟</span>
+                <span title="阅读时长">4 分钟</span>
               
             </div>
           
@@ -475,25 +477,87 @@
       
 
       
-        <p>本文介绍了在Windows和Ubuntu中同时安装Python2和Python3。为什么要Python2和Python3共存？仅管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。</p>
+        <p>虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。</p>
 <a id="more"></a>
 
-<h1 id="在Ubuntu中同时安装Python2和Python3"><a href="#在Ubuntu中同时安装Python2和Python3" class="headerlink" title="在Ubuntu中同时安装Python2和Python3"></a>在Ubuntu中同时安装Python2和Python3</h1><p>Python并没有提供Linux的官方安装说明，因为有些Linux的版本已经缺省内置了Python。这里将使用<a href="https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa" target="_blank" rel="noopener">deadsnakes PPA</a>的Apt包来安装Python。</p>
-<p>下面的安装将保持Python2和Python3共存，同时设置Python2为缺省的Python。</p>
-<h2 id="安装Python2"><a href="#安装Python2" class="headerlink" title="安装Python2"></a>安装Python2</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get update</span><br><span class="line">sudo apt install -y software-properties-common</span><br><span class="line">sudo -E add-apt-repository -y ppa:deadsnakes/ppa</span><br><span class="line">sudo apt-get update</span><br><span class="line">sudo apt-get -y -f --allow-unauthenticated install python2.7-dev</span><br><span class="line">sudo ln -s /usr/bin/python2.7 /usr/bin/python</span><br><span class="line">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/bin/python</span><br><span class="line">sudo -E -H pip install virtualenv</span><br></pre></td></tr></table></figure>
+<h1 id="在Mac中安装Python2和Python3"><a href="#在Mac中安装Python2和Python3" class="headerlink" title="在Mac中安装Python2和Python3"></a>在Mac中安装Python2和Python3</h1><p>从Python的官网中下载Python的Mac安装包，按照向导缺省安装即可。</p>
+<div align="center">
+<img src="/2020/01/31/install-python/7.png">
+</div>
+
+<div align="center">
+<img src="/2020/01/31/install-python/8.png">
+</div>
+
+<h2 id="设置Python3为缺省的Python"><a href="#设置Python3为缺省的Python" class="headerlink" title="设置Python3为缺省的Python"></a>设置Python3为缺省的Python</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sudo rm /Library/Frameworks/Python.framework/Versions/Current</span><br><span class="line">sudo ln -s /Library/Frameworks/Python.framework/Versions/3.8 /Library/Frameworks/Python.framework/Versions/Current</span><br><span class="line"><span class="built_in">cd</span> /usr/<span class="built_in">local</span>/bin/</span><br><span class="line">sudo python</span><br><span class="line">sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/python3 python</span><br><span class="line">sudo rm pip</span><br><span class="line">sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/pip3 pip</span><br></pre></td></tr></table></figure>
+
+<p>这样，在Mac中缺省的是Python3，命令行直接调用python或pip即可。如果需要使用Python2，命令行调用python2或pip2。</p>
+<p>在文件“~/.bash_profile”中注释掉或者删除Python安装程序添加的PATH环境变量，因为我们已经在系统路径/usr/local/bin下建立了Python相关命令的软链接，而且许多工具缺省也是从这个路径下搜索Python的。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Setting PATH for Python 3.8</span></span><br><span class="line"><span class="comment"># The original version is saved in .bash_profile.pysave</span></span><br><span class="line"><span class="comment">#PATH="/Library/Frameworks/Python.framework/Versions/3.8/bin:$&#123;PATH&#125;"</span></span><br><span class="line"><span class="comment">#export PATH</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Setting PATH for Python 2.7</span></span><br><span class="line"><span class="comment"># The original version is saved in .bash_profile.pysave</span></span><br><span class="line"><span class="comment">#PATH="/Library/Frameworks/Python.framework/Versions/2.7/bin:$&#123;PATH&#125;"</span></span><br><span class="line"><span class="comment">#export PATH</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="升级pip工具"><a href="#升级pip工具" class="headerlink" title="升级pip工具"></a>升级pip工具</h2><p>Python安装包里包含的pip工具可能不是最新版本，所以需要升级一下。</p>
+<h3 id="缺省python3"><a href="#缺省python3" class="headerlink" title="缺省python3"></a>缺省python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/loca/bin/python</span><br></pre></td></tr></table></figure>
+
+<h3 id="python2"><a href="#python2" class="headerlink" title="python2"></a>python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/<span class="built_in">local</span>/bin/  python2</span><br></pre></td></tr></table></figure>
+
+<h2 id="安装virtualenv工具"><a href="#安装virtualenv工具" class="headerlink" title="安装virtualenv工具"></a>安装virtualenv工具</h2><h3 id="缺省Python3"><a href="#缺省Python3" class="headerlink" title="缺省Python3"></a>缺省Python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pip install virtualenv</span><br><span class="line"><span class="built_in">cd</span> /usr/<span class="built_in">local</span>/bin/</span><br><span class="line">sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/virtualenv virtualenv</span><br></pre></td></tr></table></figure>
+
+<h3 id="Python2"><a href="#Python2" class="headerlink" title="Python2"></a>Python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pip2 install virtualenv</span><br><span class="line"><span class="built_in">cd</span> /usr/<span class="built_in">local</span>/bin/</span><br><span class="line">sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/2.7/bin/virtualenv virtualenv2</span><br></pre></td></tr></table></figure>
+
+<h2 id="创建Python的虚拟开发环境"><a href="#创建Python的虚拟开发环境" class="headerlink" title="创建Python的虚拟开发环境"></a>创建Python的虚拟开发环境</h2><h3 id="Python3"><a href="#Python3" class="headerlink" title="Python3"></a>Python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">virtualenv --always-copy pyenv3</span><br></pre></td></tr></table></figure>
+
+<h3 id="Python2-1"><a href="#Python2-1" class="headerlink" title="Python2"></a>Python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">virtualenv --always-copy -p python2 pyenv2</span><br></pre></td></tr></table></figure>
+
+<h1 id="在CentOS中安装Python2和Python3"><a href="#在CentOS中安装Python2和Python3" class="headerlink" title="在CentOS中安装Python2和Python3"></a>在CentOS中安装Python2和Python3</h1><p>Python的官方文档并没有提供Linux的二进制安装包或者提供yum的安装方法，因为大部分Linux都包含了Python。但是Linux缺省自带的Python都不是最新版本，比如CentOS 7缺省自带Python2.7.5， 所以我们需要通过源代码构建并安装最新版的Python。</p>
+<h2 id="安装构建Python2和Python3的依赖"><a href="#安装构建Python2和Python3的依赖" class="headerlink" title="安装构建Python2和Python3的依赖"></a>安装构建Python2和Python3的依赖</h2><p><a href="https://devguide.python.org/setup/#linux" target="_blank" rel="noopener">参考官方文档</a>，执行以下shell命令：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo yum install yum-utils</span><br><span class="line">sudo yum-builddep python3</span><br></pre></td></tr></table></figure>
 
 <blockquote>
-<p>在Ubuntu16.04中，最新的Python2版本是2.7.12，最新的Python3版本时3.7.6<br>如果在公司内安装，一般需要设置代理：</p>
-<ul>
-<li>HTTP/HTTPS代理<br>export http_proxy=<code>http://&lt;server&gt;:&lt;port&gt;</code><br>export https_proxy=<code>http://&lt;server&gt;:&lt;port&gt;</code><br>export ftp_proxy=<code>http://&lt;server&gt;:&lt;port&gt;</code><br>export no_proxy=localhost,127.0.0.1,xxx</li>
-<li>Apt代理<br><code># BEGIN Apt Proxy</code><br>Acquire::http::Proxy <code>http://&lt;server&gt;:&lt;port&gt;</code>;<br>Acquire::https::Proxy <code>http://&lt;server&gt;:&lt;port&gt;</code>;<br>Acquire::ftp::Proxy <code>http://&lt;server&gt;:&lt;port&gt;</code>;<br><code># END Apt Proxy</code></li>
-</ul>
+<p>也可以显式安装所有的依赖：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 首先确保你的系统是最新的:</span></span><br><span class="line">yum update</span><br><span class="line"><span class="comment"># 安装编译器和相关的工具:</span></span><br><span class="line">yum groupinstall -y <span class="string">"development tools"</span></span><br><span class="line"><span class="comment"># 安装编译全功能Python所需的依赖库:</span></span><br><span class="line">yum install -y zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gdbm-devel db4-devel libffi-devel libpcap-devel xz-devel expat-devel</span><br><span class="line"><span class="comment"># 如果你的CentOS是”最小化“安装，你需要安装wget工具：</span></span><br><span class="line">yum install -y wget</span><br></pre></td></tr></table></figure>
 </blockquote>
-<h2 id="安装Python3"><a href="#安装Python3" class="headerlink" title="安装Python3"></a>安装Python3</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get -y -f --allow-unauthenticated install python3.7-dev</span><br><span class="line">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/bin/python3.7</span><br></pre></td></tr></table></figure>
+<h2 id="源码安装Python2和Python3"><a href="#源码安装Python2和Python3" class="headerlink" title="源码安装Python2和Python3"></a>源码安装Python2和Python3</h2><ol>
+<li><p>下载最新Python2的源代码并解压<br><a href="https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz" target="_blank" rel="noopener">https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz</a></p>
+</li>
+<li><p>下载最新Python3的源代码并解压<br><a href="https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tgz" target="_blank" rel="noopener">https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tgz</a></p>
+</li>
+<li><p>分别在Python2和Python3的源码根目录中执行下面命令配置，构建并安装Python2和Python3</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./configure --prefix=/usr/<span class="built_in">local</span> --<span class="built_in">enable</span>-shared LDFLAGS=<span class="string">"-Wl,-rpath /usr/local/lib"</span></span><br><span class="line">make &amp;&amp; make altinstall</span><br></pre></td></tr></table></figure>
 
-<h2 id="保留python2的pip为缺省pip"><a href="#保留python2的pip为缺省pip" class="headerlink" title="保留python2的pip为缺省pip"></a>保留python2的pip为缺省pip</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo rm /usr/<span class="built_in">local</span>/bin/pip</span><br><span class="line">sudo cp /usr/<span class="built_in">local</span>/bin/pip2 /usr/<span class="built_in">local</span>/bin/pip</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>为了区别CentOS中缺省的自带Python，用altinstall将Python安装到不同的路径下。<br>下面是Python2的安装目录：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/usr/<span class="built_in">local</span>/bin/</span><br><span class="line">/usr/<span class="built_in">local</span>/lib/</span><br><span class="line">/usr/<span class="built_in">local</span>/lib/python3.8/</span><br><span class="line">/usr/<span class="built_in">local</span>/lib/python2.7/</span><br></pre></td></tr></table></figure>
+</blockquote>
+</li>
+<li><p>设置Python3为缺省的Python</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /usr/<span class="built_in">local</span>/bin</span><br><span class="line">sudo ln -s python3.8 python3</span><br><span class="line">sudo ln -s python3 python</span><br><span class="line">sudo ln -s python2.7 python2</span><br></pre></td></tr></table></figure>
 
-<h1 id="在Windows中同时安装Python2和Python3"><a href="#在Windows中同时安装Python2和Python3" class="headerlink" title="在Windows中同时安装Python2和Python3"></a>在Windows中同时安装Python2和Python3</h1><p>在Windows中同时安装Python2和Python3相对来说比较容易，下载对应的安装包，按向导安装到缺省目录下即可。</p>
+</li>
+</ol>
+<h2 id="安装或升级pip工具"><a href="#安装或升级pip工具" class="headerlink" title="安装或升级pip工具"></a>安装或升级pip工具</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/<span class="built_in">local</span>/bin/python</span><br><span class="line">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/<span class="built_in">local</span>/bin/python2</span><br><span class="line"><span class="built_in">cd</span> /usr/<span class="built_in">local</span>/bin</span><br><span class="line">sudo rm pip</span><br><span class="line">sudo ln -s pip3 pip</span><br></pre></td></tr></table></figure>
+
+<h2 id="安装virtualenv工具-1"><a href="#安装virtualenv工具-1" class="headerlink" title="安装virtualenv工具"></a>安装virtualenv工具</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo -E -H /usr/<span class="built_in">local</span>/bin/pip2 install virtualenv</span><br><span class="line">sudo mv virtualenv virtualenv2</span><br><span class="line">sudo -E -H /usr/<span class="built_in">local</span>/bin/pip install virtualenv</span><br></pre></td></tr></table></figure>
+
+<h2 id="创建Python的虚拟开发环境-1"><a href="#创建Python的虚拟开发环境-1" class="headerlink" title="创建Python的虚拟开发环境"></a>创建Python的虚拟开发环境</h2><h3 id="Python3-1"><a href="#Python3-1" class="headerlink" title="Python3"></a>Python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">virtualenv --always-copy pyenv3</span><br></pre></td></tr></table></figure>
+
+<h3 id="Python2-2"><a href="#Python2-2" class="headerlink" title="Python2"></a>Python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">virtualenv --always-copy -p python2 pyenv2</span><br></pre></td></tr></table></figure>
+
+<h1 id="在Ubuntu中安装Python2和Python3"><a href="#在Ubuntu中安装Python2和Python3" class="headerlink" title="在Ubuntu中安装Python2和Python3"></a>在Ubuntu中安装Python2和Python3</h1><p>与CentOS相同，我们需要通过源代码构建并安装最新版的Python。</p>
+<h2 id="安装构建Python3和Python2的依赖"><a href="#安装构建Python3和Python2的依赖" class="headerlink" title="安装构建Python3和Python2的依赖"></a>安装构建Python3和Python2的依赖</h2><p><a href="https://devguide.python.org/setup/#linux" target="_blank" rel="noopener">参考官方文档</a>，编辑/etc/apt/sources.list，为Ubuntu 18添加“deb-src <a href="http://archive.ubuntu.com/ubuntu/" target="_blank" rel="noopener">http://archive.ubuntu.com/ubuntu/</a> bionic main”，或为Ubuntu 16添加“deb-src <a href="http://archive.ubuntu.com/ubuntu/" target="_blank" rel="noopener">http://archive.ubuntu.com/ubuntu/</a> xenial main”。执行下面命令安装编译Python2或Python3的依赖：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get update</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get build-dep python3.6</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>如果依赖包的版本找不到，试着降低小版本号，比如python3.5。</p>
+</blockquote>
+<h2 id="源码安装Python2和Python3-1"><a href="#源码安装Python2和Python3-1" class="headerlink" title="源码安装Python2和Python3"></a>源码安装Python2和Python3</h2><p>与CentOS的过程一样，可以参照CentOS章节。</p>
+<h2 id="PPA-Personal-Package-Archive-安装Python"><a href="#PPA-Personal-Package-Archive-安装Python" class="headerlink" title="PPA(Personal Package Archive)安装Python"></a>PPA(Personal Package Archive)安装Python</h2><p><a href="https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa" target="_blank" rel="noopener">PPA</a>库包含了为Ubuntu打包的最新的Python版本，但不一定包含所有的版本，所以不是太推荐这个方法。以下是通过PPA安装Python3.8的步骤：</p>
+<h3 id="为apt添加PPA库"><a href="#为apt添加PPA库" class="headerlink" title="为apt添加PPA库"></a>为apt添加PPA库</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get update</span><br><span class="line">sudo apt install -y software-properties-common</span><br><span class="line">sudo -E -H add-apt-repository -y ppa:deadsnakes/ppa</span><br><span class="line">sudo apt-get update</span><br></pre></td></tr></table></figure>
+
+<h3 id="安装Python3-8"><a href="#安装Python3-8" class="headerlink" title="安装Python3.8"></a>安装Python3.8</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get -y -f --allow-unauthenticated install python3.8-dev</span><br></pre></td></tr></table></figure>
+
+<h1 id="在Windows中安装Python2和Python3"><a href="#在Windows中安装Python2和Python3" class="headerlink" title="在Windows中安装Python2和Python3"></a>在Windows中安装Python2和Python3</h1><p>在Windows中同时安装Python2和Python3相对来说比较容易，下载对应的安装包，按向导安装到缺省目录下即可。</p>
 <div align="center">
 <img src="/2020/01/31/install-python/1.png">
 </div>
@@ -522,20 +586,6 @@
 <div align="center">
 <img src="/2020/01/31/install-python/6.png">
 </div>
-
-<h1 id="安装Python相关的模块将服务器配置为Ansible可访问的节点"><a href="#安装Python相关的模块将服务器配置为Ansible可访问的节点" class="headerlink" title="安装Python相关的模块将服务器配置为Ansible可访问的节点"></a>安装Python相关的模块将服务器配置为Ansible可访问的节点</h1><h2 id="Ansible-APT模块"><a href="#Ansible-APT模块" class="headerlink" title="Ansible APT模块"></a>Ansible APT模块</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get -y install python-apt</span><br><span class="line">sudo apt-get -y install python3-apt</span><br><span class="line">sudo apt-get -y install  aptitude</span><br></pre></td></tr></table></figure>
-
-<h2 id="Ansible-unarchive模块"><a href="#Ansible-unarchive模块" class="headerlink" title="Ansible unarchive模块"></a>Ansible unarchive模块</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get -y install unzip</span><br></pre></td></tr></table></figure>
-
-<h2 id="Ansible-mysql模块"><a href="#Ansible-mysql模块" class="headerlink" title="Ansible mysql模块"></a>Ansible mysql模块</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo pip install pymysql</span><br></pre></td></tr></table></figure>
-
-<h1 id="搭建Python虚拟开发环境"><a href="#搭建Python虚拟开发环境" class="headerlink" title="搭建Python虚拟开发环境"></a>搭建Python虚拟开发环境</h1><p>无论是开发还是运行Python程序都应该用virtualenv工具创建Python虚拟环境，并安装相关的依赖包，这样既不会污染本机的Python环境，也能保证Python程序的开发和运行的可移植性。</p>
-<h2 id="Python2"><a href="#Python2" class="headerlink" title="Python2"></a>Python2</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/usr/bin/env bash</span></span><br><span class="line"></span><br><span class="line">pythonEnv2=<span class="string">"pyenv2"</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">"Setting up python2 running environment"</span></span><br><span class="line"><span class="keyword">if</span> [ ! -d <span class="string">"<span class="variable">$&#123;pythonEnv2&#125;</span>"</span> ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">"Create python2 virtual environment!"</span></span><br><span class="line">    virtualenv -p python2.7 <span class="string">"<span class="variable">$&#123;pythonEnv2&#125;</span>"</span></span><br><span class="line">    curl https://bootstrap.pypa.io/get-pip.py | <span class="string">"<span class="variable">$&#123;pythonEnv2&#125;</span>/bin/python"</span></span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="string">"<span class="variable">$&#123;pythonEnv2&#125;</span>/bin/pip"</span> install -r requirements.txt</span><br></pre></td></tr></table></figure>
-
-<h2 id="Python3"><a href="#Python3" class="headerlink" title="Python3"></a>Python3</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/usr/bin/env bash</span></span><br><span class="line"></span><br><span class="line">pythonEnv3=<span class="string">"pyenv3"</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">"Setting up python3 running environment"</span></span><br><span class="line"><span class="keyword">if</span> [ ! -d <span class="string">"<span class="variable">$&#123;pythonEnv3&#125;</span>"</span> ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">"Create python3 virtual environment!"</span></span><br><span class="line">    virtualenv -p python3.7 <span class="string">"<span class="variable">$&#123;pythonEnv3&#125;</span>"</span></span><br><span class="line">    curl https://bootstrap.pypa.io/get-pip.py | <span class="string">"<span class="variable">$&#123;pythonEnv3&#125;</span>/bin/python"</span></span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="string">"<span class="variable">$&#123;pythonEnv3&#125;</span>/bin/pip"</span> install -r requirements.txt</span><br></pre></td></tr></table></figure>
-
-<p>requirements.txt包含了Python程序运行所需要的依赖包以及版本，基本格式如下：</p>
-<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">ansible==2.7.10</span><br><span class="line">asn1crypto==0.24.0</span><br><span class="line">bcrypt==3.1.6</span><br><span class="line">certifi==2019.3.9</span><br><span class="line">cffi==1.12.3</span><br><span class="line">chardet==3.0.4</span><br><span class="line">cryptography==2.6.1</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
 
 
       
@@ -595,7 +645,7 @@
     <strong>本文作者： </strong>云斋</li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="http://www.mikesay.com/2020/01/31/install-python/" title="【原】Python随笔(1) 安装Python">http://www.mikesay.com/2020/01/31/install-python/</a>
+    <a href="http://www.mikesay.com/2020/01/31/install-python/" title="【原】Python随笔(1) 安装Python并搭建Python的虚拟开发环境">http://www.mikesay.com/2020/01/31/install-python/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！</li>
@@ -803,7 +853,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#在Ubuntu中同时安装Python2和Python3"><span class="nav-number">1.</span> <span class="nav-text">在Ubuntu中同时安装Python2和Python3</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装Python2"><span class="nav-number">1.1.</span> <span class="nav-text">安装Python2</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装Python3"><span class="nav-number">1.2.</span> <span class="nav-text">安装Python3</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#保留python2的pip为缺省pip"><span class="nav-number">1.3.</span> <span class="nav-text">保留python2的pip为缺省pip</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#在Windows中同时安装Python2和Python3"><span class="nav-number">2.</span> <span class="nav-text">在Windows中同时安装Python2和Python3</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装Python相关的模块将服务器配置为Ansible可访问的节点"><span class="nav-number">3.</span> <span class="nav-text">安装Python相关的模块将服务器配置为Ansible可访问的节点</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Ansible-APT模块"><span class="nav-number">3.1.</span> <span class="nav-text">Ansible APT模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ansible-unarchive模块"><span class="nav-number">3.2.</span> <span class="nav-text">Ansible unarchive模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Ansible-mysql模块"><span class="nav-number">3.3.</span> <span class="nav-text">Ansible mysql模块</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#搭建Python虚拟开发环境"><span class="nav-number">4.</span> <span class="nav-text">搭建Python虚拟开发环境</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Python2"><span class="nav-number">4.1.</span> <span class="nav-text">Python2</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Python3"><span class="nav-number">4.2.</span> <span class="nav-text">Python3</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#在Mac中安装Python2和Python3"><span class="nav-number">1.</span> <span class="nav-text">在Mac中安装Python2和Python3</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#设置Python3为缺省的Python"><span class="nav-number">1.1.</span> <span class="nav-text">设置Python3为缺省的Python</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#升级pip工具"><span class="nav-number">1.2.</span> <span class="nav-text">升级pip工具</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#缺省python3"><span class="nav-number">1.2.1.</span> <span class="nav-text">缺省python3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#python2"><span class="nav-number">1.2.2.</span> <span class="nav-text">python2</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装virtualenv工具"><span class="nav-number">1.3.</span> <span class="nav-text">安装virtualenv工具</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#缺省Python3"><span class="nav-number">1.3.1.</span> <span class="nav-text">缺省Python3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Python2"><span class="nav-number">1.3.2.</span> <span class="nav-text">Python2</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建Python的虚拟开发环境"><span class="nav-number">1.4.</span> <span class="nav-text">创建Python的虚拟开发环境</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Python3"><span class="nav-number">1.4.1.</span> <span class="nav-text">Python3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Python2-1"><span class="nav-number">1.4.2.</span> <span class="nav-text">Python2</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#在CentOS中安装Python2和Python3"><span class="nav-number">2.</span> <span class="nav-text">在CentOS中安装Python2和Python3</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装构建Python2和Python3的依赖"><span class="nav-number">2.1.</span> <span class="nav-text">安装构建Python2和Python3的依赖</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#源码安装Python2和Python3"><span class="nav-number">2.2.</span> <span class="nav-text">源码安装Python2和Python3</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装或升级pip工具"><span class="nav-number">2.3.</span> <span class="nav-text">安装或升级pip工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装virtualenv工具-1"><span class="nav-number">2.4.</span> <span class="nav-text">安装virtualenv工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建Python的虚拟开发环境-1"><span class="nav-number">2.5.</span> <span class="nav-text">创建Python的虚拟开发环境</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Python3-1"><span class="nav-number">2.5.1.</span> <span class="nav-text">Python3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Python2-2"><span class="nav-number">2.5.2.</span> <span class="nav-text">Python2</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#在Ubuntu中安装Python2和Python3"><span class="nav-number">3.</span> <span class="nav-text">在Ubuntu中安装Python2和Python3</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装构建Python3和Python2的依赖"><span class="nav-number">3.1.</span> <span class="nav-text">安装构建Python3和Python2的依赖</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#源码安装Python2和Python3-1"><span class="nav-number">3.2.</span> <span class="nav-text">源码安装Python2和Python3</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PPA-Personal-Package-Archive-安装Python"><span class="nav-number">3.3.</span> <span class="nav-text">PPA(Personal Package Archive)安装Python</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#为apt添加PPA库"><span class="nav-number">3.3.1.</span> <span class="nav-text">为apt添加PPA库</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装Python3-8"><span class="nav-number">3.3.2.</span> <span class="nav-text">安装Python3.8</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#在Windows中安装Python2和Python3"><span class="nav-number">4.</span> <span class="nav-text">在Windows中安装Python2和Python3</span></a></li></ol></div>
             
 
           </div>
@@ -837,7 +887,7 @@
     
       <span class="post-meta-item-text">站点总字数：</span>
     
-    <span title="站点总字数">70k</span>
+    <span title="站点总字数">72k</span>
   
 
   
@@ -848,7 +898,7 @@
     
       <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
     
-    <span title="站点阅读时长">1:04</span>
+    <span title="站点阅读时长">1:06</span>
   
 </div>
 
