@@ -345,6 +345,190 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2018/12/30/create-self-signed-ssl/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="云斋">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="云斋随笔">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/12/30/create-self-signed-ssl/" itemprop="url">
+                  【原】创建自签名TLS/SSL证书和私钥
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-30 15:22:24" itemprop="dateCreated datePublished" datetime="2018-12-30T15:22:24+08:00">2018-12-30</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-06-07 16:37:06" itemprop="dateModified" datetime="2020-06-07T16:37:06+08:00">2020-06-07</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+            <div class="post-symbolscount">
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">本文字数：</span>
+                
+                <span title="本文字数">3.3k</span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长 &asymp;</span>
+                
+                <span title="阅读时长">3 分钟</span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2018/12/30/create-self-signed-ssl/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2018/11/14/terraform-call-ansible/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -933,7 +1117,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-count">14</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
@@ -1044,7 +1228,7 @@
     
       <span class="post-meta-item-text">站点总字数：</span>
     
-    <span title="站点总字数">72k</span>
+    <span title="站点总字数">76k</span>
   
 
   
@@ -1055,7 +1239,7 @@
     
       <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
     
-    <span title="站点阅读时长">1:06</span>
+    <span title="站点阅读时长">1:09</span>
   
 </div>
 

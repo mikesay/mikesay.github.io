@@ -116,28 +116,25 @@
 
 
 
-  <meta name="description" content="直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将">
-<meta name="keywords" content="Hexo,Gitee">
+  <meta name="description" content="在开发代码的过程中，有时会不小心将不该提交的文件提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，敏感信息会导致信息泄露且不符合信息安全标准，这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数">
+<meta name="keywords" content="Git">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【原】Hexo+Gitee(码云)搭建静态博客网站">
-<meta property="og:url" content="http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/index.html">
+<meta property="og:title" content="【原】Git随笔(2) 从Git仓库中永久清理脏数据">
+<meta property="og:url" content="http://www.mikesay.com/2020/09/26/git-clean-bad-data-from-history/index.html">
 <meta property="og:site_name" content="云斋随笔">
-<meta property="og:description" content="直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将">
+<meta property="og:description" content="在开发代码的过程中，有时会不小心将不该提交的文件提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，敏感信息会导致信息泄露且不符合信息安全标准，这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/1.png">
-<meta property="og:image" content="http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/2.png">
-<meta property="og:updated_time" content="2020-06-07T08:37:06.476Z">
+<meta property="og:updated_time" content="2020-12-14T10:40:38.995Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【原】Hexo+Gitee(码云)搭建静态博客网站">
-<meta name="twitter:description" content="直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将">
-<meta name="twitter:image" content="http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/1.png">
+<meta name="twitter:title" content="【原】Git随笔(2) 从Git仓库中永久清理脏数据">
+<meta name="twitter:description" content="在开发代码的过程中，有时会不小心将不该提交的文件提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，敏感信息会导致信息泄露且不符合信息安全标准，这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数">
 
 
 
 
 
 
-  <link rel="canonical" href="http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/">
+  <link rel="canonical" href="http://www.mikesay.com/2020/09/26/git-clean-bad-data-from-history/">
 
 
 
@@ -147,7 +144,7 @@
   };
 </script>
 
-  <title>【原】Hexo+Gitee(码云)搭建静态博客网站 | 云斋随笔</title>
+  <title>【原】Git随笔(2) 从Git仓库中永久清理脏数据 | 云斋随笔</title>
   
 
 
@@ -351,7 +348,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/">
+    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2020/09/26/git-clean-bad-data-from-history/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="云斋">
@@ -368,7 +365,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">【原】Hexo+Gitee(码云)搭建静态博客网站
+          <h1 class="post-title" itemprop="name headline">【原】Git随笔(2) 从Git仓库中永久清理脏数据
               
             
           </h1>
@@ -393,7 +390,7 @@
                 
               
 
-              <time title="创建时间：2018-08-17 21:06:58" itemprop="dateCreated datePublished" datetime="2018-08-17T21:06:58+08:00">2018-08-17</time>
+              <time title="创建时间：2020-09-26 09:37:00" itemprop="dateCreated datePublished" datetime="2020-09-26T09:37:00+08:00">2020-09-26</time>
             
 
             
@@ -410,7 +407,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2020-06-07 16:37:06" itemprop="dateModified" datetime="2020-06-07T16:37:06+08:00">2020-06-07</time>
+                <time title="修改时间：2020-12-14 18:40:38" itemprop="dateModified" datetime="2020-12-14T18:40:38+08:00">2020-12-14</time>
               
             
           </span>
@@ -437,7 +434,7 @@
                 
                   <span class="post-meta-item-text">本文字数：</span>
                 
-                <span title="本文字数">5.7k</span>
+                <span title="本文字数">3.9k</span>
               
 
               
@@ -451,7 +448,7 @@
                 
                   <span class="post-meta-item-text">阅读时长 &asymp;</span>
                 
-                <span title="阅读时长">5 分钟</span>
+                <span title="阅读时长">4 分钟</span>
               
             </div>
           
@@ -471,198 +468,100 @@
       
 
       
-        <p>直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将介绍如何使用Hexo搭建静态博客网站，并将其发布到GITEE(码云)免费提供的静态网页空间里。</p>
+        <p>在开发代码的过程中，有时会不小心将不该提交的文件提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，敏感信息会导致信息泄露且不符合信息安全标准，这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner" target="_blank" rel="noopener">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
 <a id="more"></a>
+<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch" target="_blank" rel="noopener">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但是也相对复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner" target="_blank" rel="noopener">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner" target="_blank" rel="noopener">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，而且基本上能满足日常大部分的需求。</p>
+<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
+<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner" target="_blank" rel="noopener">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
+</li>
+<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></table></figure>
 
-<h1 id="Hexo是什么"><a href="#Hexo是什么" class="headerlink" title="Hexo是什么"></a>Hexo是什么</h1><p>Hexo是一款免费的用来快速搭建静态博客网站的框架。支持插件机制，简单又不失强大。Hexo是基于Node.js开发的，提供了一组命令用来创建和管理博客应用，创建和管理博客文章，将博客应用和文章发布成静态博客网站。Hexo使用Markdown语言来写博客，方便、快捷，不需要什么额外的排版工具就能使你的文章布局看起来很美观。下图是Hexo博客网站的结构：</p>
-<div align="center">
-<img src="/2018/08/17/setup-blog-hexo-gitee/1.png" title="Hexo博客网站结构">
-</div>
-
-<h1 id="Gitee是什么"><a href="#Gitee是什么" class="headerlink" title="Gitee是什么"></a>Gitee是什么</h1><p>Gitee（码云 <a href="https://gitee.com/" target="_blank" rel="noopener">gitee.com</a>）是国内的一款基于Git的代码托管和协作开发平台，和GitHub, GitLab属于同一类型的产品。同GitHub和GitLab相比，Gitee具有以下几点优势：</p>
+</li>
+</ul>
+<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
 <ul>
-<li>支持免费的私有Git代码仓库</li>
-<li>在国内，不需要科学上网，访问速度快  </li>
+<li>替换文件中的敏感信息</li>
+<li>删除文件或文件夹</li>
 </ul>
-<p>Gitee平台也提供了免费的静态页面托管服务“码云Pages”，可以用来托管博客，项目官网等静态网页。“码云Pages Pro”是这个服务的高阶收费版，支持发布代码仓库中的某个目录，支持自定义域名。</p>
-<blockquote>
-<p>要详细了解Gitee的概念和使用，可以参考Gitee的官方在线帮助文档：<a href="https://gitee.com/help" target="_blank" rel="noopener">https://gitee.com/help</a></p>
-</blockquote>
-<p>本文将会在Gitee上创建Git代码仓库管理Hexo博客应用的代码和静态博客网站，同时将静态博客网页托管到“码云Pages”。</p>
-<h1 id="从零开始搭建专属博客"><a href="#从零开始搭建专属博客" class="headerlink" title="从零开始搭建专属博客"></a>从零开始搭建专属博客</h1><p>介绍完Hexo和Gitee后，明白了它们的概念和用途。下面我们就从零开始完整地搭建一个自己专属的博客。</p>
-<h2 id="安装必备的软件"><a href="#安装必备的软件" class="headerlink" title="安装必备的软件"></a>安装必备的软件</h2><ul>
-<li>安装Node.js<ul>
-<li>Mac上安装</li>
-<li>Linux上安装</li>
-<li>Windows上安装</li>
-</ul>
+<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></table></figure>
+
+<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且当前的部署或运行会依赖于这些已经存在的敏感信息或文件，所以，你需要手动地清理这些敏感信息或文件并修复部署和运行中可能存在的错误。如果你确认清理最新版本代码里的脏数据对部署和运行不会产生影响，你可以在命令中显式地加上参数“–no-blob-protection”。</p>
+<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
+<li><p>通过mirror的方式克隆代码仓库</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/<span class="built_in">test</span>-history-clean.git</span><br></pre></td></tr></table></figure>
 </li>
-<li>安装Git客户端<ul>
-<li>Mac上安装</li>
-<li>Linux上安装</li>
-<li>Windows上安装</li>
-</ul>
-</li>
-</ul>
-<h2 id="安装Hexo"><a href="#安装Hexo" class="headerlink" title="安装Hexo"></a>安装Hexo</h2><p>运行以下命令安装Hexo（Hexo命令行）到Node.js的全局空间：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install -g hexo-cli</span><br></pre></td></tr></table></figure>
+<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></table></figure>
+
+<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></table></figure>
+
+<p>或者：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></table></figure>
+
+<p>比如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></table></figure>
+
+<p>或者：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></table></figure>
 
 <blockquote>
-<p>Hexo是用Node.js开发的，所以它以npm包格式发布。</p>
+<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different" target="_blank" rel="noopener">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
 </blockquote>
-<h2 id="创建一个新的博客应用"><a href="#创建一个新的博客应用" class="headerlink" title="创建一个新的博客应用"></a>创建一个新的博客应用</h2><ol>
-<li><p>依次执行以下shell命令创建一个缺省的博客应用：</p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo init hexo-test-blog</span><br><span class="line"><span class="built_in">cd</span> hexo-test-blog</span><br><span class="line">npm install</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><ul>
+<li><p>替换所有的文件中的指定的敏感信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -rt replace-text.txt <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
 
 <blockquote>
-<p>博客应用的文件结构：<br>.<br>├── _config.yml<br>├── package.json<br>├── scaffolds<br>│   ├── draft.md<br>│   ├── page.md<br>│   └── post.md<br>├── source<br>│   └── _posts<br>│   └── _drafts<br>└── themes<br>│   └── landscape  </p>
+<p>需要打开强制推送到Git仓库的功能</p>
+</blockquote>
+</li>
+<li><p>替换指定文件中的敏感信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
+<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -D test3.tar.gz <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
+
+<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -D *&#123;dll,bin&#125; <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
+
+<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
 <ul>
-<li>_config.yml<br>博客站点配置文件。</li>
-<li>package.json<br>博客应用引用的第三方Node.js包。</li>
-<li>scaffolds<br>脚手架是用来快速创建博客页面的模板。有三类模板，“文章”，“草稿”和“页面”。脚手架不是最终博客页面显示的模板，显示是由当前主题的layout文件夹中的模板负责。</li>
-<li>source<br>博客文章的存放目录。分为“_posts”和“_drafts”两个子目录，分别存放正式文章和草稿文章。</li>
-<li>themes<br>Hexo博客的主题。缺省安装的主题是“landscape”。</li>
+<li>获取指定文件在所有变更历史中对应的blob id号</li>
 </ul>
-</blockquote>
-</li>
-<li><p>执行以下命令构建博客应用，生成静态博客网站</p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm intall</span><br><span class="line">hexo generate</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>执行以下命令启动一个本地http服务查看静态博客网站  </p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo server</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I &#123;&#125; sh -c <span class="string">"git ls-tree  &#123;&#125; a/b/c/test1.txt"</span> | awk <span class="string">'&#123;print $3&#125;'</span> &gt; blob-ids.txt</span><br></pre></td></tr></table></figure>
 
-<blockquote>
-<p>在浏览器中输入http<nolink>://localhost:4000打开博客网站。</nolink></p>
-</blockquote>
-</li>
-<li><p>设置一些“应用配置”(_config.yml)</p>
-<blockquote>
-<p>这里将根目录下的配置文件”_config.yml“称为”应用配置“以便与后面的“主题配置”区分看来。”主题配置“是位于博客应用的主题根目录下的配置文件，名字也是”_config.yml“。</p>
-</blockquote>
 <ul>
-<li>title: 若一拾得</li>
-<li>subtitle: 若一不一，知之不知</li>
-<li>description:</li>
-<li>keywords: DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python</li>
-<li>author: 若一</li>
-<li>language: zh-Hans</li>
-<li>timezone: Asia/Shanghai</li>
-<li>url: <a href="http://www.ruokiy.com" target="_blank" rel="noopener">http://www.ruokiy.com</a></li>
-<li>root: /</li>
-<li>permalink: :year/:month/:day/:title/ =&gt; 文章页面的永久链接</li>
-<li>permalink_defaults:</li>
+<li>从变更历史中删除指定的文件(Blob)</li>
 </ul>
-</li>
-</ol>
-<blockquote>
-<p>可以参考Hexo的官方文档了解更多的Hexo命令。</p>
-</blockquote>
-<h2 id="为博客应用安装新的主题"><a href="#为博客应用安装新的主题" class="headerlink" title="为博客应用安装新的主题"></a>为博客应用安装新的主题</h2><p>Hexo自带的主题“landscape”看起来平平，不够简洁也不够富丽，所以大部分人安装和初始化完Hexo博客应用后，接下来的一步就是安装配置自己喜欢的主题。下面就以以简洁著称的“NexT”主题为例，介绍安装和配置主题的步骤。</p>
-<p>“NexT”主题在GitHub上，地址为<a href="https://github.com/theme-next/hexo-theme-next" target="_blank" rel="noopener">https://github.com/theme-next/hexo-theme-next</a>。</p>
-<blockquote>
-<p>注意：GitHub上还有很多“NexT”的fork版, 上面的地址是官方最新的版本。<a href="https://github.com/iissnan/hexo-theme-next" target="_blank" rel="noopener">https://github.com/iissnan/hexo-theme-next</a>是“NexT”的一个老版本。</p>
-</blockquote>
-<h3 id="安装步骤"><a href="#安装步骤" class="headerlink" title="安装步骤"></a>安装步骤</h3><ol>
-<li><p>克隆“NexT”主题到博客应用的themes目录</p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/theme-next/hexo-theme-next themes/next</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>修改“应用配置”使用“NexT”主题</p>
-<ul>
-<li>theme: next</li>
-</ul>
-</li>
-</ol>
-<h3 id="对“NexT”主题的一些配置"><a href="#对“NexT”主题的一些配置" class="headerlink" title="对“NexT”主题的一些配置"></a>对“NexT”主题的一些配置</h3><p>这个段落加上后面的对接第三发系统部分将介绍一些常用的配置。如果需要更多的设置，可详细浏览“应用配置”和“主题配置”中的每一个可更改的配置，并参考对应的文档，或者Google、Baidu来了解配置的作用，分析是否能满足你的要求。</p>
-<ul>
-<li><p>去除页脚中的有关“NexT”的信息和链接</p>
-<p>编辑“主题配置”，将“footer|powered|enable”，“footer|powerer|version”，“footer|theme|enable”以及“footer|theme|version”都设成“false”。</p>
-</li>
-<li><p>添加“about”和“tags”页<br>Hexo缺省支持这两个类型的页面。<br>(1) 执行下面的命令，在根目录下的source目录中分别创建“about”和“tags”文件夹</p>
-  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hexo new page about</span><br><span class="line">hexo new page tags</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -bi blob-ids.txt <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
 
-<p>(2) 编辑“根目录/source/tags/index.md”，在头部加上“type: tags”</p>
-  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">title:</span> <span class="string">tags</span></span><br><span class="line"><span class="attr">date:</span> <span class="number">2018</span><span class="number">-08</span><span class="number">-17</span> <span class="number">14</span><span class="string">:57:19</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">tags</span></span><br><span class="line"><span class="attr">comments:</span> <span class="literal">false</span></span><br><span class="line"><span class="meta">---</span></span><br></pre></td></tr></table></figure>
+<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -b 500M <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
 
-<p>(3) 编辑“主题配置”，将“menu|about”和“menu|tags”打开</p>
-</li>
-<li><p>设置博客版面样式<br>也就是博客网站的样式，比如一列或者两列。可以通过“主题配置”中的“scheme”来设置。</p>
-</li>
-<li><p>开启博客首页文章自动摘录，以及摘录字数限制<br>编辑“主题配置”，将“auto_excerpt|enable”设成“true”，设置“auto_excerpt|length”为指定的摘录字数。</p>
-<blockquote>
-<p>根据描述，你也可以用符号“&lt;!-- more --&gt;”来精确控制自动摘录的结束点。</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="对接第三发系统完善博客应用"><a href="#对接第三发系统完善博客应用" class="headerlink" title="对接第三发系统完善博客应用"></a>对接第三发系统完善博客应用</h2><p>由于Hexo产生的是静态博客网站，没有自己的独立数据库，所以很多功能需要利用第三方服务或者插件来完成。</p>
-<h3 id="评论系统"><a href="#评论系统" class="headerlink" title="评论系统"></a>评论系统</h3><p>如果不能科学上网的话，基本上不太可能使用国外的评论系统比如Disqus，Hypercomments，LiveRe等，要么访问速度慢，要么被墙。而国内可用的第三方评论系统也不是很多，多说和网易云跟帖已经关闭，畅言需要提供你的网站ICP备案号，否则只有15天的试用期。经过比较，发现Valine是一个比较轻量级的评论系统，速度快，不需要网站备案（说不定以后需要，先用着再说！）。</p>
-<blockquote>
-<p>如果非要尝试畅言的话，可以参考这个博客文章<a href="https://blog.csdn.net/qq_32518231/article/details/78080184" target="_blank" rel="noopener">https://blog.csdn.net/qq_32518231/article/details/78080184</a></p>
-</blockquote>
-<p>给你的博客应用设置Valine评论系统的步骤：<br>(1) 在LeanCloud<a href="https://www.leancloud.cn" target="_blank" rel="noopener">https://www.leancloud.cn</a>上注册一个账号；</p>
-<blockquote>
-<p>博客的评论将存储在LeadCloud中。</p>
-</blockquote>
-<p>(2) 进入控制台，创建一个开发版的应用；</p>
-<p>(3) 点击进入这个应用，并进入设置|应用key页面获取APP ID和APP KEY；</p>
-<p>(4) 修改主题配置，将valine|enable设为true，valine|appid设为上一步获取的APP ID，valine|appkey设为上一步获取的APP KEY。</p>
-<blockquote>
-<p>需要将你的静态博客发布到线上才会看到文章末尾的valine评论模块</p>
-</blockquote>
-<h3 id="文章统计"><a href="#文章统计" class="headerlink" title="文章统计"></a>文章统计</h3><ul>
-<li><p>添加“文章字数”和“文章平均阅读时间”统计。</p>
-<p>  (1) 在博客应用的根目录执行以下命令安装“hexo-sysmbols-count-time”插件</p>
-  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-symbols-count-time --save</span><br></pre></td></tr></table></figure>
+<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg -B 5 <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
 
-<p>  (2) 修改<strong>应用配置</strong>添加以下配置加载“hexo-symbols-count-time”插件</p>
-  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">symbols_count_time:</span></span><br><span class="line"><span class="attr">symbols:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">time:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">total_symbols:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">total_time:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
-
-<p>  (3) 修改<strong>主题配置</strong>中的以下配置</p>
-  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">symbols_count_time:</span></span><br><span class="line"><span class="attr">separated_meta:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">item_text_post:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">item_text_total:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">awl:</span> <span class="number">4</span></span><br><span class="line"><span class="attr">wpm:</span> <span class="number">275</span></span><br></pre></td></tr></table></figure>
-
-</li>
-</ul>
-<h3 id="社交分享"><a href="#社交分享" class="headerlink" title="社交分享"></a>社交分享</h3><p>添加模块<a href="https://github.com/theme-next/theme-next-needmoreshare2" target="_blank" rel="noopener">https://github.com/theme-next/theme-next-needmoreshare2</a>获得博客文章社交分享的功能。</p>
-<p>(1) 执行以下命令安装needmoreshare模块</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> themes/next</span><br><span class="line">git <span class="built_in">clone</span> https://github.com/theme-next/theme-next-needmoreshare2 <span class="built_in">source</span>/lib/needsharebutton</span><br></pre></td></tr></table></figure>
+<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bfg --delete-folders .svn <span class="built_in">test</span>-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></table></figure>
 
 <blockquote>
-<p>注意，这里一定得是克隆到“source/lib/needsharebutton”目录，名字不能错。</p>
+<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
 </blockquote>
-<p>(2) 修改“主题配置”“needmoreshare2”的子选项开启社交分享功能</p>
-<h3 id="博客搜索"><a href="#博客搜索" class="headerlink" title="博客搜索"></a>博客搜索</h3><p>(1) 在博客应用的根目录安装插件<a href="https://github.com/theme-next/hexo-generator-searchdb" target="_blank" rel="noopener">https://github.com/theme-next/hexo-generator-searchdb</a></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-generator-searchdb --save</span><br></pre></td></tr></table></figure>
-
-<p>(2) 在“应用配置”中添加以下配置开启博客搜索功能</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">symbols_count_time:</span></span><br><span class="line">  <span class="attr">symbols:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">time:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">total_symbols:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">total_time:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="部署静态博客网站到码云-Gitee-静态页面空间"><a href="#部署静态博客网站到码云-Gitee-静态页面空间" class="headerlink" title="部署静态博客网站到码云(Gitee)静态页面空间"></a>部署静态博客网站到码云(Gitee)静态页面空间</h2><ol>
-<li><p>在码云上创建一个与你账号同名的Git代码仓库，比如”ruokiy”;</p>
-<blockquote>
-<p>在创建时选择用README初始化仓库，这样创建出来的代码仓库缺省会带有master分支</p>
-</blockquote>
-</li>
-<li><p>安装插件hexo-deployer-git</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-deployer-git --save</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>在“应用配置”中添加一下配置</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">deploy:</span></span><br><span class="line"> <span class="bullet">-</span> <span class="attr">type:</span> <span class="string">git</span></span><br><span class="line">   <span class="attr">repo:</span> <span class="string">https://gitee.com/ruokiy/ruokiy.git</span></span><br><span class="line">   <span class="attr">branch:</span> <span class="string">master</span></span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>注意，最终deploy过程是将产生的静态博客网站文件提交到新创建的Git代码仓库的master分支上，所以做deploy的机子上需要能够写访问Git代码仓库。这里是通过https协议访问Git代码仓库的，所以你需要在deploy的机子上，也就是装有Git客户端的机子上设置以下的Git配置：<br>git config –global credential.helper store<br>尝试手动克隆一次代码仓库，根据提示输入用户名和密码，这样你的用户名和密码就会被缓存到机子上了。之后的访问都不要用户名和密码了。</p>
-</blockquote>
-</li>
-<li><p>在博客应用的根目录执行以下命令完成静态博客文件的上传</p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hexo clean</span><br><span class="line">hexo deploy</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>如下图，在码云上点击刚创建的代码仓库页面，点击菜单“Service|Gitee Pages”，在左侧选择“master”分支，点击“create”按钮</p>
- <div align="center">
- <img src="/2018/08/17/setup-blog-hexo-gitee/2.png">
- </div>
-
-</li>
-</ol>
-<p>不到一分钟，你的静态博客网站就生成了。可以拷贝生成的网址输入到浏览器打开你的博客了，同时你也可以把这个网址分享给你的朋友，或者放在你的个人简介中。</p>
-<h1 id="最后一公里-将博客应用的代码托管到码云"><a href="#最后一公里-将博客应用的代码托管到码云" class="headerlink" title="最后一公里 - 将博客应用的代码托管到码云"></a>最后一公里 - 将博客应用的代码托管到码云</h1><p>这里会用到Git submodule的概念。</p>
 
       
     </div>
@@ -721,7 +620,7 @@
     <strong>本文作者： </strong>云斋</li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/" title="【原】Hexo+Gitee(码云)搭建静态博客网站">http://www.mikesay.com/2018/08/17/setup-blog-hexo-gitee/</a>
+    <a href="http://www.mikesay.com/2020/09/26/git-clean-bad-data-from-history/" title="【原】Git随笔(2) 从Git仓库中永久清理脏数据">http://www.mikesay.com/2020/09/26/git-clean-bad-data-from-history/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！</li>
@@ -734,9 +633,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Hexo/" rel="tag"># Hexo</a>
-          
-            <a href="/tags/Gitee/" rel="tag"># Gitee</a>
+            <a href="/tags/Git/" rel="tag"># Git</a>
           
         </div>
       
@@ -749,15 +646,15 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
+              <a href="/2020/03/09/jenkins-gitlab-pullrequest/" rel="next" title="【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)">
+                <i class="fa fa-chevron-left"></i> 【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)
+              </a>
+            
           </div>
 
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2018/10/07/jenkins-freestyle-cicd-pipeline/" rel="prev" title="【原】Jenkins随笔(1) 基于Jenkins Freestyle Job构建CI/CD流水线">
-                【原】Jenkins随笔(1) 基于Jenkins Freestyle Job构建CI/CD流水线 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -927,7 +824,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Hexo是什么"><span class="nav-number">1.</span> <span class="nav-text">Hexo是什么</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Gitee是什么"><span class="nav-number">2.</span> <span class="nav-text">Gitee是什么</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#从零开始搭建专属博客"><span class="nav-number">3.</span> <span class="nav-text">从零开始搭建专属博客</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装必备的软件"><span class="nav-number">3.1.</span> <span class="nav-text">安装必备的软件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装Hexo"><span class="nav-number">3.2.</span> <span class="nav-text">安装Hexo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建一个新的博客应用"><span class="nav-number">3.3.</span> <span class="nav-text">创建一个新的博客应用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#为博客应用安装新的主题"><span class="nav-number">3.4.</span> <span class="nav-text">为博客应用安装新的主题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#安装步骤"><span class="nav-number">3.4.1.</span> <span class="nav-text">安装步骤</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对“NexT”主题的一些配置"><span class="nav-number">3.4.2.</span> <span class="nav-text">对“NexT”主题的一些配置</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#对接第三发系统完善博客应用"><span class="nav-number">3.5.</span> <span class="nav-text">对接第三发系统完善博客应用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#评论系统"><span class="nav-number">3.5.1.</span> <span class="nav-text">评论系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文章统计"><span class="nav-number">3.5.2.</span> <span class="nav-text">文章统计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#社交分享"><span class="nav-number">3.5.3.</span> <span class="nav-text">社交分享</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#博客搜索"><span class="nav-number">3.5.4.</span> <span class="nav-text">博客搜索</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#部署静态博客网站到码云-Gitee-静态页面空间"><span class="nav-number">3.6.</span> <span class="nav-text">部署静态博客网站到码云(Gitee)静态页面空间</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#最后一公里-将博客应用的代码托管到码云"><span class="nav-number">4.</span> <span class="nav-text">最后一公里 - 将博客应用的代码托管到码云</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#安装BFG-Repo-Cleaner"><span class="nav-number">1.</span> <span class="nav-text">安装BFG Repo-Cleaner</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#使用BFG-Repo-Cleaner"><span class="nav-number">2.</span> <span class="nav-text">使用BFG Repo-Cleaner</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#替换文件中的敏感信息"><span class="nav-number">2.1.</span> <span class="nav-text">替换文件中的敏感信息</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#准备工作"><span class="nav-number">2.1.1.</span> <span class="nav-text">准备工作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用的敏感信息替换操作"><span class="nav-number">2.1.2.</span> <span class="nav-text">常用的敏感信息替换操作</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#删除文件或文件夹"><span class="nav-number">2.2.</span> <span class="nav-text">删除文件或文件夹</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#删除文件名为“test3-tar-gz”的文件"><span class="nav-number">2.2.1.</span> <span class="nav-text">删除文件名为“test3.tar.gz”的文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除某一类文件"><span class="nav-number">2.2.2.</span> <span class="nav-text">删除某一类文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#从变更历史中精确地删除某个文件"><span class="nav-number">2.2.3.</span> <span class="nav-text">从变更历史中精确地删除某个文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除超过某个大小的文件"><span class="nav-number">2.2.4.</span> <span class="nav-text">删除超过某个大小的文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除前几个最大的文件"><span class="nav-number">2.2.5.</span> <span class="nav-text">删除前几个最大的文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#删除某个文件夹"><span class="nav-number">2.2.6.</span> <span class="nav-text">删除某个文件夹</span></a></li></ol></li></ol></li></ol></div>
             
 
           </div>
