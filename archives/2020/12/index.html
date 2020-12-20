@@ -116,25 +116,21 @@
 
 
 
-  <meta name="description" content="TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以">
-<meta name="keywords" content="System Management,TLS&#x2F;SSL">
-<meta property="og:type" content="article">
-<meta property="og:title" content="【原】创建自签名TLS&#x2F;SSL证书和私钥">
-<meta property="og:url" content="http://www.mikesay.com/2018/12/30/create-self-signed-ssl/index.html">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI&#x2F;CD, Operation, Monitor, Python">
+<meta property="og:type" content="website">
+<meta property="og:title" content="云斋随笔">
+<meta property="og:url" content="http://www.mikesay.com/archives/2020/12/index.html">
 <meta property="og:site_name" content="云斋随笔">
-<meta property="og:description" content="TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2020-06-07T08:37:06.392Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【原】创建自签名TLS&#x2F;SSL证书和私钥">
-<meta name="twitter:description" content="TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以">
+<meta name="twitter:title" content="云斋随笔">
 
 
 
 
 
 
-  <link rel="canonical" href="http://www.mikesay.com/2018/12/30/create-self-signed-ssl/">
+  <link rel="canonical" href="http://www.mikesay.com/archives/2020/12/">
 
 
 
@@ -144,7 +140,7 @@
   };
 </script>
 
-  <title>【原】创建自签名TLS/SSL证书和私钥 | 云斋随笔</title>
+  <title>归档 | 云斋随笔</title>
   
 
 
@@ -201,7 +197,7 @@
     
   
 
-  <div class="container sidebar-position-left page-post-detail">
+  <div class="container sidebar-position-left page-archive">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -266,7 +262,7 @@
         
         
           
-          <li class="menu-item menu-item-archives">
+          <li class="menu-item menu-item-archives menu-item-active">
     <a href="/archives/" rel="section">
       <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
   </li>
@@ -286,6 +282,25 @@
 
   
     
+
+    
+    
+      
+      
+    
+      
+      
+    
+      
+      
+    
+      
+      
+    
+    
+
+  
+
 
   
 
@@ -332,363 +347,78 @@
           <div id="content" class="content">
             
 
-  <div id="posts" class="posts-expand">
-    
+  
+  
+  
+  <div class="post-block archive">
+    <div id="posts" class="posts-collapse">
+      <span class="archive-move-on"></span>
 
-  
+      
+      <span class="archive-page-counter">
+        
+        
+        
+          
+        
+        嗯..! 目前共计 15 篇日志。 继续努力。
+      </span>
+      
 
-  
-  
-  
+      
 
-  
+        
+        
+        
+
+        
+          
+          <div class="collection-title">
+            <h1 class="archive-year" id="archive-year-2020">2020</h1>
+          </div>
+        
+        
+
+        
 
   <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2018/12/30/create-self-signed-ssl/">
+    <header class="post-header">
 
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="云斋">
-      <meta itemprop="description" content>
-      <meta itemprop="image" content="/uploads/avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="云斋随笔">
-    </span>
-
-    
-      <header class="post-header">
-
+      <h2 class="post-title">
         
+            <a class="post-title-link" href="/2020/12/16/git-encrypt-file-in-repository/" itemprop="url">
+              
+                <span itemprop="name">【原】Git随笔(3) Git加密存储文件</span>
+              
+            </a>
         
-          <h1 class="post-title" itemprop="name headline">【原】创建自签名TLS/SSL证书和私钥
-              
-            
-          </h1>
-        
+      </h2>
 
-        <div class="post-meta">
-          <span class="post-time">
-
-            
-            
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2018-12-30 15:22:24" itemprop="dateCreated datePublished" datetime="2018-12-30T15:22:24+08:00">2018-12-30</time>
-            
-
-            
-              
-
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2020-06-07 16:37:06" itemprop="dateModified" datetime="2020-06-07T16:37:06+08:00">2020-06-07</time>
-              
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-            <div class="post-symbolscount">
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-file-word-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">本文字数：</span>
-                
-                <span title="本文字数">3.3k</span>
-              
-
-              
-                <span class="post-meta-divider">|</span>
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-clock-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">阅读时长 &asymp;</span>
-                
-                <span title="阅读时长">3 分钟</span>
-              
-            </div>
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        <p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
-<a id="more"></a>
-
-<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
-<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
-</blockquote>
-<p>使用openssl命令生成自签名证书和私钥对：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
-<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
-<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
-<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
-<li>-days 365: 设置证书的有效期为1年（365天）。</li>
-<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
-<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
-<li>-out: 告诉openssl生成的自签名证书和路径。</li>
-</ul>
-<p>命令会提示以下的一些输入：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></table></figure>
-
-<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
-<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”/etc/nginx/ssl-certs”；</p>
-</li>
-<li><p>编辑”/etc/nginx/sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>重新加载配置文件：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>重启Nginx服务：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
-<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
-</blockquote>
-<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/usr/local/share/ca-certificates”:</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo cp selfsigned-certificate.crt /usr/<span class="built_in">local</span>/share/ca-certificates</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo update-ca-certificates</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/usr/local/share/ca-certificates”中删除证书：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo rm /usr/<span class="built_in">local</span>/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo update-ca-certificates --fresh</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo cp selfsigned-certificate.crt /etc/pki/ca-trust/<span class="built_in">source</span>/anchors</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo update-ca-trust</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo rm /etc/pki/ca-trust/<span class="built_in">source</span>/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo update-ca-trust</span><br></pre></td></tr></table></figure>
-
-</li>
-</ol>
-<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-
-<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo security delete-certificate -c <span class="string">"&lt;Common Name of existing certificate&gt;"</span></span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
-</blockquote>
-<p>或者通过证书的SHA-1码来删除：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">"</span></span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
-</blockquote>
-<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">certutil -addstore -f &quot;Root&quot; selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-
-<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">certutil -delstore &quot;Root&quot; &lt;Cert Serial Number&gt;</span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
-</blockquote>
-
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-      <div>
-        <div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
-    <img id="wechat_subscriber_qcode" src="/uploads/wechat.png" alt="云斋 wechat" style="width: 200px; max-width: 100%;">
-    <div>欢迎订阅我的微信公众号</div>
-</div>
-
+      <div class="post-meta">
+        <time class="post-time" itemprop="dateCreated" datetime="2020-12-16T08:50:00+08:00" content="2020-12-16">
+          12-16
+        </time>
       </div>
-    
 
-    
-      <div>
-        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
-  <div>坚持原创技术分享，您的支持将鼓励我继续创作!</div>
-  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
-    <span>打赏</span>
-  </button>
-  <div id="QR" style="display: none;">
-
-    
-      <div id="wechat" style="display: inline-block">
-        <img id="wechat_qr" src="/images/wechatpay.png" alt="云斋 微信支付">
-        <p>微信支付</p>
-      </div>
-    
-
-    
-      <div id="alipay" style="display: inline-block">
-        <img id="alipay_qr" src="/images/alipay.png" alt="云斋 支付宝">
-        <p>支付宝</p>
-      </div>
-    
-
-    
-
-  </div>
-</div>
-
-      </div>
-    
-
-    
-      <div>
-        <ul class="post-copyright">
-  <li class="post-copyright-author">
-    <strong>本文作者： </strong>云斋</li>
-  <li class="post-copyright-link">
-    <strong>本文链接：</strong>
-    <a href="http://www.mikesay.com/2018/12/30/create-self-signed-ssl/" title="【原】创建自签名TLS/SSL证书和私钥">http://www.mikesay.com/2018/12/30/create-self-signed-ssl/</a>
-  </li>
-  <li class="post-copyright-license">
-    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！</li>
-</ul>
-
-      </div>
-    
-
-    <footer class="post-footer">
-      
-        <div class="post-tags">
-          
-            <a href="/tags/System-Management/" rel="tag"># System Management</a>
-          
-            <a href="/tags/TLS-SSL/" rel="tag"># TLS/SSL</a>
-          
-        </div>
-      
-
-      
-      
-      
-
-      
-        <div class="post-nav">
-          <div class="post-nav-next post-nav-item">
-            
-              <a href="/2018/11/14/terraform-call-ansible/" rel="next" title="【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源">
-                <i class="fa fa-chevron-left"></i> 【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源
-              </a>
-            
-          </div>
-
-          <span class="post-nav-divider"></span>
-
-          <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/07/08/jenkins-concurrent-builds/" rel="prev" title="【原】Jenkins随笔(2) Jenkins Job的并发执行">
-                【原】Jenkins随笔(2) Jenkins Job的并发执行 <i class="fa fa-chevron-right"></i>
-              </a>
-            
-          </div>
-        </div>
-      
-
-      
-      
-    </footer>
-  </div>
-  
-  
-  
+    </header>
   </article>
 
 
+
+      
+
+    </div>
   </div>
+  
+  
+  
+
+  
+
 
 
           </div>
           
-
-  
-    <div id="gitalk-container"></div>
-
-  
-
-
 
         </div>
         
@@ -711,17 +441,8 @@
       
 
       
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
-            站点概览
-          </li>
-        </ul>
-      
 
-      <section class="site-overview-wrap sidebar-panel">
+      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -821,22 +542,6 @@
         </div>
       </section>
 
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
-
-            
-              
-            
-
-            
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#生成自签名证书和私钥"><span class="nav-number">1.</span> <span class="nav-text">生成自签名证书和私钥</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置Nginx使用自签名证书和私钥"><span class="nav-number">2.</span> <span class="nav-text">配置Nginx使用自签名证书和私钥</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#在客户端安装自签名证书"><span class="nav-number">3.</span> <span class="nav-text">在客户端安装自签名证书</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Linux客户端"><span class="nav-number">3.1.</span> <span class="nav-text">Linux客户端</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Ubuntu-Debian"><span class="nav-number">3.1.1.</span> <span class="nav-text">Ubuntu, Debian</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#添加"><span class="nav-number">3.1.1.1.</span> <span class="nav-text">添加</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#删除"><span class="nav-number">3.1.1.2.</span> <span class="nav-text">删除</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CentOS-RedHat"><span class="nav-number">3.1.2.</span> <span class="nav-text">CentOS, RedHat</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#添加-1"><span class="nav-number">3.1.2.1.</span> <span class="nav-text">添加</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#删除-1"><span class="nav-number">3.1.2.2.</span> <span class="nav-text">删除</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Mac客户端"><span class="nav-number">3.2.</span> <span class="nav-text">Mac客户端</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#添加-2"><span class="nav-number">3.2.0.1.</span> <span class="nav-text">添加</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#删除-2"><span class="nav-number">3.2.0.2.</span> <span class="nav-text">删除</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Windows客户端"><span class="nav-number">3.3.</span> <span class="nav-text">Windows客户端</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#添加-3"><span class="nav-number">3.3.0.1.</span> <span class="nav-text">添加</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#删除-3"><span class="nav-number">3.3.0.2.</span> <span class="nav-text">删除</span></a></li></ol></li></ol></div>
-            
-
-          </div>
-        </section>
-      <!--/noindex-->
       
 
       
@@ -994,10 +699,6 @@
   
 
   
-  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.4.0"></script>
-<script type="text/javascript" src="/js/src/post-details.js?v=6.4.0"></script>
-
-
 
   
 
@@ -1020,21 +721,6 @@
 
 
 
-
-    <link rel="stylesheet" href="/lib/gitalk/gitalk.css">
-    <script src="/lib/gitalk/gitalk.min.js"></script>
-    <script type="text/javascript">
-        var gitalk = new Gitalk({
-            clientID: '73c77dac9516bad51840',
-            clientSecret: '63db12daea1638df9bfb8c249ef62e331b37156a',
-            repo: 'mikesay.comments',
-            owner: 'mikejianzhang',
-            admin: ['mikejianzhang'],
-            id: location.pathname,
-            distractionFreeMode: 'true'
-        })
-        gitalk.render('gitalk-container')           
-    </script>
 
 
   

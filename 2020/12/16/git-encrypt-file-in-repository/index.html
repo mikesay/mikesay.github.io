@@ -116,27 +116,28 @@
 
 
 
-  <meta name="description" content="Terraform（https://www.terraform.io/）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有">
-<meta name="keywords" content="DevOps,Infrastructure As Code,Terraform,Ansible">
+  <meta name="description" content="不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用git-secret将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。">
+<meta name="keywords" content="Git">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源">
-<meta property="og:url" content="http://www.mikesay.com/2018/11/14/terraform-call-ansible/index.html">
+<meta property="og:title" content="【原】Git随笔(3) Git加密存储文件">
+<meta property="og:url" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/index.html">
 <meta property="og:site_name" content="云斋随笔">
-<meta property="og:description" content="Terraform（https://www.terraform.io/）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有">
+<meta property="og:description" content="不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用git-secret将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://www.mikesay.com/2018/11/14/terraform-call-ansible/1.jpg">
-<meta property="og:updated_time" content="2020-06-07T08:37:06.480Z">
+<meta property="og:image" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/1.png">
+<meta property="og:image" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/2.png">
+<meta property="og:updated_time" content="2020-12-20T17:20:52.091Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源">
-<meta name="twitter:description" content="Terraform（https://www.terraform.io/）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有">
-<meta name="twitter:image" content="http://www.mikesay.com/2018/11/14/terraform-call-ansible/1.jpg">
+<meta name="twitter:title" content="【原】Git随笔(3) Git加密存储文件">
+<meta name="twitter:description" content="不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用git-secret将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。">
+<meta name="twitter:image" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/1.png">
 
 
 
 
 
 
-  <link rel="canonical" href="http://www.mikesay.com/2018/11/14/terraform-call-ansible/">
+  <link rel="canonical" href="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/">
 
 
 
@@ -146,7 +147,7 @@
   };
 </script>
 
-  <title>【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源 | 云斋随笔</title>
+  <title>【原】Git随笔(3) Git加密存储文件 | 云斋随笔</title>
   
 
 
@@ -350,7 +351,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2018/11/14/terraform-call-ansible/">
+    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="云斋">
@@ -367,7 +368,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源
+          <h1 class="post-title" itemprop="name headline">【原】Git随笔(3) Git加密存储文件
               
             
           </h1>
@@ -392,7 +393,7 @@
                 
               
 
-              <time title="创建时间：2018-11-14 21:00:19" itemprop="dateCreated datePublished" datetime="2018-11-14T21:00:19+08:00">2018-11-14</time>
+              <time title="创建时间：2020-12-16 08:50:00" itemprop="dateCreated datePublished" datetime="2020-12-16T08:50:00+08:00">2020-12-16</time>
             
 
             
@@ -409,7 +410,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2020-06-07 16:37:06" itemprop="dateModified" datetime="2020-06-07T16:37:06+08:00">2020-06-07</time>
+                <time title="修改时间：2020-12-21 01:20:52" itemprop="dateModified" datetime="2020-12-21T01:20:52+08:00">2020-12-21</time>
               
             
           </span>
@@ -436,7 +437,7 @@
                 
                   <span class="post-meta-item-text">本文字数：</span>
                 
-                <span title="本文字数">5.4k</span>
+                <span title="本文字数">5.3k</span>
               
 
               
@@ -470,67 +471,184 @@
       
 
       
-        <p>Terraform（<a href="https://www.terraform.io/" target="_blank" rel="noopener">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
+        <p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/" target="_blank" rel="noopener">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
 <a id="more"></a>
 
-<h1 id="Terraform架构简介"><a href="#Terraform架构简介" class="headerlink" title="Terraform架构简介"></a>Terraform架构简介</h1><p>为了方便后续步骤的理解，在这里对Terraform及其相关组件做一简单介绍。这是Terraform的架构图：</p>
-<div align="center">
-<img src="/2018/11/14/terraform-call-ansible/1.jpg">
+<h1 id="私有仓库是否安全"><a href="#私有仓库是否安全" class="headerlink" title="私有仓库是否安全"></a>私有仓库是否安全</h1><p>也许有人会说：”我把代码仓库设成私有的不就安全了？“，然而情况并非如此，因为即使私有仓库也会面临着不同类型的风险。当你集成某个第三方的服务到你的私有仓库时，比如集成第三方的持续集成服务，你的私有仓库就开放给了第三方服务，这些第三方服务就能够读取你存储在代码仓库中的敏感信息。如果第三方服务遭受了黑客攻击，那么可以通过这个第三方服务获取你的Git仓库中的敏感信息。</p>
+<h1 id="为什么还要将敏感信息放在Git代码仓库中"><a href="#为什么还要将敏感信息放在Git代码仓库中" class="headerlink" title="为什么还要将敏感信息放在Git代码仓库中"></a>为什么还要将敏感信息放在Git代码仓库中</h1><p>正如文初谈到的”不要将敏感信息放在Git代码仓库中已是共识“，那为什么还用谈将敏感信息放在Git代码仓库中？正所谓无风不起浪，存在即合理。抛开敏感信息这个特征不谈，包含这些信息的文件其实和我们的代码文件没什么区别，如果不放在Git仓库中，就不能对它们做版本管理，而文件名和路径的变更，密码等信息的变更，一些新的信息的添加，都没法追踪它们的变更记录。尤其在构建一个自动部署系统时，你就不得不维护一个额外的安全服务来加密存储这些包含敏感信息的配置文件，而自动部署系统也需要设计额外的方法和步骤来读取这些配置文件，更为麻烦的是自动部署系统无法通过Git变更记录来指定使用的配置文件的版本。</p>
+<h1 id="git-secret的原理"><a href="#git-secret的原理" class="headerlink" title="git-secret的原理"></a>git-secret的原理</h1><p>既要将包含敏感信息的配置文件保存在Git代码仓库中（因为能带来很多便利），又要保证安全的要求，那么最直接的做法就是将这些文件加密后再保存到Git仓库中。git-secret则满足了这一需求，同时git-secret也能保证多人协同工作。以下是git-secret提供的一些功能：</p>
+<ul>
+<li><p>利用<a href="http://www.gnupg.org/" target="_blank" rel="noopener">GnuPG</a>的多秘钥加密功能：多个公钥加密文件，不同的私钥解密文件。这样，工作在Git仓库中的开发人员只需要将自己的公钥保存在代码仓库中要来加密文件，同时在自己的工作机器上保存自己的私钥来解密文件。</p>
+</li>
+<li><p>通过git-secret将包含敏感信息的文件放入.gitignore文件中避免误提交，同时生成一个新的加密文件（添加了一个额外的后缀.secret）并保存在Git仓库中。</p>
+</li>
+<li><p>当把代码仓库克隆到本地（只包含带有后缀.secret的加密文件）后，可以通过git-secret解密后生成解密的文件（不包含.secret后缀），这样就可以本地使用包含这些敏感信息的文件了。</p>
+</li>
+</ul>
+<h1 id="git-secret的安装和使用"><a href="#git-secret的安装和使用" class="headerlink" title="git-secret的安装和使用"></a>git-secret的安装和使用</h1><p>git-secret的使用依赖于git和<a href="http://www.gnupg.org/" target="_blank" rel="noopener">GnuPG</a>。Git的安装可以参考相关文档，不在这里赘述。git-secret使用的密钥以及加解密的功能都是通过GnuPG来完成的。</p>
+<h2 id="安装GnuPG"><a href="#安装GnuPG" class="headerlink" title="安装GnuPG"></a>安装GnuPG</h2><p>GnuPG，也称为GPG，是OpenPGP标准RFC4880（也称为PGP）的免费实现。GnuPG允许你对数据和通信进行加密和签名，它具有通用的密钥管理系统，以及用于各种公钥目录的访问模块。GnuPG是一种命令行工具，具有易于与其他应用程序集成的功能。GnuPG也提供了大量的前段应用程序和库，GnuPG还提供对S/MIME和Secure Shell（ssh）的支持。</p>
+<ul>
+<li><p>Mac OSX中的安装</p>
+<p>目前最新版本的GnuPG是2.2.25。可以从<a href="https://sourceforge.net/p/gpgosx/docu/Download/" target="_blank" rel="noopener">https://sourceforge.net/p/gpgosx/docu/Download/</a> 下载dmg文件并安装，也可以通过下面的brew命令安装：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brew install gpg2</span><br></pre></td></tr></table></figure>
+
+<p>推荐使用brew的安装方式，以后可以方便升级。</p>
+</li>
+<li><p>Windows中的安装</p>
+<p>Gpg4win是Windows版本的GnuPG完整实现。可以从<a href="https://gpg4win.org/download.html" target="_blank" rel="noopener">https://gpg4win.org/download.html</a> 下载安装文件并安装。</p>
+</li>
+<li><p>Linux中的安装</p>
+<p>大部分Linux系统已经自带GnuPG了，所以不需要额外安装，只是有可能不是最新版本的，但是不影响使用。如果GnuPG不存在，也可以通过以下的命令来安装：</p>
+<p>Debian或Ubuntu</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install gnupg</span><br></pre></td></tr></table></figure>
+
+<p>RedHat或CentOS</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo yum install gnupg</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="安装git-secret"><a href="#安装git-secret" class="headerlink" title="安装git-secret"></a>安装git-secret</h2><p>在Max OSX和Linux中的安装可以参考git-secret的<a href="https://git-secret.io/installation" target="_blank" rel="noopener">安装文档</a>。</p>
+<ul>
+<li><p>Mac OSX中的安装</p>
+<p>通过brew安装：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brew install git-secret</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Linux中的安装</p>
+<p>Ubuntu或者Debian</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">"deb https://dl.bintray.com/sobolevn/deb git-secret main"</span> | sudo tee -a /etc/apt/sources.list</span><br><span class="line">wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | sudo apt-key add -</span><br><span class="line">sudo apt-get update &amp;&amp; sudo apt-get install git-secret</span><br></pre></td></tr></table></figure>
+
+<p>RedHat或者CentOS:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wget https://bintray.com/sobolevn/rpm/rpm -O bintray-sobolevn-rpm.repo</span><br><span class="line">sudo mv bintray-sobolevn-rpm.repo /etc/yum.repos.d/</span><br><span class="line">sudo yum install git-secret</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Windows中的安装</p>
+<p>git-secret官方并没有宣称支持Windows系统，但是从源代码来看已经支持CYGWIN或MINGW环境了。经过试验，以下方法可用：</p>
+<p>(1) 首先确认Git在Windows系统的安装过程中，选择”在命令提示符下使用Git和可选的Unix工具“，这样可以安装很多可用的Linux命令</p>
+<div align="left">
+<img src="/2020/12/16/git-encrypt-file-in-repository/1.png">
 </div>
-Terraform调用不同云平台（公有或私有）的“Provider”创建和编排基础架构资源，调用不同的“Provisioner”配置新生成的资源。并不是所有的资源都支持“Provisioner”，可以参考对应资源的帮助文档来了解是否支持。基本上，虚拟机资源，比如ECS, EC2等，都支持调用“Provisioner”去配置。
 
-<h1 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h1><p>组合利用Terraform现有的Provisioner为新创建的虚拟机生成动态的Ansible资源文件，加入到Ansible当前资源文件夹中（Ansible在执行时会合并当前资源文件加下的所有资源文件），最后基于动态资源执行Ansible脚本配置新创建的虚拟机。</p>
-<h1 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h1><p>以自动创建一台虚拟机资源并安装和配置Artifactory软件为例，下图是Terraform+Ansible的代码结构：<br>.<br>├── ansible<br>│   ├── handlers<br>│   ├── inventory<br>│   │   ├── devops<br>│   │   │   ├── group_vars<br>│   │   │   ├── host_vars<br>│   │   │   └── hosts<br>│   │   └── devops-disconf<br>│   │       └── hosts<br>│   ├── roles<br>│   ├── templates<br>│   │   ├── artifactory<br>│   │   │   └── hosts.temp.j2<br>│   ├── configure-ansible-node.sh<br>│   ├── ansible.cfg<br>│   ├── terraform-ansible-inventory.yaml<br>│   ├── artifactory.yaml<br>├── iac<br>│   └── cicd<br>│       ├── vsphere_virtual_machine_art1.tf</p>
-<blockquote>
-<p>Artifactory是一款统一制品管理工具，支持多种标准的软件包格式：Maven（Gradle），Nuget，NPM，Bower，CocoaPods，Docker，Debian，RPM…，也支持自定义存储格式。Artifactory是构建CI/CD流程必不可少的一个工具。</p>
-</blockquote>
-<h2 id="ansible目录"><a href="#ansible目录" class="headerlink" title="ansible目录"></a>ansible目录</h2><p>这个目录是典型的Ansible工程目录，有handlers，inventory，roles，templates，ansible.cfg，*.yaml（Ansible playbook）。</p>
-<ul>
-<li><p>ansible.cfg</p>
-<p>设置缺省的资源文件夹，比如：</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">[defaults]</span></span><br><span class="line"><span class="string">inventory</span> <span class="string">=</span> <span class="string">./inventory/devops</span></span><br></pre></td></tr></table></figure>
+<p>(2) 将Mac OS X下通过brew安装的git secret打包</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">zip -r -9 git-secret.zip /usr/<span class="built_in">local</span>/Cellar/git-secret/</span><br></pre></td></tr></table></figure>
 
-<p>在资源文件夹中，一般会有一个缺省的资源文件hosts，另外还有组变量文件和主机变量文件。</p>
-</li>
-<li><p>configure-ansible-node.sh</p>
-<p>Shell脚本，用来在新创建的虚拟机中（Ubuntu）安装Python，以便将这台虚拟机配置成Ansible的管理节点。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/bin/bash -il</span></span><br><span class="line"></span><br><span class="line">py_version=2.7.12-1~16.04</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ -f /var/lib/apt/lists/lock ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">  rm -f /var/lib/apt/lists/lock</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line">result=$(dpkg-query -W  python | awk <span class="string">'&#123;print $2&#125;'</span>)</span><br><span class="line"><span class="keyword">if</span> [ -z <span class="string">"<span class="variable">$&#123;result&#125;</span>"</span> ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">"Installing python=<span class="variable">$&#123;py_version&#125;</span>"</span></span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">"python was already installed!"</span></span><br><span class="line">  <span class="built_in">exit</span> 0</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> http_proxy=http://xxxx</span><br><span class="line"><span class="built_in">export</span> https_proxy=<span class="variable">$&#123;http_proxy&#125;</span></span><br><span class="line"></span><br><span class="line">cat &gt; /etc/apt/apt.conf.d/apt-temp.conf &lt;&lt;EOF</span><br><span class="line">Acquire::http::Proxy <span class="string">"<span class="variable">$&#123;http_proxy&#125;</span>"</span>;</span><br><span class="line">Acquire::https::Proxy <span class="string">"<span class="variable">$&#123;http_proxy&#125;</span>"</span>;</span><br><span class="line">Acquire::ftp::Proxy <span class="string">"<span class="variable">$&#123;http_proxy&#125;</span>"</span>;</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">apt-get update</span><br><span class="line">apt-get -y --no-upgrade install python=<span class="variable">$&#123;py_version&#125;</span></span><br><span class="line"></span><br><span class="line">curl https://bootstrap.pypa.io/get-pip.py | python</span><br><span class="line">pip install -U pip</span><br><span class="line"></span><br><span class="line">rm -f /etc/apt/apt.conf.d/apt-temp.conf</span><br></pre></td></tr></table></figure>
-
-<p>如果代码是运行在防火墙后面，比如在公司的网络中，需要line 19 - line 26的代码配置apt代理。</p>
-</li>
-<li><p>terraform-ansible-inventory.yaml</p>
-<p>Ansible脚本，用来生成当前虚拟机的动态资源文件：</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">name:</span>  <span class="string">Create</span> <span class="string">temp</span> <span class="string">inventory</span> <span class="string">file</span></span><br><span class="line">  <span class="attr">hosts:</span> <span class="string">"<span class="template-variable">&#123;&#123; host | default('localhost') &#125;&#125;</span>"</span></span><br><span class="line">  <span class="attr">vars:</span></span><br><span class="line">    <span class="attr">host_name:</span> <span class="string">default-temp</span></span><br><span class="line">    <span class="attr">host_ip:</span> <span class="string">xxx.xxx.xxx.xxx</span></span><br><span class="line">    <span class="attr">host_user:</span> <span class="string">xxx</span></span><br><span class="line">    <span class="attr">host_password:</span> <span class="string">xxx</span></span><br><span class="line">  <span class="attr">tasks:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Create</span> <span class="string">temp</span> <span class="string">inventory</span> <span class="string">file</span></span><br><span class="line">      <span class="attr">template:</span> <span class="string">src=artifactory/hosts.temp.j2</span> <span class="string">dest=inventory/devops/&#123;&#123;host_name&#125;&#125;</span> <span class="string">mode=644</span></span><br><span class="line">      <span class="attr">delegate_to:</span> <span class="string">localhost</span></span><br></pre></td></tr></table></figure>
-
-<p>本地执行这个Ansible脚本从以下模板（hosts.temp.j2）实例化出Ansible的资源文件。</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&#123;&#123;host_name&#125;&#125;</span> <span class="string">ansible_host=&#123;&#123;host_ip&#125;&#125;</span> <span class="string">ansible_user=&#123;&#123;host_user&#125;&#125;</span> <span class="string">ansible_password=&#123;&#123;host_password&#125;&#125;</span> <span class="string">ansible_ssh_common_args='-o</span> <span class="string">StrictHostKeyChecking=no'</span></span><br><span class="line"></span><br><span class="line"><span class="string">[packer_node]</span></span><br><span class="line"><span class="string">&#123;&#123;host_name&#125;&#125;</span></span><br></pre></td></tr></table></figure>
+<p>(3) 将git-secret.zip拷贝到Windows系统某个目录下并解压，例如解压后的路径如下：</p>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">C:\<span class="title">Users</span>\<span class="title">Administrator</span>\<span class="title">Documents</span>\<span class="title">Tools</span>\<span class="title">git</span>-<span class="title">secret</span>\0.3.3</span></span><br></pre></td></tr></table></figure>
 
 <blockquote>
-<p>因为在动态资源文件中使用了用户名和密码的方式访问虚拟机。需要在Ansible控制机上安装sshpass。</p>
+<p>0.3.3是git-secret的版本，可能会有变化。</p>
+</blockquote>
+<p>(4) 将git-secret目录下的bin目录加到Windows的Path环境变量中</p>
+<div align="left">
+<img src="/2020/12/16/git-encrypt-file-in-repository/2.png">
+</div>
+
+<p>(5) 重新启动一个命令行控制台执行以下命令检查git secret命令可用</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret --version</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="使用git-secret"><a href="#使用git-secret" class="headerlink" title="使用git-secret"></a>使用git-secret</h2><h3 id="初次添加对git-secret支持"><a href="#初次添加对git-secret支持" class="headerlink" title="初次添加对git-secret支持"></a>初次添加对git-secret支持</h3><ul>
+<li><p>执行下面的命令创建GPG公钥和私钥</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:mikejianzhang@163.com" target="_blank" rel="noopener">mikejianzhang@163.com</a>。</p>
+</blockquote>
+</li>
+<li><p>导出GPG公钥和私钥</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gpg --armor --<span class="built_in">export</span> mikejianzhang@163.com &gt; mikejianzhang.public-key.gpg</span><br><span class="line">gpg --armor --<span class="built_in">export</span>-secret-key  mikejianzhang@163.com &gt; mikejianzhang.private-key.gpg</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>如果还有第二个开发电脑，则需要在电脑里安装Git和GnuPG，并执行下面命令导入自己的私钥：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpg --import mikejianzhang.private-key.gpg</span><br></pre></td></tr></table></figure>
+</blockquote>
+</li>
+<li><p>初始化一个新的Git仓库或者克隆一个已经存在的代码仓库</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir <span class="built_in">test</span>-git-secret</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-git-secret</span><br><span class="line">git init</span><br></pre></td></tr></table></figure>
+
+<p>或者</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/<span class="built_in">test</span>-git-secret.git</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>初始化Git仓库支持git-secret</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-git-secret</span><br><span class="line">git secret init</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>类似于.git目录，git secret init命令会在根目录下创建一个.gitsecret目录用来存储GPG公钥。</p>
+</blockquote>
+</li>
+<li><p>将自己的公钥导入进git secret的密钥串中（保存在.gitsecret目录）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret tell mikejianzhang@163.com</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>执行下面命令添加需要加密的文件</p>
+<p>执行命令之前，你得有一个包含敏感信息的文件，而且还没有提交到Git仓库中，例如test。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret add <span class="built_in">test</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>文件“test”会被加入到.gitignore文件中，这样Git命令就会忽略这个文件</p>
+</blockquote>
+</li>
+<li><p>执行下面命令加密所有通过git secret add添加的待加密文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>这个命令会产生一个加密文件，例如”test.secret”。</p>
+</blockquote>
+</li>
+<li><p>将所有本地文件和文件夹提交到Git仓库中</p>
+</li>
+</ul>
+<h3 id="编辑已加密后的文件"><a href="#编辑已加密后的文件" class="headerlink" title="编辑已加密后的文件"></a>编辑已加密后的文件</h3><ul>
+<li><p>克隆Git代码仓库</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/<span class="built_in">test</span>-git-secret.git</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>解密所有的加密文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>“-f”选项将解密后的文件强制覆盖本地的明文文件。</p>
+</blockquote>
+</li>
+<li><p>编辑本地的明文文件并执行下面命令重新加密</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>将所有的本地改动提交的Git仓库中</p>
+<blockquote>
+<p>当每次有改动时，可以通过下面命令检查是否有加密文件的改动，已决定是否需要执行git secret hide命令去重新加密</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret changes</span><br></pre></td></tr></table></figure>
 </blockquote>
 </li>
 </ul>
-<h2 id="iac目录"><a href="#iac目录" class="headerlink" title="iac目录"></a>iac目录</h2><p>这个目录用来存放Terraform配置文件。</p>
-<ul>
-<li><p>vsphere_virtual_machine_art1.tf</p>
-<p>Terraform配置文件，在vsphere中从某个虚拟机模板克隆创建一台新的虚拟机资源。</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">provider</span> <span class="string">"vsphere"</span> <span class="string">&#123;</span></span><br><span class="line">  <span class="string">vsphere_server</span> <span class="string">=</span> <span class="string">"xxx.xxx.xxx.xxx"</span></span><br><span class="line">  <span class="string">user</span>           <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">  <span class="string">password</span>       <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">  <span class="string">allow_unverified_ssl</span> <span class="string">=</span> <span class="literal">true</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="string">resource</span> <span class="string">"vsphere_virtual_machine"</span> <span class="string">"art1"</span> <span class="string">&#123;</span></span><br><span class="line">  <span class="string">...</span></span><br><span class="line"></span><br><span class="line">  <span class="string">clone</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">template_uuid</span> <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">    <span class="string">...</span></span><br><span class="line">  <span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"file"</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">source</span>      <span class="string">=</span> <span class="string">"../../ansible/configure-ansible-node.sh"</span></span><br><span class="line">    <span class="string">destination</span> <span class="string">=</span> <span class="string">"/tmp/configure-ansible-node.sh"</span></span><br><span class="line"></span><br><span class="line">    <span class="string">connection</span> <span class="string">&#123;</span></span><br><span class="line">      <span class="string">type</span>        <span class="string">=</span> <span class="string">"ssh"</span></span><br><span class="line">      <span class="string">user</span>        <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">password</span>    <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">agent</span>       <span class="string">=</span> <span class="literal">false</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">  <span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"remote-exec"</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">inline</span> <span class="string">=</span> <span class="string">["chmod</span> <span class="string">a+x</span> <span class="string">/tmp/configure-ansible-node.sh",</span></span><br><span class="line">              <span class="string">"/tmp/configure-ansible-node.sh"</span><span class="string">,</span></span><br><span class="line">              <span class="string">"rm -f /tmp/configure-ansible-node.sh"</span><span class="string">]</span></span><br><span class="line"></span><br><span class="line">    <span class="string">connection</span> <span class="string">&#123;</span></span><br><span class="line">      <span class="string">type</span>        <span class="string">=</span> <span class="string">"ssh"</span></span><br><span class="line">      <span class="string">user</span>        <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">password</span>    <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">agent</span>       <span class="string">=</span> <span class="literal">false</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">  <span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">command</span> <span class="string">=</span> <span class="string">"ansible-playbook -e host_name=default_art1 -e host_ip=$&#123;vsphere_virtual_machine.art1.default_ip_address&#125; terraform-ansible-inventory.yaml"</span><span class="string">,</span></span><br><span class="line">    <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">  <span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> <span class="string">&#123;</span></span><br><span class="line">    <span class="string">command</span> <span class="string">=</span> <span class="string">"ansible-playbook  -e host=default_art1 artifactory.yaml"</span><span class="string">,</span></span><br><span class="line">    <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">  <span class="string">&#125;</span></span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> <span class="string">&#123;</span></span><br><span class="line">      <span class="string">command</span> <span class="string">=</span> <span class="string">"rm -f inventory/devops/default_art1"</span><span class="string">,</span></span><br><span class="line">      <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">    <span class="string">&#125;</span></span><br><span class="line">  <span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+<h3 id="添加第二个用户"><a href="#添加第二个用户" class="headerlink" title="添加第二个用户"></a>添加第二个用户</h3><ul>
+<li><p>拿到第二个用户的公钥文件，例如user2.public-key.gpg, 并执行以下的操作将第二个用户的公钥导入git仓库的密钥串中<br>执行以下命令将用户的公钥导入gpg密钥串中：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpg --import user2.public-key.gpg</span><br></pre></td></tr></table></figure>
 
+<p>在当前代码仓库下执行以下命令将用户的公钥导入git仓库的密钥串中：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git tell &lt;user2&gt;@xxx.com</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>执行下面命令解密出所有最新的加密文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>用目前密钥串中的所有公钥（包含第二个用户的公钥）重新加密所有的文件并提交</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<p>当做完以上所有的操作后，第二个用户就可以执行git secret命令进行正常的加解密操作了。</p>
+<h1 id="git-secret的缺点"><a href="#git-secret的缺点" class="headerlink" title="git-secret的缺点"></a>git-secret的缺点</h1><ul>
+<li><p>无法在Web界面上浏览加密后的文件内容或做差异化比较，只有把代码仓库克隆到本地解密后才能浏览文件内容或作差异化比较。如果git-secret能够提供加密部分文件内容的功能，那么就比较完美了。例如，在一个配置文件里用正则表达式或Glob语法来定义需要加密的文本，git-secret的hide命令可以读取这个配置文件去加密文件内容而非整个文件。</p>
+</li>
+<li><p>操作变得复杂了，个人觉得这也不能算什么缺点，有得必有失，获得了高安全性，而在操作上就必定要花费一些代价，但这也是我们愿意花费这些代价去做这件事的。</p>
+</li>
+<li><p>用户还是需要一个安全的工具来妥善保存自己的私钥，开源和商业领域都有相关的工具选择，所以问题不是很大。</p>
+</li>
+</ul>
+<h1 id="git-secret对CI-CD流程的支持"><a href="#git-secret对CI-CD流程的支持" class="headerlink" title="git-secret对CI/CD流程的支持"></a>git-secret对CI/CD流程的支持</h1><p>申请一个服务账号（一般企业都会支持这样的操作）包含邮箱地址，利用这个邮箱地址创建一个GnuPG的公钥和私钥，将公钥导入Git仓库的密钥环中，将私钥导入所有的构建机器中，最后在CI/CD脚本中用git secret命令来解密所有加密文件再执行构建，测试和部署。</p>
+<h1 id="其它的同类工具"><a href="#其它的同类工具" class="headerlink" title="其它的同类工具"></a>其它的同类工具</h1><p>除了git-secret, 还有很多其它类似的工具可供选择，它们的原理基本上都是相似的。下面列出一些仅供参考。</p>
 <ul>
-<li><p>line16 - line26：利用Terraform的”file“provisioner上传安装Python的Shell脚本</p>
+<li><p><a href="https://www.agwa.name/projects/git-crypt/" target="_blank" rel="noopener">git-crypt</a><br>另一个和git-secret相似的方案是git-crypt，但是git-crypt是二进制可执行文件而不是shell脚本。</p>
 </li>
-<li><p>line28 - line39：利用Terraform的”remote-exec“provisioner执行安装Python的Shell脚本</p>
-</li>
-<li><p>line41 - line44：获取新生成的虚拟机IP地址，利用Terraform的”local-exec“provisioner本地执行“terraform-ansible-inventory.yaml”生成Ansible的动态资源文件</p>
-</li>
-<li><p>line46 - line49：利用Terraform的”local-exec“provisioner基于Ansible的动态资源文件执行Ansible脚本完成应用的部署和配置</p>
-</li>
-<li><p>line51 - line54：利用Terraform的”local-exec“provisioner执行Shell命令删除动态资源文件</p>
+<li><p><a href="https://github.com/StackExchange/blackbox" target="_blank" rel="noopener">BlackBox</a><br>BlackBox既支持Git也支持其它的版本管理系统，例如Mercurial和Subversion。BlackBox支持加密某个文本串而不是整个文件，这正好可以弥补git-secret只能加密整个文件的缺点。可以抽空做个深入研究看BlackBox是否支持git-secret其它的一些操作。</p>
 </li>
 </ul>
-</li>
-</ul>
-<h1 id="结束"><a href="#结束" class="headerlink" title="结束"></a>结束</h1><p>这个方法同样也适用于在公有云平台上创建虚拟机实例并调用Ansible脚本完成配置，但需要为虚拟机实例绑定一个动态的公网IP地址。</p>
 
       
     </div>
@@ -589,7 +707,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
     <strong>本文作者： </strong>云斋</li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="http://www.mikesay.com/2018/11/14/terraform-call-ansible/" title="【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源">http://www.mikesay.com/2018/11/14/terraform-call-ansible/</a>
+    <a href="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/" title="【原】Git随笔(3) Git加密存储文件">http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！</li>
@@ -602,13 +720,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       
         <div class="post-tags">
           
-            <a href="/tags/DevOps/" rel="tag"># DevOps</a>
-          
-            <a href="/tags/Infrastructure-As-Code/" rel="tag"># Infrastructure As Code</a>
-          
-            <a href="/tags/Terraform/" rel="tag"># Terraform</a>
-          
-            <a href="/tags/Ansible/" rel="tag"># Ansible</a>
+            <a href="/tags/Git/" rel="tag"># Git</a>
           
         </div>
       
@@ -621,8 +733,8 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2018/10/07/jenkins-freestyle-cicd-pipeline/" rel="next" title="【原】Jenkins随笔(1) 基于Jenkins Freestyle Job构建CI/CD流水线">
-                <i class="fa fa-chevron-left"></i> 【原】Jenkins随笔(1) 基于Jenkins Freestyle Job构建CI/CD流水线
+              <a href="/2020/09/26/git-clean-bad-data-from-history/" rel="next" title="【原】Git随笔(2) 从Git仓库中永久清理脏数据">
+                <i class="fa fa-chevron-left"></i> 【原】Git随笔(2) 从Git仓库中永久清理脏数据
               </a>
             
           </div>
@@ -630,10 +742,6 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2018/12/30/create-self-signed-ssl/" rel="prev" title="【原】创建自签名TLS/SSL证书和私钥">
-                【原】创建自签名TLS/SSL证书和私钥 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -803,7 +911,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Terraform架构简介"><span class="nav-number">1.</span> <span class="nav-text">Terraform架构简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#实现思路"><span class="nav-number">2.</span> <span class="nav-text">实现思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#具体实现"><span class="nav-number">3.</span> <span class="nav-text">具体实现</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#ansible目录"><span class="nav-number">3.1.</span> <span class="nav-text">ansible目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#iac目录"><span class="nav-number">3.2.</span> <span class="nav-text">iac目录</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#结束"><span class="nav-number">4.</span> <span class="nav-text">结束</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#私有仓库是否安全"><span class="nav-number">1.</span> <span class="nav-text">私有仓库是否安全</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#为什么还要将敏感信息放在Git代码仓库中"><span class="nav-number">2.</span> <span class="nav-text">为什么还要将敏感信息放在Git代码仓库中</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret的原理"><span class="nav-number">3.</span> <span class="nav-text">git-secret的原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret的安装和使用"><span class="nav-number">4.</span> <span class="nav-text">git-secret的安装和使用</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装GnuPG"><span class="nav-number">4.1.</span> <span class="nav-text">安装GnuPG</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装git-secret"><span class="nav-number">4.2.</span> <span class="nav-text">安装git-secret</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用git-secret"><span class="nav-number">4.3.</span> <span class="nav-text">使用git-secret</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#初次添加对git-secret支持"><span class="nav-number">4.3.1.</span> <span class="nav-text">初次添加对git-secret支持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#编辑已加密后的文件"><span class="nav-number">4.3.2.</span> <span class="nav-text">编辑已加密后的文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#添加第二个用户"><span class="nav-number">4.3.3.</span> <span class="nav-text">添加第二个用户</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret的缺点"><span class="nav-number">5.</span> <span class="nav-text">git-secret的缺点</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret对CI-CD流程的支持"><span class="nav-number">6.</span> <span class="nav-text">git-secret对CI/CD流程的支持</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#其它的同类工具"><span class="nav-number">7.</span> <span class="nav-text">其它的同类工具</span></a></li></ol></div>
             
 
           </div>
