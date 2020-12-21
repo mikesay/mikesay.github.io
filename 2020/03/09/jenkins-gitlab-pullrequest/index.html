@@ -1,489 +1,216 @@
+
+
 <!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
 
 
 
-
-
-
-
-
-
-
-
-
-  
-
-
-<html class="theme-next mist use-motion" lang="zh-Hans">
 <head><meta name="generator" content="Hexo 3.9.0">
   <meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
-<meta name="theme-color" content="#222">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content>
+  <meta name="author" content="云斋">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python">
+  <title>【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request) - 云斋随笔</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
 
 
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css">
+  <link rel="stylesheet" href="/lib/hint/hint.min.css">
 
   
+    
+    
+      
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/github-gist.min.css">
+    
   
-  <link rel="stylesheet" href="/lib/needsharebutton/needsharebutton.css">
-
-
-
-
-
-
-
-
-
-
-<meta http-equiv="Cache-Control" content="no-transform">
-<meta http-equiv="Cache-Control" content="no-siteapp">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   
-  
-  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
-
-
-
-
-
-
-
-<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
-
-<link href="/css/main.css?v=6.4.0" rel="stylesheet" type="text/css">
-
-
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.4.0">
-
-
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.4.0">
-
-
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.4.0">
-
-
-  <link rel="mask-icon" href="/images/logo.svg?v=6.4.0" color="#222">
-
-
-
-
-
-
-
-
-
-<script type="text/javascript" id="hexo.configurations">
-  var NexT = window.NexT || {};
-  var CONFIG = {
-    root: '/',
-    scheme: 'Mist',
-    version: '6.4.0',
-    sidebar: {"position":"left","display":"hide","offset":12,"b2t":false,"scrollpercent":true,"onmobile":true},
-    fancybox: true,
-    fastclick: false,
-    lazyload: false,
-    tabs: true,
-    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
-    algolia: {
-      applicationID: '',
-      apiKey: '',
-      indexName: '',
-      hits: {"per_page":10},
-      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
-    }
-  };
-</script>
-
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css">
   
 
 
 
+<!-- 主题依赖的图标库，不要自行修改 -->
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
 
-  <meta name="description" content="写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事">
-<meta name="keywords" content="DevOps,CI&#x2F;CD,Git,Jenkins,GitLab">
-<meta property="og:type" content="article">
-<meta property="og:title" content="【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)">
-<meta property="og:url" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/index.html">
-<meta property="og:site_name" content="云斋随笔">
-<meta property="og:description" content="写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事">
-<meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/1.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/3.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/2.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/4.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/5.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/6.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/7.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/8.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/11.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/12.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/13.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/14.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/9.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/10.png">
-<meta property="og:updated_time" content="2020-06-07T08:37:06.452Z">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)">
-<meta name="twitter:description" content="写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事">
-<meta name="twitter:image" content="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/1.png">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<!-- 自定义样式保持在最底部 -->
 
 
-
-
-
-
-  <link rel="canonical" href="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/">
-
-
-
-<script type="text/javascript" id="page.configurations">
-  CONFIG.page = {
-    sidebar: "",
-  };
-</script>
-
-  <title>【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request) | 云斋随笔</title>
-  
-
-
-
-
-
-
-  <script type="text/javascript">
-    var _hmt = _hmt || [];
-    (function() {
-      var hm = document.createElement("script");
-      hm.src = "https://hm.baidu.com/hm.js?b06d874859326a2c3b8d3e497afbb0ad";
-      var s = document.getElementsByTagName("script")[0];
-      s.parentNode.insertBefore(hm, s);
-    })();
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.mikesay.com","root":"/","version":"1.8.6","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"copy_btn":true,"image_zoom":{"enable":true},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
   </script>
-
-
-
-
-  <noscript>
-  <style type="text/css">
-    .use-motion .motion-element,
-    .use-motion .brand,
-    .use-motion .menu-item,
-    .sidebar-inner,
-    .use-motion .post-block,
-    .use-motion .pagination,
-    .use-motion .comments,
-    .use-motion .post-header,
-    .use-motion .post-body,
-    .use-motion .collection-title { opacity: initial; }
-
-    .use-motion .logo,
-    .use-motion .site-title,
-    .use-motion .site-subtitle {
-      opacity: initial;
-      top: initial;
-    }
-
-    .use-motion {
-      .logo-line-before i { left: initial; }
-      .logo-line-after i { right: initial; }
-    }
-  </style>
-</noscript>
-
+  <script src="/js/utils.js"></script>
+  <script src="/js/color-schema.js"></script>
 </head>
 
-<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
 
-  
-  
-    
-  
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>云斋随笔</strong>&nbsp;</a>
 
-  <div class="container sidebar-position-left page-post-detail">
-    <div class="headband"></div>
-
-    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
-      <div class="header-inner"><div class="site-brand-wrapper">
-  <div class="site-meta ">
-    
-
-    <div class="custom-logo-site-title">
-      <a href="/" class="brand" rel="start">
-        <span class="logo-line-before"><i></i></span>
-        <span class="site-title">云斋随笔</span>
-        <span class="logo-line-after"><i></i></span>
-      </a>
-    </div>
-    
-      
-        <p class="site-subtitle">云间一小斋，</p>
-      
-    
-  </div>
-
-  <div class="site-nav-toggle">
-    <button aria-label="切换导航栏">
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
     </button>
-  </div>
-</div>
 
-
-
-<nav class="site-nav">
-  
-    <ul id="menu" class="menu">
-      
-        
-        
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
         
           
-          <li class="menu-item menu-item-home">
-    <a href="/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
-  </li>
-        
-        
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
         
           
-          <li class="menu-item menu-item-about">
-    <a href="/about/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
-  </li>
-        
-        
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
         
           
-          <li class="menu-item menu-item-tags">
-    <a href="/tags/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
-  </li>
-        
-        
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
         
           
-          <li class="menu-item menu-item-archives">
-    <a href="/archives/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
-  </li>
-
-      
-      
-        <li class="menu-item menu-item-search">
           
-            <a href="javascript:;" class="popup-trigger">
           
-            
-              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>搜索</a>
-        </li>
-      
-    </ul>
-  
-
-  
-    
-
-  
-
-  
-    <div class="site-search">
-      
-  <div class="popup search-popup local-search-popup">
-  <div class="local-search-header clearfix">
-    <span class="search-icon">
-      <i class="fa fa-search"></i>
-    </span>
-    <span class="popup-btn-close">
-      <i class="fa fa-times-circle"></i>
-    </span>
-    <div class="local-search-input-wrapper">
-      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
     </div>
   </div>
-  <div id="local-search-result"></div>
-</div>
-
-
-
-    </div>
-  
 </nav>
 
+    <div class="banner intro-2" id="background" parallax=true
+         style="background: url('/img/book.jpeg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)">
+              
+            </span>
 
-
+            
+              <div class="mt-3">
   
-
-
-
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-03-09 18:00" pubdate>
+        2020年3月9日 晚上
+      </time>
+    </span>
+  
 </div>
-    </header>
 
+<div class="mt-1">
+  
     
-
-
-    <main id="main" class="main">
-      <div class="main-inner">
-        <div class="content-wrap">
-          
-          <div id="content" class="content">
-            
-
-  <div id="posts" class="posts-expand">
-    
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="云斋">
-      <meta itemprop="description" content>
-      <meta itemprop="image" content="/uploads/avatar.png">
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      1.5k 字
     </span>
+  
 
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="云斋随笔">
-    </span>
-
+  
     
-      <header class="post-header">
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      18
+       分钟
+    </span>
+  
 
-        
-        
-          <h1 class="post-title" itemprop="name headline">【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-
-            
-            
-            
+  
+  
+</div>
 
             
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2020-03-09 18:00:00" itemprop="dateCreated datePublished" datetime="2020-03-09T18:00:00+08:00">2020-03-09</time>
-            
-
-            
-              
-
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2020-06-07 16:37:06" itemprop="dateModified" datetime="2020-06-07T16:37:06+08:00">2020-06-07</time>
-              
-            
-          </span>
+          </div>
 
           
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-            <div class="post-symbolscount">
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-file-word-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">本文字数：</span>
-                
-                <span title="本文字数">7.1k</span>
-              
-
-              
-                <span class="post-meta-divider">|</span>
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-clock-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">阅读时长 &asymp;</span>
-                
-                <span title="阅读时长">6 分钟</span>
-              
-            </div>
-          
-
-          
-
         </div>
-      </header>
-    
+      </div>
+    </div>
+  </header>
 
+  <main>
     
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
       
 
-      
-        <p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
+<div class="container-fluid">
+  <div class="row">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-md">
+      <div class="container nopadding-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)</h1>
+            
+            <div class="markdown-body">
+              <p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
 <a id="more"></a>
 
 <p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html" target="_blank" rel="noopener">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/" target="_blank" rel="noopener">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/" target="_blank" rel="noopener">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
@@ -532,7 +259,7 @@
 <li><p>点击”Save”按钮保存配置</p>
 </li>
 </ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line">pipeline &#123;</span><br><span class="line">    agent &#123;</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    &#125;</span><br><span class="line">    triggers &#123;</span><br><span class="line">        gitlab(</span><br><span class="line"><span class="symbol">            triggerOnPush:</span> <span class="literal">false</span>,</span><br><span class="line"><span class="symbol">            triggerOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            triggerOpenMergeRequestOnPush:</span> <span class="string">"source"</span>,</span><br><span class="line"><span class="symbol">            triggerOnNoteRequest:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            noteRegex:</span> <span class="string">".*\\[run\\W+ci\\].*"</span>,</span><br><span class="line"><span class="symbol">            skipWorkInProgressMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            ciSkip:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            setBuildDescription:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            addNoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            addCiMessage:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            addVoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line"><span class="symbol">            acceptMergeRequestOnSuccess:</span> <span class="literal">false</span>,</span><br><span class="line"><span class="symbol">            branchFilterType:</span> <span class="string">"NameBasedFilter"</span>,</span><br><span class="line"><span class="symbol">            includeBranchesSpec:</span> <span class="string">"master"</span>,</span><br><span class="line"><span class="symbol">            excludeBranchesSpec:</span> <span class="string">""</span></span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">    environment &#123;</span><br><span class="line">        GITLAB_URL = <span class="string">"http://mygitlab.philips.com"</span></span><br><span class="line">        GITLAB_ORG = <span class="string">"mikesay"</span></span><br><span class="line">        GITLAB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    &#125;</span><br><span class="line">    options &#123;</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">        gitLabConnection <span class="string">'mygitlab'</span></span><br><span class="line">    &#125;</span><br><span class="line">    stages &#123;</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                script&#123;</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="string">$class:</span> <span class="string">'GitSCM'</span>, <span class="string">branches:</span> [[<span class="string">name:</span> <span class="string">"origin/mr/$&#123;gitlabMergeRequestId&#125;/head"</span>]], </span><br><span class="line"><span class="symbol">                                        doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line"><span class="symbol">                                        submoduleCfg:</span> [], </span><br><span class="line"><span class="symbol">                                        extensions:</span> [</span><br><span class="line">                                            [<span class="string">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="string">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="string">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line"><span class="symbol">                                        userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line"><span class="symbol">                                                    credentialsId:</span> <span class="string">'gitlab_account'</span>, </span><br><span class="line"><span class="symbol">                                                    name:</span> <span class="string">'origin'</span>, </span><br><span class="line"><span class="symbol">                                                    refspec:</span> <span class="string">'+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*'</span>, </span><br><span class="line"><span class="symbol">                                                    url:</span> <span class="string">"$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"$&#123;scmVars.GIT_BRANCH&#125;"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"$&#123;scmVars.GIT_COMMIT&#125;"</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        stage(<span class="string">'Build'</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                dir(<span class="string">'codes'</span>) &#123;</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    post &#123;</span><br><span class="line">      failure &#123;</span><br><span class="line">        updateGitlabCommitStatus <span class="string">name:</span> <span class="string">'build'</span>, <span class="string">state:</span> <span class="string">'failed'</span></span><br><span class="line">      &#125;</span><br><span class="line">      success &#123;</span><br><span class="line">        updateGitlabCommitStatus <span class="string">name:</span> <span class="string">'build'</span>, <span class="string">state:</span> <span class="string">'success'</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">'common'</span><br>    &#125;<br>    triggers &#123;<br>        gitlab(<br><span class="hljs-symbol">            triggerOnPush:</span> <span class="hljs-literal">false</span>,<br><span class="hljs-symbol">            triggerOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            triggerOpenMergeRequestOnPush:</span> <span class="hljs-string">"source"</span>,<br><span class="hljs-symbol">            triggerOnNoteRequest:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            noteRegex:</span> <span class="hljs-string">".*\\[run\\W+ci\\].*"</span>,<br><span class="hljs-symbol">            skipWorkInProgressMergeRequest:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            ciSkip:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            setBuildDescription:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            addNoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            addCiMessage:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            addVoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br><span class="hljs-symbol">            acceptMergeRequestOnSuccess:</span> <span class="hljs-literal">false</span>,<br><span class="hljs-symbol">            branchFilterType:</span> <span class="hljs-string">"NameBasedFilter"</span>,<br><span class="hljs-symbol">            includeBranchesSpec:</span> <span class="hljs-string">"master"</span>,<br><span class="hljs-symbol">            excludeBranchesSpec:</span> <span class="hljs-string">""</span><br>        )<br>    &#125;<br>    environment &#123;<br>        GITLAB_URL = <span class="hljs-string">"http://mygitlab.philips.com"</span><br>        GITLAB_ORG = <span class="hljs-string">"mikesay"</span><br>        GITLAB_REPO = <span class="hljs-string">"mikesay-test-1"</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">'xterm'</span>)<br>        gitLabConnection <span class="hljs-string">'mygitlab'</span><br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">'Checkout'</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-string">$class:</span> <span class="hljs-string">'GitSCM'</span>, <span class="hljs-string">branches:</span> [[<span class="hljs-string">name:</span> <span class="hljs-string">"origin/mr/$&#123;gitlabMergeRequestId&#125;/head"</span>]], <br><span class="hljs-symbol">                                        doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br><span class="hljs-symbol">                                        submoduleCfg:</span> [], <br><span class="hljs-symbol">                                        extensions:</span> [<br>                                            [<span class="hljs-string">$class:</span> <span class="hljs-string">'RelativeTargetDirectory'</span>, <span class="hljs-string">relativeTargetDir:</span> <span class="hljs-string">'codes'</span>],<br>                                            [<span class="hljs-string">$class:</span> <span class="hljs-string">'CleanBeforeCheckout'</span>]<br>                                        ],<br><span class="hljs-symbol">                                        userRemoteConfigs:</span> [<br>                                                [<br><span class="hljs-symbol">                                                    credentialsId:</span> <span class="hljs-string">'gitlab_account'</span>, <br><span class="hljs-symbol">                                                    name:</span> <span class="hljs-string">'origin'</span>, <br><span class="hljs-symbol">                                                    refspec:</span> <span class="hljs-string">'+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*'</span>, <br><span class="hljs-symbol">                                                    url:</span> <span class="hljs-string">"$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git"</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">"$&#123;scmVars.GIT_BRANCH&#125;"</span><br>                    env.GIT_COMMIT = <span class="hljs-string">"$&#123;scmVars.GIT_COMMIT&#125;"</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">'Build'</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">'codes'</span>) &#123;<br>                    sh <span class="hljs-string">'''#!/bin/bash -l<br>                        echo "Start building!"<br>                    '''</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>    post &#123;<br>      failure &#123;<br>        updateGitlabCommitStatus <span class="hljs-string">name:</span> <span class="hljs-string">'build'</span>, <span class="hljs-string">state:</span> <span class="hljs-string">'failed'</span><br>      &#125;<br>      success &#123;<br>        updateGitlabCommitStatus <span class="hljs-string">name:</span> <span class="hljs-string">'build'</span>, <span class="hljs-string">state:</span> <span class="hljs-string">'success'</span><br>      &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
 
 <ol>
 <li>6行-22行设置GitLab触发器，主要设置如下：</li>
@@ -571,15 +298,15 @@
 </tbody></table>
 <ol start="2">
 <li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
- <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">refspec:</span> <span class="string">'+refs/merge-requests/*:refs/remotes/origin/mr/*'</span></span><br></pre></td></tr></table></figure>
+ <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs groovy"><span class="hljs-string">refspec:</span> <span class="hljs-string">'+refs/merge-requests/*:refs/remotes/origin/mr/*'</span><br></code></pre></td></tr></table></figure>
 </li>
 <li><p>39行: branches选择”origin/mr/${gitlabMergeRequestId}/head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
- <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[<span class="string">$class:</span> <span class="string">'GitSCM'</span>, <span class="string">branches:</span> [[<span class="string">name:</span> <span class="string">"origin/mr/$&#123;gitlabMergeRequestId&#125;/head"</span>]]</span><br></pre></td></tr></table></figure>
+ <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs groovy">[<span class="hljs-string">$class:</span> <span class="hljs-string">'GitSCM'</span>, <span class="hljs-string">branches:</span> [[<span class="hljs-string">name:</span> <span class="hljs-string">"origin/mr/$&#123;gitlabMergeRequestId&#125;/head"</span>]]<br></code></pre></td></tr></table></figure>
 
 </li>
 </ol>
 <p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
-<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">gitlabBranch</span><br><span class="line">gitlabSourceBranch</span><br><span class="line">gitlabActionType</span><br><span class="line">gitlabUserName</span><br><span class="line">gitlabUserUsername</span><br><span class="line">gitlabUserEmail</span><br><span class="line">gitlabSourceRepoHomepage</span><br><span class="line">gitlabSourceRepoName</span><br><span class="line">gitlabSourceNamespace</span><br><span class="line">gitlabSourceRepoURL</span><br><span class="line">gitlabSourceRepoSshUrl</span><br><span class="line">gitlabSourceRepoHttpUrl</span><br><span class="line">gitlabMergeRequestTitle</span><br><span class="line">gitlabMergeRequestDescription</span><br><span class="line">gitlabMergeRequestId</span><br><span class="line">gitlabMergeRequestIid</span><br><span class="line">gitlabMergeRequestState</span><br><span class="line">gitlabMergedByUser</span><br><span class="line">gitlabMergeRequestAssignee</span><br><span class="line">gitlabMergeRequestLastCommit</span><br><span class="line">gitlabMergeRequestTargetProjectId</span><br><span class="line">gitlabTargetBranch</span><br><span class="line">gitlabTargetRepoName</span><br><span class="line">gitlabTargetNamespace</span><br><span class="line">gitlabTargetRepoSshUrl</span><br><span class="line">gitlabTargetRepoHttpUrl</span><br><span class="line">gitlabBefore</span><br><span class="line">gitlabAfter</span><br><span class="line">gitlabTriggerPhrase</span><br></pre></td></tr></table></figure>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs groovy">gitlabBranch<br>gitlabSourceBranch<br>gitlabActionType<br>gitlabUserName<br>gitlabUserUsername<br>gitlabUserEmail<br>gitlabSourceRepoHomepage<br>gitlabSourceRepoName<br>gitlabSourceNamespace<br>gitlabSourceRepoURL<br>gitlabSourceRepoSshUrl<br>gitlabSourceRepoHttpUrl<br>gitlabMergeRequestTitle<br>gitlabMergeRequestDescription<br>gitlabMergeRequestId<br>gitlabMergeRequestIid<br>gitlabMergeRequestState<br>gitlabMergedByUser<br>gitlabMergeRequestAssignee<br>gitlabMergeRequestLastCommit<br>gitlabMergeRequestTargetProjectId<br>gitlabTargetBranch<br>gitlabTargetRepoName<br>gitlabTargetNamespace<br>gitlabTargetRepoSshUrl<br>gitlabTargetRepoHttpUrl<br>gitlabBefore<br>gitlabAfter<br>gitlabTriggerPhrase<br></code></pre></td></tr></table></figure>
 
 <h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
 <li><p>点击”New Item”</p>
@@ -647,852 +374,247 @@
 </ol>
 <p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
 
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-      <div>
-        <div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
-    <img id="wechat_subscriber_qcode" src="/uploads/wechat.png" alt="云斋 wechat" style="width: 200px; max-width: 100%;">
-    <div>欢迎订阅我的微信公众号</div>
-</div>
-
-      </div>
-    
-
-    
-      <div>
-        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
-  <div>坚持原创技术分享，您的支持将鼓励我继续创作!</div>
-  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
-    <span>打赏</span>
-  </button>
-  <div id="QR" style="display: none;">
-
-    
-      <div id="wechat" style="display: inline-block">
-        <img id="wechat_qr" src="/images/wechatpay.png" alt="云斋 微信支付">
-        <p>微信支付</p>
-      </div>
-    
-
-    
-      <div id="alipay" style="display: inline-block">
-        <img id="alipay_qr" src="/images/alipay.png" alt="云斋 支付宝">
-        <p>支付宝</p>
-      </div>
-    
-
-    
-
-  </div>
-</div>
-
-      </div>
-    
-
-    
-      <div>
-        <ul class="post-copyright">
-  <li class="post-copyright-author">
-    <strong>本文作者： </strong>云斋</li>
-  <li class="post-copyright-link">
-    <strong>本文链接：</strong>
-    <a href="http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/" title="【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)">http://www.mikesay.com/2020/03/09/jenkins-gitlab-pullrequest/</a>
-  </li>
-  <li class="post-copyright-license">
-    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！</li>
-</ul>
-
-      </div>
-    
-
-    <footer class="post-footer">
-      
-        <div class="post-tags">
-          
-            <a href="/tags/DevOps/" rel="tag"># DevOps</a>
-          
-            <a href="/tags/CI-CD/" rel="tag"># CI/CD</a>
-          
-            <a href="/tags/Git/" rel="tag"># Git</a>
-          
-            <a href="/tags/Jenkins/" rel="tag"># Jenkins</a>
-          
-            <a href="/tags/GitLab/" rel="tag"># GitLab</a>
-          
-        </div>
-      
-
-      
-      
-      
-
-      
-        <div class="post-nav">
-          <div class="post-nav-next post-nav-item">
-            
-              <a href="/2020/02/23/jenkins-bibucket-pullrequest/" rel="next" title="【原】Jenkins随笔(4) Jenkins构建Bitbucket合并请求(Pull Request)">
-                <i class="fa fa-chevron-left"></i> 【原】Jenkins随笔(4) Jenkins构建Bitbucket合并请求(Pull Request)
-              </a>
-            
-          </div>
-
-          <span class="post-nav-divider"></span>
-
-          <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2020/09/26/git-clean-bad-data-from-history/" rel="prev" title="【原】Git随笔(2) 从Git仓库中永久清理脏数据">
-                【原】Git随笔(2) 从Git仓库中永久清理脏数据 <i class="fa fa-chevron-right"></i>
-              </a>
-            
-          </div>
-        </div>
-      
-
-      
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-  </div>
-
-
-          </div>
-          
-
-  
-    <div id="gitalk-container"></div>
-
-  
-
-
-
-        </div>
-        
-          
-  
-  <div class="sidebar-toggle">
-    <div class="sidebar-toggle-line-wrap">
-      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
-    </div>
-  </div>
-
-  <aside id="sidebar" class="sidebar">
-    
-      <div id="sidebar-dimmer"></div>
-    
-    <div class="sidebar-inner">
-
-      
-
-      
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
-            站点概览
-          </li>
-        </ul>
-      
-
-      <section class="site-overview-wrap sidebar-panel">
-        <div class="site-overview">
-          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
-            
-              <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="云斋">
-            
-              <p class="site-author-name" itemprop="name">云斋</p>
-              <p class="site-description motion-element" itemprop="description"></p>
-          </div>
-
-          
-            <nav class="site-state motion-element">
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/DevOps/">DevOps</a>
+                    
+                      <a class="hover-with-bg" href="/tags/CI-CD/">CI/CD</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Git/">Git</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Jenkins/">Jenkins</a>
+                    
+                      <a class="hover-with-bg" href="/tags/GitLab/">GitLab</a>
+                    
+                  </div>
+                
+              </div>
               
-                <div class="site-state-item site-state-posts">
-                
-                  <a href="/archives/">
-                
-                    <span class="site-state-item-count">15</span>
-                    <span class="site-state-item-name">日志</span>
-                  </a>
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2020/09/26/git-clean-bad-data-from-history/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">【原】Git随笔(2) 从Git仓库中永久清理脏数据</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2020/02/23/jenkins-bibucket-pullrequest/">
+                        <span class="hidden-mobile">【原】Jenkins随笔(4) Jenkins构建Bitbucket合并请求(Pull Request)</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
                 </div>
               
+            </div>
 
-              
-
-              
-                
-                
-                <div class="site-state-item site-state-tags">
-                  <a href="/tags/index.html">
-                    
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                    <span class="site-state-item-count">21</span>
-                    <span class="site-state-item-name">标签</span>
-                  </a>
-                </div>
-              
-            </nav>
-          
-
-          
-
-          
-
-          
-          
-
-          
-          
-
-          
             
-          
-          
-
+          </article>
         </div>
-      </section>
-
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
-
-            
-              
-            
-
-            
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#配置Jenkins"><span class="nav-number">1.</span> <span class="nav-text">配置Jenkins</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><span class="nav-number">1.1.</span> <span class="nav-text">安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建Gitlab-Personal-Access-Token"><span class="nav-number">1.2.</span> <span class="nav-text">创建Gitlab Personal Access Token</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置Jenkins-Gitlab插件"><span class="nav-number">1.3.</span> <span class="nav-text">配置Jenkins Gitlab插件</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><span class="nav-number">2.</span> <span class="nav-text">创建Jenkins pipeline job用来构建合并请求(Merge Request)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Jenkinsfile"><span class="nav-number">2.1.</span> <span class="nav-text">Jenkinsfile</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建Jenkins-job引用Jenkinsfile"><span class="nav-number">2.2.</span> <span class="nav-text">创建Jenkins job引用Jenkinsfile</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#配置Gitlab"><span class="nav-number">3.</span> <span class="nav-text">配置Gitlab</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#创建Jenkins-API-token"><span class="nav-number">3.1.</span> <span class="nav-text">创建Jenkins API token</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建Gitlab-Web-hook"><span class="nav-number">3.2.</span> <span class="nav-text">创建Gitlab Web hook</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#创建合并请求-merge-request-触发构建"><span class="nav-number">4.</span> <span class="nav-text">创建合并请求(merge request)触发构建</span></a></li></ol></div>
-            
-
-          </div>
-        </section>
-      <!--/noindex-->
-      
-
-      
-
-    </div>
-  </aside>
-
-
-        
       </div>
-    </main>
-
-    <footer id="footer" class="footer">
-      <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
-  <span class="with-love" id="animate">
-    <i class="fa fa-user"></i>
-  </span>
-  <span class="author" itemprop="copyrightHolder">云斋</span>
-
-  
-    <span class="post-meta-divider">|</span>
-    <span class="post-meta-item-icon">
-      <i class="fa fa-area-chart"></i>
-    </span>
+    </div>
     
-      <span class="post-meta-item-text">站点总字数：</span>
-    
-    <span title="站点总字数">81k</span>
-  
-
-  
-    <span class="post-meta-divider">|</span>
-    <span class="post-meta-item-icon">
-      <i class="fa fa-coffee"></i>
-    </span>
-    
-      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
-    
-    <span title="站点阅读时长">1:14</span>
-  
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
 </div>
 
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-        
-      </div>
-    </footer>
-
-    
-      <div class="back-to-top">
-        <i class="fa fa-arrow-up"></i>
-        
-          <span id="scrollpercent"><span>0</span>%</span>
-        
       </div>
     
+  </div>
+</div>
+
+<!-- Custom -->
+
 
     
-      <div id="needsharebutton-float">
-        <span class="btn">
-          <i class="fa fa-share-alt" aria-hidden="true"></i>
-        </span>
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
-    
-	
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
     
 
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
     
   </div>
 
-  
-
-<script type="text/javascript">
-  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
-    window.Promise = null;
-  }
-</script>
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
-  
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/utils.js?v=6.4.0"></script>
-
-  <script type="text/javascript" src="/js/src/motion.js?v=6.4.0"></script>
-
-
-
-  
-  
-
-  
-  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.4.0"></script>
-<script type="text/javascript" src="/js/src/post-details.js?v=6.4.0"></script>
-
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.4.0"></script>
-
-
-
-  
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-    <link rel="stylesheet" href="/lib/gitalk/gitalk.css">
-    <script src="/lib/gitalk/gitalk.min.js"></script>
-    <script type="text/javascript">
-        var gitalk = new Gitalk({
-            clientID: '73c77dac9516bad51840',
-            clientSecret: '63db12daea1638df9bfb8c249ef62e331b37156a',
-            repo: 'mikesay.comments',
-            owner: 'mikejianzhang',
-            admin: ['mikejianzhang'],
-            id: location.pathname,
-            distractionFreeMode: 'true'
-        })
-        gitalk.render('gitalk-container')           
-    </script>
-
-
-  
-
-  <script type="text/javascript">
-    // Popup Window;
-    var isfetched = false;
-    var isXml = true;
-    // Search DB path;
-    var search_path = "search.xml";
-    if (search_path.length === 0) {
-      search_path = "search.xml";
-    } else if (/json$/i.test(search_path)) {
-      isXml = false;
-    }
-    var path = "/" + search_path;
-    // monitor main search box;
-
-    var onPopupClose = function (e) {
-      $('.popup').hide();
-      $('#local-search-input').val('');
-      $('.search-result-list').remove();
-      $('#no-result').remove();
-      $(".local-search-pop-overlay").remove();
-      $('body').css('overflow', '');
-    }
-
-    function proceedsearch() {
-      $("body")
-        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
-        .css('overflow', 'hidden');
-      $('.search-popup-overlay').click(onPopupClose);
-      $('.popup').toggle();
-      var $localSearchInput = $('#local-search-input');
-      $localSearchInput.attr("autocapitalize", "none");
-      $localSearchInput.attr("autocorrect", "off");
-      $localSearchInput.focus();
-    }
-
-    // search function;
-    var searchFunc = function(path, search_id, content_id) {
-      'use strict';
-
-      // start loading animation
-      $("body")
-        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
-          '<div id="search-loading-icon">' +
-          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
-          '</div>' +
-          '</div>')
-        .css('overflow', 'hidden');
-      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
-
-      
-
-      $.ajax({
-        url: path,
-        dataType: isXml ? "xml" : "json",
-        async: true,
-        success: function(res) {
-          // get the contents from search data
-          isfetched = true;
-          $('.popup').detach().appendTo('.header-inner');
-          var datas = isXml ? $("entry", res).map(function() {
-            return {
-              title: $("title", this).text(),
-              content: $("content",this).text(),
-              url: $("url" , this).text()
-            };
-          }).get() : res;
-          var input = document.getElementById(search_id);
-          var resultContent = document.getElementById(content_id);
-          var inputEventFunction = function() {
-            var searchText = input.value.trim().toLowerCase();
-            var keywords = searchText.split(/[\s\-]+/);
-            if (keywords.length > 1) {
-              keywords.push(searchText);
-            }
-            var resultItems = [];
-            if (searchText.length > 0) {
-              // perform local searching
-              datas.forEach(function(data) {
-                var isMatch = false;
-                var hitCount = 0;
-                var searchTextCount = 0;
-                var title = data.title.trim();
-                var titleInLowerCase = title.toLowerCase();
-                var content = data.content.trim().replace(/<[^>]+>/g,"");
-                
-                var contentInLowerCase = content.toLowerCase();
-                var articleUrl = decodeURIComponent(data.url);
-                var indexOfTitle = [];
-                var indexOfContent = [];
-                // only match articles with not empty titles
-                if(title != '') {
-                  keywords.forEach(function(keyword) {
-                    function getIndexByWord(word, text, caseSensitive) {
-                      var wordLen = word.length;
-                      if (wordLen === 0) {
-                        return [];
-                      }
-                      var startPosition = 0, position = [], index = [];
-                      if (!caseSensitive) {
-                        text = text.toLowerCase();
-                        word = word.toLowerCase();
-                      }
-                      while ((position = text.indexOf(word, startPosition)) > -1) {
-                        index.push({position: position, word: word});
-                        startPosition = position + wordLen;
-                      }
-                      return index;
-                    }
-
-                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
-                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
-                  });
-                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
-                    isMatch = true;
-                    hitCount = indexOfTitle.length + indexOfContent.length;
-                  }
-                }
-
-                // show search results
-
-                if (isMatch) {
-                  // sort index by position of keyword
-
-                  [indexOfTitle, indexOfContent].forEach(function (index) {
-                    index.sort(function (itemLeft, itemRight) {
-                      if (itemRight.position !== itemLeft.position) {
-                        return itemRight.position - itemLeft.position;
-                      } else {
-                        return itemLeft.word.length - itemRight.word.length;
-                      }
-                    });
-                  });
-
-                  // merge hits into slices
-
-                  function mergeIntoSlice(text, start, end, index) {
-                    var item = index[index.length - 1];
-                    var position = item.position;
-                    var word = item.word;
-                    var hits = [];
-                    var searchTextCountInSlice = 0;
-                    while (position + word.length <= end && index.length != 0) {
-                      if (word === searchText) {
-                        searchTextCountInSlice++;
-                      }
-                      hits.push({position: position, length: word.length});
-                      var wordEnd = position + word.length;
-
-                      // move to next position of hit
-
-                      index.pop();
-                      while (index.length != 0) {
-                        item = index[index.length - 1];
-                        position = item.position;
-                        word = item.word;
-                        if (wordEnd > position) {
-                          index.pop();
-                        } else {
-                          break;
-                        }
-                      }
-                    }
-                    searchTextCount += searchTextCountInSlice;
-                    return {
-                      hits: hits,
-                      start: start,
-                      end: end,
-                      searchTextCount: searchTextCountInSlice
-                    };
-                  }
-
-                  var slicesOfTitle = [];
-                  if (indexOfTitle.length != 0) {
-                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
-                  }
-
-                  var slicesOfContent = [];
-                  while (indexOfContent.length != 0) {
-                    var item = indexOfContent[indexOfContent.length - 1];
-                    var position = item.position;
-                    var word = item.word;
-                    // cut out 100 characters
-                    var start = position - 20;
-                    var end = position + 80;
-                    if(start < 0){
-                      start = 0;
-                    }
-                    if (end < position + word.length) {
-                      end = position + word.length;
-                    }
-                    if(end > content.length){
-                      end = content.length;
-                    }
-                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
-                  }
-
-                  // sort slices in content by search text's count and hits' count
-
-                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
-                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
-                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
-                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
-                      return sliceRight.hits.length - sliceLeft.hits.length;
-                    } else {
-                      return sliceLeft.start - sliceRight.start;
-                    }
-                  });
-
-                  // select top N slices in content
-
-                  var upperBound = parseInt('1');
-                  if (upperBound >= 0) {
-                    slicesOfContent = slicesOfContent.slice(0, upperBound);
-                  }
-
-                  // highlight title and content
-
-                  function highlightKeyword(text, slice) {
-                    var result = '';
-                    var prevEnd = slice.start;
-                    slice.hits.forEach(function (hit) {
-                      result += text.substring(prevEnd, hit.position);
-                      var end = hit.position + hit.length;
-                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
-                      prevEnd = end;
-                    });
-                    result += text.substring(prevEnd, slice.end);
-                    return result;
-                  }
-
-                  var resultItem = '';
-
-                  if (slicesOfTitle.length != 0) {
-                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
-                  } else {
-                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
-                  }
-
-                  slicesOfContent.forEach(function (slice) {
-                    resultItem += "<a href='" + articleUrl + "'>" +
-                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
-                      "...</p>" + "</a>";
-                  });
-
-                  resultItem += "</li>";
-                  resultItems.push({
-                    item: resultItem,
-                    searchTextCount: searchTextCount,
-                    hitCount: hitCount,
-                    id: resultItems.length
-                  });
-                }
-              })
-            };
-            if (keywords.length === 1 && keywords[0] === "") {
-              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
-            } else if (resultItems.length === 0) {
-              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
-            } else {
-              resultItems.sort(function (resultLeft, resultRight) {
-                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
-                  return resultRight.searchTextCount - resultLeft.searchTextCount;
-                } else if (resultLeft.hitCount !== resultRight.hitCount) {
-                  return resultRight.hitCount - resultLeft.hitCount;
-                } else {
-                  return resultRight.id - resultLeft.id;
-                }
-              });
-              var searchResultList = '<ul class=\"search-result-list\">';
-              resultItems.forEach(function (result) {
-                searchResultList += result.item;
-              })
-              searchResultList += "</ul>";
-              resultContent.innerHTML = searchResultList;
-            }
-          }
-
-          if ('auto' === 'auto') {
-            input.addEventListener('input', inputEventFunction);
-          } else {
-            $('.search-icon').click(inputEventFunction);
-            input.addEventListener('keypress', function (event) {
-              if (event.keyCode === 13) {
-                inputEventFunction();
-              }
-            });
-          }
-
-          // remove loading animation
-          $(".local-search-pop-overlay").remove();
-          $('body').css('overflow', '');
-
-          proceedsearch();
-        }
-      });
-    }
-
-    // handle and trigger popup window;
-    $('.popup-trigger').click(function(e) {
-      e.stopPropagation();
-      if (isfetched === false) {
-        searchFunc(path, 'local-search-input', 'local-search-result');
-      } else {
-        proceedsearch();
-      };
-    });
-
-    $('.popup-btn-close').click(onPopupClose);
-    $('.popup').click(function(e){
-      e.stopPropagation();
-    });
-    $(document).on('keyup', function (event) {
-      var shouldDismissSearchPopup = event.which === 27 &&
-        $('.search-popup').is(':visible');
-      if (shouldDismissSearchPopup) {
-        onPopupClose();
-      }
-    });
-  </script>
-
-
-
-
 
   
 
   
+</footer>
 
-  
+<!-- SCRIPTS -->
 
-  
-
-  
-  
-  
-  <script src="/lib/needsharebutton/needsharebutton.js"></script>
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
 
   <script>
-    
-    
-      flOptions = {};
-      
-          flOptions.iconStyle = "default";
-      
-          flOptions.boxForm = "vertical";
-      
-          flOptions.position = "middleRight";
-      
-          flOptions.networks = "Weibo,Wechat,Douban,QQZone,Twitter,Facebook";
-      
-      new needShareButton('#needsharebutton-float', flOptions);
-    
+    NProgress.configure({"showSpinner":false,"trickleSpeed":200})
+    NProgress.start()
+    document.addEventListener('DOMContentLoaded', function() {
+      window.NProgress && window.NProgress.inc();
+    })
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
   </script>
 
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
   
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
 
   
 
-  
 
-  
 
-  
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
 
-  
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
 
 </body>
 </html>

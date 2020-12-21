@@ -1,477 +1,216 @@
+
+
 <!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
 
 
 
-
-
-
-
-
-
-
-
-
-  
-
-
-<html class="theme-next mist use-motion" lang="zh-Hans">
 <head><meta name="generator" content="Hexo 3.9.0">
   <meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
-<meta name="theme-color" content="#222">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content>
+  <meta name="author" content="云斋">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python">
+  <title>【原】Git随笔(3) Git加密存储文件 - 云斋随笔</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
 
 
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css">
+  <link rel="stylesheet" href="/lib/hint/hint.min.css">
 
   
+    
+    
+      
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/github-gist.min.css">
+    
   
-  <link rel="stylesheet" href="/lib/needsharebutton/needsharebutton.css">
-
-
-
-
-
-
-
-
-
-
-<meta http-equiv="Cache-Control" content="no-transform">
-<meta http-equiv="Cache-Control" content="no-siteapp">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   
-  
-  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
-
-
-
-
-
-
-
-<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
-
-<link href="/css/main.css?v=6.4.0" rel="stylesheet" type="text/css">
-
-
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.4.0">
-
-
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.4.0">
-
-
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.4.0">
-
-
-  <link rel="mask-icon" href="/images/logo.svg?v=6.4.0" color="#222">
-
-
-
-
-
-
-
-
-
-<script type="text/javascript" id="hexo.configurations">
-  var NexT = window.NexT || {};
-  var CONFIG = {
-    root: '/',
-    scheme: 'Mist',
-    version: '6.4.0',
-    sidebar: {"position":"left","display":"hide","offset":12,"b2t":false,"scrollpercent":true,"onmobile":true},
-    fancybox: true,
-    fastclick: false,
-    lazyload: false,
-    tabs: true,
-    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
-    algolia: {
-      applicationID: '',
-      apiKey: '',
-      indexName: '',
-      hits: {"per_page":10},
-      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
-    }
-  };
-</script>
-
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css">
   
 
 
 
+<!-- 主题依赖的图标库，不要自行修改 -->
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
 
-  <meta name="description" content="不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用git-secret将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。">
-<meta name="keywords" content="Git">
-<meta property="og:type" content="article">
-<meta property="og:title" content="【原】Git随笔(3) Git加密存储文件">
-<meta property="og:url" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/index.html">
-<meta property="og:site_name" content="云斋随笔">
-<meta property="og:description" content="不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用git-secret将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。">
-<meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/1.png">
-<meta property="og:image" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/2.png">
-<meta property="og:updated_time" content="2020-12-20T17:20:52.091Z">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【原】Git随笔(3) Git加密存储文件">
-<meta name="twitter:description" content="不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用git-secret将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。">
-<meta name="twitter:image" content="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/1.png">
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<!-- 自定义样式保持在最底部 -->
 
 
-
-
-
-
-  <link rel="canonical" href="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/">
-
-
-
-<script type="text/javascript" id="page.configurations">
-  CONFIG.page = {
-    sidebar: "",
-  };
-</script>
-
-  <title>【原】Git随笔(3) Git加密存储文件 | 云斋随笔</title>
-  
-
-
-
-
-
-
-  <script type="text/javascript">
-    var _hmt = _hmt || [];
-    (function() {
-      var hm = document.createElement("script");
-      hm.src = "https://hm.baidu.com/hm.js?b06d874859326a2c3b8d3e497afbb0ad";
-      var s = document.getElementsByTagName("script")[0];
-      s.parentNode.insertBefore(hm, s);
-    })();
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.mikesay.com","root":"/","version":"1.8.6","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"copy_btn":true,"image_zoom":{"enable":true},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
   </script>
-
-
-
-
-  <noscript>
-  <style type="text/css">
-    .use-motion .motion-element,
-    .use-motion .brand,
-    .use-motion .menu-item,
-    .sidebar-inner,
-    .use-motion .post-block,
-    .use-motion .pagination,
-    .use-motion .comments,
-    .use-motion .post-header,
-    .use-motion .post-body,
-    .use-motion .collection-title { opacity: initial; }
-
-    .use-motion .logo,
-    .use-motion .site-title,
-    .use-motion .site-subtitle {
-      opacity: initial;
-      top: initial;
-    }
-
-    .use-motion {
-      .logo-line-before i { left: initial; }
-      .logo-line-after i { right: initial; }
-    }
-  </style>
-</noscript>
-
+  <script src="/js/utils.js"></script>
+  <script src="/js/color-schema.js"></script>
 </head>
 
-<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
 
-  
-  
-    
-  
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>云斋随笔</strong>&nbsp;</a>
 
-  <div class="container sidebar-position-left page-post-detail">
-    <div class="headband"></div>
-
-    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
-      <div class="header-inner"><div class="site-brand-wrapper">
-  <div class="site-meta ">
-    
-
-    <div class="custom-logo-site-title">
-      <a href="/" class="brand" rel="start">
-        <span class="logo-line-before"><i></i></span>
-        <span class="site-title">云斋随笔</span>
-        <span class="logo-line-after"><i></i></span>
-      </a>
-    </div>
-    
-      
-        <p class="site-subtitle">云间一小斋，</p>
-      
-    
-  </div>
-
-  <div class="site-nav-toggle">
-    <button aria-label="切换导航栏">
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
-      <span class="btn-bar"></span>
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
     </button>
-  </div>
-</div>
 
-
-
-<nav class="site-nav">
-  
-    <ul id="menu" class="menu">
-      
-        
-        
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
         
           
-          <li class="menu-item menu-item-home">
-    <a href="/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
-  </li>
-        
-        
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
         
           
-          <li class="menu-item menu-item-about">
-    <a href="/about/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
-  </li>
-        
-        
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
         
           
-          <li class="menu-item menu-item-tags">
-    <a href="/tags/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
-  </li>
-        
-        
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
         
           
-          <li class="menu-item menu-item-archives">
-    <a href="/archives/" rel="section">
-      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
-  </li>
-
-      
-      
-        <li class="menu-item menu-item-search">
           
-            <a href="javascript:;" class="popup-trigger">
           
-            
-              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>搜索</a>
-        </li>
-      
-    </ul>
-  
-
-  
-    
-
-  
-
-  
-    <div class="site-search">
-      
-  <div class="popup search-popup local-search-popup">
-  <div class="local-search-header clearfix">
-    <span class="search-icon">
-      <i class="fa fa-search"></i>
-    </span>
-    <span class="popup-btn-close">
-      <i class="fa fa-times-circle"></i>
-    </span>
-    <div class="local-search-input-wrapper">
-      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
     </div>
   </div>
-  <div id="local-search-result"></div>
-</div>
-
-
-
-    </div>
-  
 </nav>
 
+    <div class="banner intro-2" id="background" parallax=true
+         style="background: url('/img/book.jpeg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="【原】Git随笔(3) Git加密存储文件">
+              
+            </span>
 
-
+            
+              <div class="mt-3">
   
-
-
-
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-12-16 08:50" pubdate>
+        2020年12月16日 早上
+      </time>
+    </span>
+  
 </div>
-    </header>
 
+<div class="mt-1">
+  
     
-
-
-    <main id="main" class="main">
-      <div class="main-inner">
-        <div class="content-wrap">
-          
-          <div id="content" class="content">
-            
-
-  <div id="posts" class="posts-expand">
-    
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="云斋">
-      <meta itemprop="description" content>
-      <meta itemprop="image" content="/uploads/avatar.png">
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.9k 字
     </span>
+  
 
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="云斋随笔">
-    </span>
-
+  
     
-      <header class="post-header">
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      32
+       分钟
+    </span>
+  
 
-        
-        
-          <h1 class="post-title" itemprop="name headline">【原】Git随笔(3) Git加密存储文件
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-
-            
-            
-            
+  
+  
+</div>
 
             
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2020-12-16 08:50:00" itemprop="dateCreated datePublished" datetime="2020-12-16T08:50:00+08:00">2020-12-16</time>
-            
-
-            
-              
-
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2020-12-21 01:20:52" itemprop="dateModified" datetime="2020-12-21T01:20:52+08:00">2020-12-21</time>
-              
-            
-          </span>
+          </div>
 
           
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-            <div class="post-symbolscount">
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-file-word-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">本文字数：</span>
-                
-                <span title="本文字数">5.3k</span>
-              
-
-              
-                <span class="post-meta-divider">|</span>
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-clock-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">阅读时长 &asymp;</span>
-                
-                <span title="阅读时长">5 分钟</span>
-              
-            </div>
-          
-
-          
-
         </div>
-      </header>
-    
+      </div>
+    </div>
+  </header>
 
+  <main>
     
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
       
 
-      
-        <p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/" target="_blank" rel="noopener">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
+<div class="container-fluid">
+  <div class="row">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-md">
+      <div class="container nopadding-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">【原】Git随笔(3) Git加密存储文件</h1>
+            
+            <div class="markdown-body">
+              <p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/" target="_blank" rel="noopener">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
 <a id="more"></a>
 
 <h1 id="私有仓库是否安全"><a href="#私有仓库是否安全" class="headerlink" title="私有仓库是否安全"></a>私有仓库是否安全</h1><p>也许有人会说：”我把代码仓库设成私有的不就安全了？“，然而情况并非如此，因为即使私有仓库也会面临着不同类型的风险。当你集成某个第三方的服务到你的私有仓库时，比如集成第三方的持续集成服务，你的私有仓库就开放给了第三方服务，这些第三方服务就能够读取你存储在代码仓库中的敏感信息。如果第三方服务遭受了黑客攻击，那么可以通过这个第三方服务获取你的Git仓库中的敏感信息。</p>
@@ -490,7 +229,7 @@
 <ul>
 <li><p>Mac OSX中的安装</p>
 <p>目前最新版本的GnuPG是2.2.25。可以从<a href="https://sourceforge.net/p/gpgosx/docu/Download/" target="_blank" rel="noopener">https://sourceforge.net/p/gpgosx/docu/Download/</a> 下载dmg文件并安装，也可以通过下面的brew命令安装：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brew install gpg2</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">brew install gpg2<br></code></pre></td></tr></table></figure>
 
 <p>推荐使用brew的安装方式，以后可以方便升级。</p>
 </li>
@@ -500,10 +239,10 @@
 <li><p>Linux中的安装</p>
 <p>大部分Linux系统已经自带GnuPG了，所以不需要额外安装，只是有可能不是最新版本的，但是不影响使用。如果GnuPG不存在，也可以通过以下的命令来安装：</p>
 <p>Debian或Ubuntu</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install gnupg</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo apt-get install gnupg<br></code></pre></td></tr></table></figure>
 
 <p>RedHat或CentOS</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo yum install gnupg</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo yum install gnupg<br></code></pre></td></tr></table></figure>
 
 </li>
 </ul>
@@ -511,14 +250,14 @@
 <ul>
 <li><p>Mac OSX中的安装</p>
 <p>通过brew安装：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">brew install git-secret</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">brew install git-secret<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>Linux中的安装</p>
 <p>Ubuntu或者Debian</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">"deb https://dl.bintray.com/sobolevn/deb git-secret main"</span> | sudo tee -a /etc/apt/sources.list</span><br><span class="line">wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | sudo apt-key add -</span><br><span class="line">sudo apt-get update &amp;&amp; sudo apt-get install git-secret</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">echo</span> <span class="hljs-string">"deb https://dl.bintray.com/sobolevn/deb git-secret main"</span> | sudo tee -a /etc/apt/sources.list<br>wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | sudo apt-key add -<br>sudo apt-get update &amp;&amp; sudo apt-get install git-secret<br></code></pre></td></tr></table></figure>
 
 <p>RedHat或者CentOS:</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wget https://bintray.com/sobolevn/rpm/rpm -O bintray-sobolevn-rpm.repo</span><br><span class="line">sudo mv bintray-sobolevn-rpm.repo /etc/yum.repos.d/</span><br><span class="line">sudo yum install git-secret</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">wget https://bintray.com/sobolevn/rpm/rpm -O bintray-sobolevn-rpm.repo<br>sudo mv bintray-sobolevn-rpm.repo /etc/yum.repos.d/<br>sudo yum install git-secret<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>Windows中的安装</p>
 <p>git-secret官方并没有宣称支持Windows系统，但是从源代码来看已经支持CYGWIN或MINGW环境了。经过试验，以下方法可用：</p>
@@ -528,10 +267,10 @@
 </div>
 
 <p>(2) 将Mac OS X下通过brew安装的git secret打包</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">zip -r -9 git-secret.zip /usr/<span class="built_in">local</span>/Cellar/git-secret/</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">zip -r -9 git-secret.zip /usr/<span class="hljs-built_in">local</span>/Cellar/git-secret/<br></code></pre></td></tr></table></figure>
 
 <p>(3) 将git-secret.zip拷贝到Windows系统某个目录下并解压，例如解压后的路径如下：</p>
-<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">C:\<span class="title">Users</span>\<span class="title">Administrator</span>\<span class="title">Documents</span>\<span class="title">Tools</span>\<span class="title">git</span>-<span class="title">secret</span>\0.3.3</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bat"><span class="hljs-function">C:\<span class="hljs-title">Users</span>\<span class="hljs-title">Administrator</span>\<span class="hljs-title">Documents</span>\<span class="hljs-title">Tools</span>\<span class="hljs-title">git</span>-<span class="hljs-title">secret</span>\0.3.3</span><br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <p>0.3.3是git-secret的版本，可能会有变化。</p>
@@ -542,52 +281,52 @@
 </div>
 
 <p>(5) 重新启动一个命令行控制台执行以下命令检查git secret命令可用</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret --version</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret --version<br></code></pre></td></tr></table></figure>
 
 </li>
 </ul>
 <h2 id="使用git-secret"><a href="#使用git-secret" class="headerlink" title="使用git-secret"></a>使用git-secret</h2><h3 id="初次添加对git-secret支持"><a href="#初次添加对git-secret支持" class="headerlink" title="初次添加对git-secret支持"></a>初次添加对git-secret支持</h3><ul>
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:mikejianzhang@163.com" target="_blank" rel="noopener">mikejianzhang@163.com</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gpg --armor --<span class="built_in">export</span> mikejianzhang@163.com &gt; mikejianzhang.public-key.gpg</span><br><span class="line">gpg --armor --<span class="built_in">export</span>-secret-key  mikejianzhang@163.com &gt; mikejianzhang.private-key.gpg</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">gpg --armor --<span class="hljs-built_in">export</span> mikejianzhang@163.com &gt; mikejianzhang.public-key.gpg<br>gpg --armor --<span class="hljs-built_in">export</span>-secret-key  mikejianzhang@163.com &gt; mikejianzhang.private-key.gpg<br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <p>如果还有第二个开发电脑，则需要在电脑里安装Git和GnuPG，并执行下面命令导入自己的私钥：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpg --import mikejianzhang.private-key.gpg</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">gpg --import mikejianzhang.private-key.gpg<br></code></pre></td></tr></table></figure>
 </blockquote>
 </li>
 <li><p>初始化一个新的Git仓库或者克隆一个已经存在的代码仓库</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir <span class="built_in">test</span>-git-secret</span><br><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-git-secret</span><br><span class="line">git init</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">mkdir <span class="hljs-built_in">test</span>-git-secret<br><span class="hljs-built_in">cd</span> <span class="hljs-built_in">test</span>-git-secret<br>git init<br></code></pre></td></tr></table></figure>
 
 <p>或者</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/<span class="built_in">test</span>-git-secret.git</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git <span class="hljs-built_in">clone</span> https://github.com/mikejianzhang/<span class="hljs-built_in">test</span>-git-secret.git<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>初始化Git仓库支持git-secret</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> <span class="built_in">test</span>-git-secret</span><br><span class="line">git secret init</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">cd</span> <span class="hljs-built_in">test</span>-git-secret<br>git secret init<br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <p>类似于.git目录，git secret init命令会在根目录下创建一个.gitsecret目录用来存储GPG公钥。</p>
 </blockquote>
 </li>
 <li><p>将自己的公钥导入进git secret的密钥串中（保存在.gitsecret目录）</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret tell mikejianzhang@163.com</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret tell mikejianzhang@163.com<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>执行下面命令添加需要加密的文件</p>
 <p>执行命令之前，你得有一个包含敏感信息的文件，而且还没有提交到Git仓库中，例如test。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret add <span class="built_in">test</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret add <span class="hljs-built_in">test</span><br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <p>文件“test”会被加入到.gitignore文件中，这样Git命令就会忽略这个文件</p>
 </blockquote>
 </li>
 <li><p>执行下面命令加密所有通过git secret add添加的待加密文件</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret hide<br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <p>这个命令会产生一个加密文件，例如”test.secret”。</p>
@@ -598,37 +337,37 @@
 </ul>
 <h3 id="编辑已加密后的文件"><a href="#编辑已加密后的文件" class="headerlink" title="编辑已加密后的文件"></a>编辑已加密后的文件</h3><ul>
 <li><p>克隆Git代码仓库</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/<span class="built_in">test</span>-git-secret.git</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git <span class="hljs-built_in">clone</span> https://github.com/mikejianzhang/<span class="hljs-built_in">test</span>-git-secret.git<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>解密所有的加密文件</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret reveal -f<br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <p>“-f”选项将解密后的文件强制覆盖本地的明文文件。</p>
 </blockquote>
 </li>
 <li><p>编辑本地的明文文件并执行下面命令重新加密</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret hide<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>将所有的本地改动提交的Git仓库中</p>
 <blockquote>
 <p>当每次有改动时，可以通过下面命令检查是否有加密文件的改动，已决定是否需要执行git secret hide命令去重新加密</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret changes</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret changes<br></code></pre></td></tr></table></figure>
 </blockquote>
 </li>
 </ul>
 <h3 id="添加第二个用户"><a href="#添加第二个用户" class="headerlink" title="添加第二个用户"></a>添加第二个用户</h3><ul>
 <li><p>拿到第二个用户的公钥文件，例如user2.public-key.gpg, 并执行以下的操作将第二个用户的公钥导入git仓库的密钥串中<br>执行以下命令将用户的公钥导入gpg密钥串中：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpg --import user2.public-key.gpg</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">gpg --import user2.public-key.gpg<br></code></pre></td></tr></table></figure>
 
 <p>在当前代码仓库下执行以下命令将用户的公钥导入git仓库的密钥串中：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git tell &lt;user2&gt;@xxx.com</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git tell &lt;user2&gt;@xxx.com<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>执行下面命令解密出所有最新的加密文件</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret reveal -f<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>用目前密钥串中的所有公钥（包含第二个用户的公钥）重新加密所有的文件并提交</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">git secret hide<br></code></pre></td></tr></table></figure>
 
 </li>
 </ul>
@@ -650,840 +389,233 @@
 </li>
 </ul>
 
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-      <div>
-        <div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
-    <img id="wechat_subscriber_qcode" src="/uploads/wechat.png" alt="云斋 wechat" style="width: 200px; max-width: 100%;">
-    <div>欢迎订阅我的微信公众号</div>
-</div>
-
-      </div>
-    
-
-    
-      <div>
-        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
-  <div>坚持原创技术分享，您的支持将鼓励我继续创作!</div>
-  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
-    <span>打赏</span>
-  </button>
-  <div id="QR" style="display: none;">
-
-    
-      <div id="wechat" style="display: inline-block">
-        <img id="wechat_qr" src="/images/wechatpay.png" alt="云斋 微信支付">
-        <p>微信支付</p>
-      </div>
-    
-
-    
-      <div id="alipay" style="display: inline-block">
-        <img id="alipay_qr" src="/images/alipay.png" alt="云斋 支付宝">
-        <p>支付宝</p>
-      </div>
-    
-
-    
-
-  </div>
-</div>
-
-      </div>
-    
-
-    
-      <div>
-        <ul class="post-copyright">
-  <li class="post-copyright-author">
-    <strong>本文作者： </strong>云斋</li>
-  <li class="post-copyright-link">
-    <strong>本文链接：</strong>
-    <a href="http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/" title="【原】Git随笔(3) Git加密存储文件">http://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/</a>
-  </li>
-  <li class="post-copyright-license">
-    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！</li>
-</ul>
-
-      </div>
-    
-
-    <footer class="post-footer">
-      
-        <div class="post-tags">
-          
-            <a href="/tags/Git/" rel="tag"># Git</a>
-          
-        </div>
-      
-
-      
-      
-      
-
-      
-        <div class="post-nav">
-          <div class="post-nav-next post-nav-item">
-            
-              <a href="/2020/09/26/git-clean-bad-data-from-history/" rel="next" title="【原】Git随笔(2) 从Git仓库中永久清理脏数据">
-                <i class="fa fa-chevron-left"></i> 【原】Git随笔(2) 从Git仓库中永久清理脏数据
-              </a>
-            
-          </div>
-
-          <span class="post-nav-divider"></span>
-
-          <div class="post-nav-prev post-nav-item">
-            
-          </div>
-        </div>
-      
-
-      
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-  </div>
-
-
-          </div>
-          
-
-  
-    <div id="gitalk-container"></div>
-
-  
-
-
-
-        </div>
-        
-          
-  
-  <div class="sidebar-toggle">
-    <div class="sidebar-toggle-line-wrap">
-      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
-      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
-    </div>
-  </div>
-
-  <aside id="sidebar" class="sidebar">
-    
-      <div id="sidebar-dimmer"></div>
-    
-    <div class="sidebar-inner">
-
-      
-
-      
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
-            站点概览
-          </li>
-        </ul>
-      
-
-      <section class="site-overview-wrap sidebar-panel">
-        <div class="site-overview">
-          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
-            
-              <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="云斋">
-            
-              <p class="site-author-name" itemprop="name">云斋</p>
-              <p class="site-description motion-element" itemprop="description"></p>
-          </div>
-
-          
-            <nav class="site-state motion-element">
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Git/">Git</a>
+                    
+                  </div>
+                
+              </div>
               
-                <div class="site-state-item site-state-posts">
-                
-                  <a href="/archives/">
-                
-                    <span class="site-state-item-count">15</span>
-                    <span class="site-state-item-name">日志</span>
-                  </a>
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2020/09/26/git-clean-bad-data-from-history/">
+                        <span class="hidden-mobile">【原】Git随笔(2) 从Git仓库中永久清理脏数据</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
                 </div>
               
+            </div>
 
-              
-
-              
-                
-                
-                <div class="site-state-item site-state-tags">
-                  <a href="/tags/index.html">
-                    
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                    <span class="site-state-item-count">21</span>
-                    <span class="site-state-item-name">标签</span>
-                  </a>
-                </div>
-              
-            </nav>
-          
-
-          
-
-          
-
-          
-          
-
-          
-          
-
-          
             
-          
-          
-
+          </article>
         </div>
-      </section>
-
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
-
-            
-              
-            
-
-            
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#私有仓库是否安全"><span class="nav-number">1.</span> <span class="nav-text">私有仓库是否安全</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#为什么还要将敏感信息放在Git代码仓库中"><span class="nav-number">2.</span> <span class="nav-text">为什么还要将敏感信息放在Git代码仓库中</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret的原理"><span class="nav-number">3.</span> <span class="nav-text">git-secret的原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret的安装和使用"><span class="nav-number">4.</span> <span class="nav-text">git-secret的安装和使用</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装GnuPG"><span class="nav-number">4.1.</span> <span class="nav-text">安装GnuPG</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装git-secret"><span class="nav-number">4.2.</span> <span class="nav-text">安装git-secret</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用git-secret"><span class="nav-number">4.3.</span> <span class="nav-text">使用git-secret</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#初次添加对git-secret支持"><span class="nav-number">4.3.1.</span> <span class="nav-text">初次添加对git-secret支持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#编辑已加密后的文件"><span class="nav-number">4.3.2.</span> <span class="nav-text">编辑已加密后的文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#添加第二个用户"><span class="nav-number">4.3.3.</span> <span class="nav-text">添加第二个用户</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret的缺点"><span class="nav-number">5.</span> <span class="nav-text">git-secret的缺点</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#git-secret对CI-CD流程的支持"><span class="nav-number">6.</span> <span class="nav-text">git-secret对CI/CD流程的支持</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#其它的同类工具"><span class="nav-number">7.</span> <span class="nav-text">其它的同类工具</span></a></li></ol></div>
-            
-
-          </div>
-        </section>
-      <!--/noindex-->
-      
-
-      
-
-    </div>
-  </aside>
-
-
-        
       </div>
-    </main>
-
-    <footer id="footer" class="footer">
-      <div class="footer-inner">
-        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
-  <span class="with-love" id="animate">
-    <i class="fa fa-user"></i>
-  </span>
-  <span class="author" itemprop="copyrightHolder">云斋</span>
-
-  
-    <span class="post-meta-divider">|</span>
-    <span class="post-meta-item-icon">
-      <i class="fa fa-area-chart"></i>
-    </span>
+    </div>
     
-      <span class="post-meta-item-text">站点总字数：</span>
-    
-    <span title="站点总字数">81k</span>
-  
-
-  
-    <span class="post-meta-divider">|</span>
-    <span class="post-meta-item-icon">
-      <i class="fa fa-coffee"></i>
-    </span>
-    
-      <span class="post-meta-item-text">站点阅读时长 &asymp;</span>
-    
-    <span title="站点阅读时长">1:14</span>
-  
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
 </div>
 
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-        
-      </div>
-    </footer>
-
-    
-      <div class="back-to-top">
-        <i class="fa fa-arrow-up"></i>
-        
-          <span id="scrollpercent"><span>0</span>%</span>
-        
       </div>
     
+  </div>
+</div>
+
+<!-- Custom -->
+
 
     
-      <div id="needsharebutton-float">
-        <span class="btn">
-          <i class="fa fa-share-alt" aria-hidden="true"></i>
-        </span>
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
-    
-	
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
     
 
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
     
   </div>
 
-  
-
-<script type="text/javascript">
-  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
-    window.Promise = null;
-  }
-</script>
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
-  
-
-  
-  
-    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
-  
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/utils.js?v=6.4.0"></script>
-
-  <script type="text/javascript" src="/js/src/motion.js?v=6.4.0"></script>
-
-
-
-  
-  
-
-  
-  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.4.0"></script>
-<script type="text/javascript" src="/js/src/post-details.js?v=6.4.0"></script>
-
-
-
-  
-
-
-  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.4.0"></script>
-
-
-
-  
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-    <link rel="stylesheet" href="/lib/gitalk/gitalk.css">
-    <script src="/lib/gitalk/gitalk.min.js"></script>
-    <script type="text/javascript">
-        var gitalk = new Gitalk({
-            clientID: '73c77dac9516bad51840',
-            clientSecret: '63db12daea1638df9bfb8c249ef62e331b37156a',
-            repo: 'mikesay.comments',
-            owner: 'mikejianzhang',
-            admin: ['mikejianzhang'],
-            id: location.pathname,
-            distractionFreeMode: 'true'
-        })
-        gitalk.render('gitalk-container')           
-    </script>
-
-
-  
-
-  <script type="text/javascript">
-    // Popup Window;
-    var isfetched = false;
-    var isXml = true;
-    // Search DB path;
-    var search_path = "search.xml";
-    if (search_path.length === 0) {
-      search_path = "search.xml";
-    } else if (/json$/i.test(search_path)) {
-      isXml = false;
-    }
-    var path = "/" + search_path;
-    // monitor main search box;
-
-    var onPopupClose = function (e) {
-      $('.popup').hide();
-      $('#local-search-input').val('');
-      $('.search-result-list').remove();
-      $('#no-result').remove();
-      $(".local-search-pop-overlay").remove();
-      $('body').css('overflow', '');
-    }
-
-    function proceedsearch() {
-      $("body")
-        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
-        .css('overflow', 'hidden');
-      $('.search-popup-overlay').click(onPopupClose);
-      $('.popup').toggle();
-      var $localSearchInput = $('#local-search-input');
-      $localSearchInput.attr("autocapitalize", "none");
-      $localSearchInput.attr("autocorrect", "off");
-      $localSearchInput.focus();
-    }
-
-    // search function;
-    var searchFunc = function(path, search_id, content_id) {
-      'use strict';
-
-      // start loading animation
-      $("body")
-        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
-          '<div id="search-loading-icon">' +
-          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
-          '</div>' +
-          '</div>')
-        .css('overflow', 'hidden');
-      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
-
-      
-
-      $.ajax({
-        url: path,
-        dataType: isXml ? "xml" : "json",
-        async: true,
-        success: function(res) {
-          // get the contents from search data
-          isfetched = true;
-          $('.popup').detach().appendTo('.header-inner');
-          var datas = isXml ? $("entry", res).map(function() {
-            return {
-              title: $("title", this).text(),
-              content: $("content",this).text(),
-              url: $("url" , this).text()
-            };
-          }).get() : res;
-          var input = document.getElementById(search_id);
-          var resultContent = document.getElementById(content_id);
-          var inputEventFunction = function() {
-            var searchText = input.value.trim().toLowerCase();
-            var keywords = searchText.split(/[\s\-]+/);
-            if (keywords.length > 1) {
-              keywords.push(searchText);
-            }
-            var resultItems = [];
-            if (searchText.length > 0) {
-              // perform local searching
-              datas.forEach(function(data) {
-                var isMatch = false;
-                var hitCount = 0;
-                var searchTextCount = 0;
-                var title = data.title.trim();
-                var titleInLowerCase = title.toLowerCase();
-                var content = data.content.trim().replace(/<[^>]+>/g,"");
-                
-                var contentInLowerCase = content.toLowerCase();
-                var articleUrl = decodeURIComponent(data.url);
-                var indexOfTitle = [];
-                var indexOfContent = [];
-                // only match articles with not empty titles
-                if(title != '') {
-                  keywords.forEach(function(keyword) {
-                    function getIndexByWord(word, text, caseSensitive) {
-                      var wordLen = word.length;
-                      if (wordLen === 0) {
-                        return [];
-                      }
-                      var startPosition = 0, position = [], index = [];
-                      if (!caseSensitive) {
-                        text = text.toLowerCase();
-                        word = word.toLowerCase();
-                      }
-                      while ((position = text.indexOf(word, startPosition)) > -1) {
-                        index.push({position: position, word: word});
-                        startPosition = position + wordLen;
-                      }
-                      return index;
-                    }
-
-                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
-                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
-                  });
-                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
-                    isMatch = true;
-                    hitCount = indexOfTitle.length + indexOfContent.length;
-                  }
-                }
-
-                // show search results
-
-                if (isMatch) {
-                  // sort index by position of keyword
-
-                  [indexOfTitle, indexOfContent].forEach(function (index) {
-                    index.sort(function (itemLeft, itemRight) {
-                      if (itemRight.position !== itemLeft.position) {
-                        return itemRight.position - itemLeft.position;
-                      } else {
-                        return itemLeft.word.length - itemRight.word.length;
-                      }
-                    });
-                  });
-
-                  // merge hits into slices
-
-                  function mergeIntoSlice(text, start, end, index) {
-                    var item = index[index.length - 1];
-                    var position = item.position;
-                    var word = item.word;
-                    var hits = [];
-                    var searchTextCountInSlice = 0;
-                    while (position + word.length <= end && index.length != 0) {
-                      if (word === searchText) {
-                        searchTextCountInSlice++;
-                      }
-                      hits.push({position: position, length: word.length});
-                      var wordEnd = position + word.length;
-
-                      // move to next position of hit
-
-                      index.pop();
-                      while (index.length != 0) {
-                        item = index[index.length - 1];
-                        position = item.position;
-                        word = item.word;
-                        if (wordEnd > position) {
-                          index.pop();
-                        } else {
-                          break;
-                        }
-                      }
-                    }
-                    searchTextCount += searchTextCountInSlice;
-                    return {
-                      hits: hits,
-                      start: start,
-                      end: end,
-                      searchTextCount: searchTextCountInSlice
-                    };
-                  }
-
-                  var slicesOfTitle = [];
-                  if (indexOfTitle.length != 0) {
-                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
-                  }
-
-                  var slicesOfContent = [];
-                  while (indexOfContent.length != 0) {
-                    var item = indexOfContent[indexOfContent.length - 1];
-                    var position = item.position;
-                    var word = item.word;
-                    // cut out 100 characters
-                    var start = position - 20;
-                    var end = position + 80;
-                    if(start < 0){
-                      start = 0;
-                    }
-                    if (end < position + word.length) {
-                      end = position + word.length;
-                    }
-                    if(end > content.length){
-                      end = content.length;
-                    }
-                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
-                  }
-
-                  // sort slices in content by search text's count and hits' count
-
-                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
-                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
-                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
-                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
-                      return sliceRight.hits.length - sliceLeft.hits.length;
-                    } else {
-                      return sliceLeft.start - sliceRight.start;
-                    }
-                  });
-
-                  // select top N slices in content
-
-                  var upperBound = parseInt('1');
-                  if (upperBound >= 0) {
-                    slicesOfContent = slicesOfContent.slice(0, upperBound);
-                  }
-
-                  // highlight title and content
-
-                  function highlightKeyword(text, slice) {
-                    var result = '';
-                    var prevEnd = slice.start;
-                    slice.hits.forEach(function (hit) {
-                      result += text.substring(prevEnd, hit.position);
-                      var end = hit.position + hit.length;
-                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
-                      prevEnd = end;
-                    });
-                    result += text.substring(prevEnd, slice.end);
-                    return result;
-                  }
-
-                  var resultItem = '';
-
-                  if (slicesOfTitle.length != 0) {
-                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
-                  } else {
-                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
-                  }
-
-                  slicesOfContent.forEach(function (slice) {
-                    resultItem += "<a href='" + articleUrl + "'>" +
-                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
-                      "...</p>" + "</a>";
-                  });
-
-                  resultItem += "</li>";
-                  resultItems.push({
-                    item: resultItem,
-                    searchTextCount: searchTextCount,
-                    hitCount: hitCount,
-                    id: resultItems.length
-                  });
-                }
-              })
-            };
-            if (keywords.length === 1 && keywords[0] === "") {
-              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
-            } else if (resultItems.length === 0) {
-              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
-            } else {
-              resultItems.sort(function (resultLeft, resultRight) {
-                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
-                  return resultRight.searchTextCount - resultLeft.searchTextCount;
-                } else if (resultLeft.hitCount !== resultRight.hitCount) {
-                  return resultRight.hitCount - resultLeft.hitCount;
-                } else {
-                  return resultRight.id - resultLeft.id;
-                }
-              });
-              var searchResultList = '<ul class=\"search-result-list\">';
-              resultItems.forEach(function (result) {
-                searchResultList += result.item;
-              })
-              searchResultList += "</ul>";
-              resultContent.innerHTML = searchResultList;
-            }
-          }
-
-          if ('auto' === 'auto') {
-            input.addEventListener('input', inputEventFunction);
-          } else {
-            $('.search-icon').click(inputEventFunction);
-            input.addEventListener('keypress', function (event) {
-              if (event.keyCode === 13) {
-                inputEventFunction();
-              }
-            });
-          }
-
-          // remove loading animation
-          $(".local-search-pop-overlay").remove();
-          $('body').css('overflow', '');
-
-          proceedsearch();
-        }
-      });
-    }
-
-    // handle and trigger popup window;
-    $('.popup-trigger').click(function(e) {
-      e.stopPropagation();
-      if (isfetched === false) {
-        searchFunc(path, 'local-search-input', 'local-search-result');
-      } else {
-        proceedsearch();
-      };
-    });
-
-    $('.popup-btn-close').click(onPopupClose);
-    $('.popup').click(function(e){
-      e.stopPropagation();
-    });
-    $(document).on('keyup', function (event) {
-      var shouldDismissSearchPopup = event.which === 27 &&
-        $('.search-popup').is(':visible');
-      if (shouldDismissSearchPopup) {
-        onPopupClose();
-      }
-    });
-  </script>
-
-
-
-
 
   
 
   
+</footer>
 
-  
+<!-- SCRIPTS -->
 
-  
-
-  
-  
-  
-  <script src="/lib/needsharebutton/needsharebutton.js"></script>
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
 
   <script>
-    
-    
-      flOptions = {};
-      
-          flOptions.iconStyle = "default";
-      
-          flOptions.boxForm = "vertical";
-      
-          flOptions.position = "middleRight";
-      
-          flOptions.networks = "Weibo,Wechat,Douban,QQZone,Twitter,Facebook";
-      
-      new needShareButton('#needsharebutton-float', flOptions);
-    
+    NProgress.configure({"showSpinner":false,"trickleSpeed":200})
+    NProgress.start()
+    document.addEventListener('DOMContentLoaded', function() {
+      window.NProgress && window.NProgress.inc();
+    })
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
   </script>
 
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
   
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
 
   
 
-  
 
-  
 
-  
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
 
-  
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
 
 </body>
 </html>
