@@ -140,7 +140,7 @@
 </nav>
 
     <div class="banner intro-2" id="background" parallax=true
-         style="background: url('/img/book.jpeg') no-repeat center center;
+         style="background: url('/img/post.jpeg') no-repeat center center;
            background-size: cover;">
       <div class="full-bg-img">
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
@@ -208,6 +208,12 @@
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">【原】Git随笔(2) 从Git仓库中永久清理脏数据</h1>
+            
+              <p class="note note-info">
+                
+                  本文最后更新于：2020年12月14日 晚上
+                
+              </p>
             
             <div class="markdown-body">
               <p>在开发代码的过程中，有时会不小心将不该提交的文件提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，敏感信息会导致信息泄露且不符合信息安全标准，这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner" target="_blank" rel="noopener">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>

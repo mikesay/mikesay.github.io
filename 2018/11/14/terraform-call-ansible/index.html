@@ -140,7 +140,7 @@
 </nav>
 
     <div class="banner intro-2" id="background" parallax=true
-         style="background: url('/img/book.jpeg') no-repeat center center;
+         style="background: url('/img/post.jpeg') no-repeat center center;
            background-size: cover;">
       <div class="full-bg-img">
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
@@ -208,6 +208,12 @@
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源</h1>
+            
+              <p class="note note-info">
+                
+                  本文最后更新于：2020年6月7日 下午
+                
+              </p>
             
             <div class="markdown-body">
               <p>Terraform（<a href="https://www.terraform.io/" target="_blank" rel="noopener">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>

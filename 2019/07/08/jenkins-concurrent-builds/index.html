@@ -140,7 +140,7 @@
 </nav>
 
     <div class="banner intro-2" id="background" parallax=true
-         style="background: url('/img/book.jpeg') no-repeat center center;
+         style="background: url('/img/post.jpeg') no-repeat center center;
            background-size: cover;">
       <div class="full-bg-img">
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
@@ -208,6 +208,12 @@
           <article class="post-content mx-auto">
             <!-- SEO header -->
             <h1 style="display: none">【原】Jenkins随笔(2) Jenkins Job的并发执行</h1>
+            
+              <p class="note note-info">
+                
+                  本文最后更新于：2020年6月7日 下午
+                
+              </p>
             
             <div class="markdown-body">
               <p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<a id="more"></a>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
