@@ -1,6 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>【原】创建容器化的Azure DevOps Agent</title>
+    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
+    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts" target="_blank" rel="noopener">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
+<a id="more"></a>
+
+<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent" target="_blank" rel="noopener">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
+<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent" target="_blank" rel="noopener">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">./build.sh azure-agent:&lt;tag&gt;<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
+</blockquote>
+<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
+<li><p>在Azure DevOps上创建Agent Pool<br><img src="1.png" alt></p>
+</li>
+<li><p>生成Personal Access Token<br><img src="2.png" alt></p>
+</li>
+</ol>
+<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">$ docker run -it -d --name some-agent \<br>        -e AZP_URL=your-azure-devops-url \<br>        -e AZP_TOKEN=your-azure-devops-pat \<br>        -e AZP_AGENT_NAME=some-agent \<br>        -e AZP_POOL=your-azure-devops-agent-pool \<br>        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \<br>        azure-agent:&lt;tag&gt;<br></code></pre></td></tr></table></figure>
+
+<p>环境变量说明：</p>
+<table>
+<thead>
+<tr>
+<th>变量名</th>
+<th>必需</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AZP_URL</td>
+<td>是</td>
+<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
+</tr>
+<tr>
+<td>AZP_TOKEN</td>
+<td>是</td>
+<td>前面申请的有足够权限的Personal Access Token</td>
+</tr>
+<tr>
+<td>AZP_AGENT_NAME</td>
+<td>是</td>
+<td>显示在Agent Pool中的Agent名字</td>
+</tr>
+<tr>
+<td>AZP_POOL</td>
+<td>是</td>
+<td>Agent pool的名字</td>
+</tr>
+<tr>
+<td>AZP_AGENTPACKAGE_URL</td>
+<td>否</td>
+<td>显式指定Azure Agent包的下载地址</td>
+</tr>
+</tbody></table>
+<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
+<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">curl -LsS \<br>  -u user:&lt;your-azure-devops-pat&gt; \<br>  -H <span class="hljs-string">'Accept:application/json;api-version=3.0-preview'</span> \<br>  <span class="hljs-string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span><br></code></pre></td></tr></table></figure>
+
+<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
+<p>getaddrinfo ENOTFOUND …</p>
+<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">$ docker run -it -d --name some-agent \<br>        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;<br>        -e AZP_URL=your-azure-devops-url \<br>        -e AZP_TOKEN=your-azure-devops-pat \<br>        -e AZP_AGENT_NAME=some-agent \<br>        -e AZP_POOL=your-azure-devops-agent-pool \<br>        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \<br>        azure-agent:&lt;tag&gt;<br></code></pre></td></tr></table></figure>
+
+]]></content>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Azure DevOps</tag>
+        <tag>Docker</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>【原】创建自签名TLS/SSL证书和私钥</title>
     <url>/2018/12/30/create-self-signed-ssl/</url>
     <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
@@ -102,79 +175,6 @@
       <tags>
         <tag>System Management</tag>
         <tag>TLS/SSL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>【原】创建容器化的Azure DevOps Agent</title>
-    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
-    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts" target="_blank" rel="noopener">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
-<a id="more"></a>
-
-<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent" target="_blank" rel="noopener">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
-<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent" target="_blank" rel="noopener">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">./build.sh azure-agent:&lt;tag&gt;<br></code></pre></td></tr></table></figure>
-
-<blockquote>
-<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
-</blockquote>
-<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
-<li><p>在Azure DevOps上创建Agent Pool<br><img src="1.png" alt></p>
-</li>
-<li><p>生成Personal Access Token<br><img src="2.png" alt></p>
-</li>
-</ol>
-<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">$ docker run -it -d --name some-agent \<br>        -e AZP_URL=your-azure-devops-url \<br>        -e AZP_TOKEN=your-azure-devops-pat \<br>        -e AZP_AGENT_NAME=some-agent \<br>        -e AZP_POOL=your-azure-devops-agent-pool \<br>        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \<br>        azure-agent:&lt;tag&gt;<br></code></pre></td></tr></table></figure>
-
-<p>环境变量说明：</p>
-<table>
-<thead>
-<tr>
-<th>变量名</th>
-<th>必需</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>AZP_URL</td>
-<td>是</td>
-<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
-</tr>
-<tr>
-<td>AZP_TOKEN</td>
-<td>是</td>
-<td>前面申请的有足够权限的Personal Access Token</td>
-</tr>
-<tr>
-<td>AZP_AGENT_NAME</td>
-<td>是</td>
-<td>显示在Agent Pool中的Agent名字</td>
-</tr>
-<tr>
-<td>AZP_POOL</td>
-<td>是</td>
-<td>Agent pool的名字</td>
-</tr>
-<tr>
-<td>AZP_AGENTPACKAGE_URL</td>
-<td>否</td>
-<td>显式指定Azure Agent包的下载地址</td>
-</tr>
-</tbody></table>
-<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
-<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">curl -LsS \<br>  -u user:&lt;your-azure-devops-pat&gt; \<br>  -H <span class="hljs-string">'Accept:application/json;api-version=3.0-preview'</span> \<br>  <span class="hljs-string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span><br></code></pre></td></tr></table></figure>
-
-<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
-<p>getaddrinfo ENOTFOUND …</p>
-<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">$ docker run -it -d --name some-agent \<br>        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;<br>        -e AZP_URL=your-azure-devops-url \<br>        -e AZP_TOKEN=your-azure-devops-pat \<br>        -e AZP_AGENT_NAME=some-agent \<br>        -e AZP_POOL=your-azure-devops-agent-pool \<br>        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \<br>        azure-agent:&lt;tag&gt;<br></code></pre></td></tr></table></figure>
-
-]]></content>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Azure DevOps</tag>
-        <tag>Docker</tag>
       </tags>
   </entry>
   <entry>
