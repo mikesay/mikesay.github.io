@@ -396,11 +396,11 @@
                   <div class="post-meta">
                     <i class="iconfont icon-tags"></i>
                     
+                      <a class="hover-with-bg" href="/tags/Git/">Git</a>
+                    
                       <a class="hover-with-bg" href="/tags/DevOps/">DevOps</a>
                     
                       <a class="hover-with-bg" href="/tags/CI-CD/">CI/CD</a>
-                    
-                      <a class="hover-with-bg" href="/tags/Git/">Git</a>
                     
                       <a class="hover-with-bg" href="/tags/Github/">Github</a>
                     
@@ -450,7 +450,14 @@
       var conf = '';
       var width = window.innerWidth || document.documentElement.clientWidth;
       if (width < 960) {
-        window.document.write('<script id="changyan_mobile_js" charset="utf-8" type="text/javascript" src="http://changyan.sohu.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf + '"><\/script>');
+        var head = window.document.getElementsByTagName('head')[0]||document.head||document.documentElement;
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.charset = 'utf-8';
+        script.id = 'changyan_mobile_js';
+        script.src = 'https://cy-cdn.kuaizhan.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf;
+        head.appendChild(script);
+        //window.document.write('<script id="changyan_mobile_js" charset="utf-8" type="text/javascript" src="http://changyan.sohu.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf + '"><\/script>');
       } else {
         Fluid.utils.createScript("https://changyan.sohu.com/upload/changyan.js", function() {
           window.changyan.api.config({
