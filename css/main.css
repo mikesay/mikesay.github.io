@@ -1306,12 +1306,15 @@ mjx-container svg:focus,
   display: none;
 }
 .post-donate {
-  margin-top: 80px;
+  padding: 5px 0;
+  margin: 5px auto;
+  width: 90%;
+  text-align: center;
 }
 #donate_guide {
   height: 210px;
   width: 420px;
-  margin: 0 auto;
+  margin: 0px auto 0px auto;
 }
 #donate_guide img {
   height: 200px;
