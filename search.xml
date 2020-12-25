@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>【原】创建自签名TLS/SSL证书和私钥</title>
+    <title>创建自签名TLS/SSL证书和私钥</title>
     <url>/2018/12/30/create-self-signed-ssl/</url>
     <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
 <a id="more"></a>
@@ -105,7 +105,7 @@
       </tags>
   </entry>
   <entry>
-    <title>【原】创建容器化的Azure DevOps Agent</title>
+    <title>创建容器化的Azure DevOps Agent</title>
     <url>/2019/12/30/docker-agent-for-azure-devops/</url>
     <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts" target="_blank" rel="noopener">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
 <a id="more"></a>
@@ -178,7 +178,7 @@
       </tags>
   </entry>
   <entry>
-    <title>【原】Git随笔(2) 从Git仓库中永久清理脏数据</title>
+    <title>从Git仓库中永久清理脏数据</title>
     <url>/2020/09/26/git-clean-bad-data-from-history/</url>
     <content><![CDATA[<p>在开发代码的过程中，有时会不小心将不该提交的文件提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，敏感信息会导致信息泄露且不符合信息安全标准，这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner" target="_blank" rel="noopener">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
 <a id="more"></a>
@@ -280,7 +280,7 @@
       </tags>
   </entry>
   <entry>
-    <title>【原】Python随笔(1) 安装Python并搭建Python的虚拟开发环境</title>
+    <title>安装Python并搭建Python的虚拟开发环境</title>
     <url>/2020/01/31/install-python/</url>
     <content><![CDATA[<p>虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。</p>
 <a id="more"></a>
@@ -398,7 +398,7 @@
       </tags>
   </entry>
   <entry>
-    <title>【原】Git随笔(1) Git合并请求(pull/merge request)的本质</title>
+    <title>Git合并请求(pull/merge request)的本质</title>
     <url>/2020/01/29/pullrequest-essential/</url>
     <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull/merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull/merge request)合并到主分支上。合并请求(pull/merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull/merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull/merget request)的实现来阐明合并请求(pull/merge request)的本质。<a id="more"></a></p>
 <p>实际上，合并请求(pull/merge request)在代码层面上是Git仓库中的一个特殊分支。当开发在代码协作平台上创建并提交合并请求(pull/merge request)后，代码协作平台在服务器端将私有分支和主分支临时合并产生一个合并提交(merge commit)，同时创建一个特殊分支指向这个合并提交(merge commit)。如果临时合并出现冲突，则在Web层面显示有冲突，需要开发提交新的代码到个人分支以消除冲突。</p>
@@ -486,7 +486,7 @@
       </tags>
   </entry>
   <entry>
-    <title>【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源</title>
+    <title>Terraform如何调用Ansible配置虚拟机资源</title>
     <url>/2018/11/14/terraform-call-ansible/</url>
     <content><![CDATA[<p>Terraform（<a href="https://www.terraform.io/" target="_blank" rel="noopener">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
 <a id="more"></a>
@@ -558,7 +558,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】Git随笔(3) Git加密存储文件</title>
+    <title>Git加密存储文件</title>
     <url>/2020/12/16/git-encrypt-file-in-repository/</url>
     <content><![CDATA[<p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/" target="_blank" rel="noopener">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
 <a id="more"></a>
@@ -744,7 +744,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】Jenkins随笔(4) Jenkins构建Bitbucket合并请求(Pull Request)</title>
+    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
     <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
     <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
 <a id="more"></a>
@@ -848,7 +848,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】Jenkins随笔(2) Jenkins Job的并发执行</title>
+    <title>Jenkins Job的并发执行</title>
     <url>/2019/07/08/jenkins-concurrent-builds/</url>
     <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<a id="more"></a>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
 <ul>
@@ -938,7 +938,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】Jenkins随笔(1) 基于Jenkins Freestyle Job构建CI/CD流水线</title>
+    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
     <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
     <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
 <a id="more"></a>
@@ -1068,7 +1068,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】Jenkins随笔(3) Jenkins构建Github合并请求(Pull Request)</title>
+    <title>Jenkins构建Github合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
 <a id="more"></a>
@@ -1248,7 +1248,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)</title>
+    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
     <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
     <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
 <a id="more"></a>
@@ -1423,7 +1423,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】Hexo+Gitee(码云)搭建静态博客网站</title>
+    <title>Hexo+Gitee(码云)搭建静态博客网站</title>
     <url>/2018/08/17/setup-blog-hexo-gitee/</url>
     <content><![CDATA[<p>直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将介绍如何使用Hexo搭建静态博客网站，并将其发布到GITEE(码云)免费提供的静态网页空间里。</p>
 <a id="more"></a>
@@ -1624,7 +1624,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【原】命令方式设置Windows Server网络代理</title>
+    <title>命令方式设置Windows Server网络代理</title>
     <url>/2020/02/03/windows-core-proxy/</url>
     <content><![CDATA[<p>在公司里的服务器往往需要配置网络代理才能访问外网，不同的操作系统设置代理的方式也不同，同一个操作系统在图形化和非图形化下的设置方式也不同。本文将详细介绍如何用命令的方式来设置Windows Server的网络代理，这种方式非常适合于非图形化的Windows Server Core的网络代理的设置，对图形化的Windows Server也同样适用。</p>
 <a id="more"></a>
@@ -1682,7 +1682,7 @@ Terraform调用不同云平台（公有或私有）的“Provider”创建和编
       </tags>
   </entry>
   <entry>
-    <title>【译】GitOps(1) 什么是GitOps?</title>
+    <title>什么是GitOps?</title>
     <url>/2019/07/21/gitops/</url>
     <content><![CDATA[<center>[原文] [https://www.weave.works/technologies/gitops/][1]</center>
 您是否听说过GitOps并且也想知道它到底是什么？ 本文，我们将介绍GitOps工作流的原理和模式，以及如何实现它们以便在生产环境中规模化运行Kubernetes。 我们还将描述GitOps与基础架构代码（IAC)，配置管理工具之间的差异，当然还将向您展示如何将GitOps最佳实践作为您自己的开发环境的一部分。

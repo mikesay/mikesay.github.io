@@ -4,7 +4,7 @@
   
   
   <entry>
-    <title>【原】Git随笔(3) Git加密存储文件</title>
+    <title>Git加密存储文件</title>
     <link href="/2020/12/16/git-encrypt-file-in-repository/"/>
     <url>/2020/12/16/git-encrypt-file-in-repository/</url>
     
@@ -23,7 +23,7 @@
   
   
   <entry>
-    <title>【原】Git随笔(2) 从Git仓库中永久清理脏数据</title>
+    <title>从Git仓库中永久清理脏数据</title>
     <link href="/2020/09/26/git-clean-bad-data-from-history/"/>
     <url>/2020/09/26/git-clean-bad-data-from-history/</url>
     
@@ -42,7 +42,7 @@
   
   
   <entry>
-    <title>【原】Jenkins随笔(5) Jenkins构建GitLab合并请求(Merge Request)</title>
+    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
     <link href="/2020/03/09/jenkins-gitlab-pullrequest/"/>
     <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
     
@@ -69,7 +69,7 @@
   
   
   <entry>
-    <title>【原】Jenkins随笔(4) Jenkins构建Bitbucket合并请求(Pull Request)</title>
+    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
     <link href="/2020/02/23/jenkins-bibucket-pullrequest/"/>
     <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
     
@@ -96,7 +96,7 @@
   
   
   <entry>
-    <title>【原】命令方式设置Windows Server网络代理</title>
+    <title>命令方式设置Windows Server网络代理</title>
     <link href="/2020/02/03/windows-core-proxy/"/>
     <url>/2020/02/03/windows-core-proxy/</url>
     
@@ -115,7 +115,7 @@
   
   
   <entry>
-    <title>【原】Python随笔(1) 安装Python并搭建Python的虚拟开发环境</title>
+    <title>安装Python并搭建Python的虚拟开发环境</title>
     <link href="/2020/01/31/install-python/"/>
     <url>/2020/01/31/install-python/</url>
     
@@ -134,7 +134,7 @@
   
   
   <entry>
-    <title>【原】Jenkins随笔(3) Jenkins构建Github合并请求(Pull Request)</title>
+    <title>Jenkins构建Github合并请求(Pull Request)</title>
     <link href="/2020/01/30/jenkins-github-pullrequest/"/>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     
@@ -161,7 +161,7 @@
   
   
   <entry>
-    <title>【原】Git随笔(1) Git合并请求(pull/merge request)的本质</title>
+    <title>Git合并请求(pull/merge request)的本质</title>
     <link href="/2020/01/29/pullrequest-essential/"/>
     <url>/2020/01/29/pullrequest-essential/</url>
     
@@ -190,7 +190,7 @@
   
   
   <entry>
-    <title>【原】创建容器化的Azure DevOps Agent</title>
+    <title>创建容器化的Azure DevOps Agent</title>
     <link href="/2019/12/30/docker-agent-for-azure-devops/"/>
     <url>/2019/12/30/docker-agent-for-azure-devops/</url>
     
@@ -215,7 +215,7 @@
   
   
   <entry>
-    <title>【译】GitOps(1) 什么是GitOps?</title>
+    <title>什么是GitOps?</title>
     <link href="/2019/07/21/gitops/"/>
     <url>/2019/07/21/gitops/</url>
     
@@ -238,7 +238,7 @@
   
   
   <entry>
-    <title>【原】Jenkins随笔(2) Jenkins Job的并发执行</title>
+    <title>Jenkins Job的并发执行</title>
     <link href="/2019/07/08/jenkins-concurrent-builds/"/>
     <url>/2019/07/08/jenkins-concurrent-builds/</url>
     
@@ -261,7 +261,7 @@
   
   
   <entry>
-    <title>【原】创建自签名TLS/SSL证书和私钥</title>
+    <title>创建自签名TLS/SSL证书和私钥</title>
     <link href="/2018/12/30/create-self-signed-ssl/"/>
     <url>/2018/12/30/create-self-signed-ssl/</url>
     
@@ -282,7 +282,7 @@
   
   
   <entry>
-    <title>【原】Terraform随笔(1) Terraform如何调用Ansible配置虚拟机资源</title>
+    <title>Terraform如何调用Ansible配置虚拟机资源</title>
     <link href="/2018/11/14/terraform-call-ansible/"/>
     <url>/2018/11/14/terraform-call-ansible/</url>
     
@@ -307,7 +307,7 @@
   
   
   <entry>
-    <title>【原】Jenkins随笔(1) 基于Jenkins Freestyle Job构建CI/CD流水线</title>
+    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
     <link href="/2018/10/07/jenkins-freestyle-cicd-pipeline/"/>
     <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
     
@@ -330,7 +330,7 @@
   
   
   <entry>
-    <title>【原】Hexo+Gitee(码云)搭建静态博客网站</title>
+    <title>Hexo+Gitee(码云)搭建静态博客网站</title>
     <link href="/2018/08/17/setup-blog-hexo-gitee/"/>
     <url>/2018/08/17/setup-blog-hexo-gitee/</url>
     
