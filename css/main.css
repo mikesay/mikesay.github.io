@@ -1313,6 +1313,7 @@ mjx-container svg:focus,
   text-align: center;
 }
 #donate_guide {
+  width: 90%;
   margin: 5px auto;
 }
 #donate_guide img {
