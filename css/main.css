@@ -1285,6 +1285,7 @@ mjx-container svg:focus,
 .donate_bar {
   text-align: center;
   margin-top: 5%;
+  border: 1px solid #000;
 }
 .donate_bar a.btn_donate {
   display: inline-block;
@@ -1311,9 +1312,12 @@ mjx-container svg:focus,
   width: 90%;
   text-align: center;
 }
+#donate_guide {
+  margin: 5px auto;
+}
 #donate_guide img {
   height: 200px;
-  height: 200px;
+  width: 200px;
 }
 .post-content,
 post-custom {
