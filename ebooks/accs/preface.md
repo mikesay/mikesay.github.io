@@ -1,5 +1,4 @@
-# Preface
-
+# 前言
 Cloud adoption is a core component of digital transformation. Organizations must align
 modern technology and current economic models to business strategy. Transformation
 requires a new approach that balances cost and technology choices with company direction
@@ -22,7 +21,7 @@ Chinese lanterns symbolize wishes for a brighter, more prosperous future. The la
 the book cover symbolize our desire to help you and your organization attain that brighter
 and more prosperous future with cloud computing.
 
-## Who this book is for
+## 读者
 This book teaches you how to architect effective and organizationally aligned cloud
 computing solutions by addressing cloud computing fundamentals, cloud architecture
 considerations, cloud technology service selection, and cloud computing security controls.
@@ -35,16 +34,16 @@ a goal-oriented cloud computing strategy
 No prior knowledge of Cloud computing is needed, but a basic understanding of current
 information technology operations and practice is highly desired.
 
-## What this book covers
+## 本书涉及的内容
 Prologue, Ground rules, covers baseline assumptions the authors took when writing this
 book.
 
-## Part 1: What you hear about cloud computing
+## 第一部分: 你听说的云计算是什么
 Chapter 1, What is Cloud Computing? explains foundational definitions and explanations.
 Chapter 2, Governance and Change Management, explains how organizational governance
 and change management affect cloud computing transitions.
 
-## Part 2: How a cloud architect sees cloud computing
+## 第二部分: 云架构是是如何看待云计算的
 Chapter 3, Design Considerations, provides direction on how to think through design,
 economic models, risk profiles, strategies, and technology decisions.
 Chapter 4, Business Drivers, Metrics, and Use Cases, provides key considerations when
@@ -59,7 +58,7 @@ as foundational building blocks to cornerstone design ideas.
 Chapter 8, Solution Reference Architectures, discusses about blending different deployment
 and service models to deliver on organizational goals.
 
-## Part 3: Technology Services - It's not about the technology
+## 第三部分: 技术服务 - 与技术无关
 Chapter 9, Cloud Environment Key Tenets and Virtualization, explains essential elements used
 to modify existing architectures, application layouts, and solution dependencies to
 modernize deployments at lower risk.
@@ -73,14 +72,14 @@ providers.
 Chapter 13, Cloud Application Development, discusses key concepts to address when
 developing for cloud-based applications.
 
-## Part 4: Cloud Security - It's all about the data
+## 第四部分: 云安全 - 都是关于数据的
 Chapter 14, Data Security, explains security planning from a data-centric point of view.
 Chapter 15, Application Security, discusses challenges that need to be considered when
 developing cloud-related applications.
 Chapter 16, Risk Management and Business Continuity, explains how to manage both the risk
 and risk mitigation when making future state choices.
 
-## Part 5: Capstone - end-to-end design exercise
+## 第五部分: 顶石 - 端到端设计练习
 Chapter 17, Hands-On Lab 1 - Basic Cloud Design (Single Server), provides an example of a
 small cloud solution design.
 Chapter 18, Hands-On Lab 2 - Advanced Cloud Design Insight, provides an example of a
@@ -91,14 +90,14 @@ Chapter 20, Cloud Architecture - Lessons Learned, discusses important solution d
 lessons.
 Epilogure, Sensomorphic.
 
-## To get the most out of this book
+## 充分利用这本书
 This book is designed to guide organization digital transformation and cloud transition. To
 get the most out of this guide, the main goal should be to design and build architectures
 supporting specified business or mission use cases. The target should be the use and
 aggregation of cloud architectures to deploy and securely use business and/or mission
 software applications.
 
-## Conventions used
+## 使用约定
 There are a number of text conventions used throughout this book.
 CodeInText: Indicates code words in text, database table names, folder names, filenames,
 file extensions, pathnames, dummy URLs, user input, and Twitter handles. Here is an
@@ -112,7 +111,7 @@ example, words in menus or dialog boxes appear in the text like this. Here is an
 
 ![logo](/_media/tips.png) Tips and tricks appear like this.
 
-## Get in touch
+## 保持联系
 Feedback from our readers is always welcome.
 General feedback: Email feedback@packtpub.com and mention the book title in the
 subject of your message. If you have questions about any aspect of this book, please email
@@ -128,7 +127,7 @@ If you are interested in becoming an author: If there is a topic that you have e
 and you are interested in either writing or contributing to a book, please visit
 authors.packtpub.com.
 
-## Reviews
+## 评论
 Please leave a review. Once you have read and used this book, why not leave a review on
 the site that you purchased it from? Potential readers can then see and use your unbiased
 opinion to make purchase decisions, we at Packt can understand what you think about our

@@ -1,4 +1,4 @@
-# Prologue
+# 序幕
 140 million results are returned in 0.48 seconds when you search for cloud computing in a
 Google search. With that much information available, and that many conversations active
 around the globe, do we really know what cloud is? Are we confident in knowing what
@@ -17,7 +17,7 @@ Cloud is blending roles and redefining boundaries. Regardless of which industry 
 or the position we hold, cloud computing is changing everything: how we work, how we
 play, and how we communicate.
 
-## Ground rules
+## 基本规则
 This book is meant as a guide to help you sort through the noise related to cloud
 computing. We intend to help explain what cloud really is and how it affects strategy,
 economics, and technology simultaneously, and discuss how to stay professionally relevant

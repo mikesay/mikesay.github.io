@@ -1,5 +1,4 @@
 # 第一章 什么是云计算？
-
 We hear that the cloud simplifies, yet it makes things more complicated (at first). It saves us
 money, yet unusually high bills have surprised many IT leaders and executives. The cloud
 is flexible, agile, and nimble, yet many get locked into single providers with less than
@@ -25,8 +24,7 @@ related services. Additionally, this chapter covers:
 + Similar technology models
 + Cloud washing
 
-## Cloud computing history
-
+## 云计算历史
 For our purposes, the first age of computing was the 1970s when the focus was on big
 infrastructure. Green-screen terminals, in vogue back then, eventually evolved into
 personal computers. Networks went from a centralized, hierarchical design to a
@@ -53,3 +51,21 @@ competing companies. The competition forced faster innovation, lower costs, and 
 levels of reliability and service.
 
 The following diagram depicts the various cloud computing phases:
+
+## 云计算定义
+TBD
+
+## 云计算的基本特征
+TBD
+
+## 云计算运营模型
+TBD
+
+## 云服务模型
+TBD
+
+## 洗云
+TBD
+
+## 云计算分类法
+TBD
