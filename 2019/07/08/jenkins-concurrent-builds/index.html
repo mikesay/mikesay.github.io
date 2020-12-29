@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -314,21 +314,21 @@
 <li>充分利用Slave资源。如果让一台VM Slave一次只处理一个CI请求，往往会浪费很多的资源（CPU，Memory，Storage）。</li>
 <li>持续集成的最佳实践要求快速地“Build Per Change Commit”，但是对于一些比较耗时的持续集成流水线，比如项目比较大，或者自动化测试的时间比较长，往往是前一个集成还没结束，新的change commit已经到来，如果不能并发执行，只能阻塞等待，导致commit的提交者不能及时得到反馈，从而使持续集成流水线在项目中失去了应有的作用，地位也会变得比较尴尬。此时，如果再一味地推进与持续集成流水线配套的一些策略，将会受到很大的阻力。</li>
 </ul>
-<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
+<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：<br>1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；<br>2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
 <p>为了支持Jenkins Job并发执行，首先需要设置Jenkins Slave的Build Executors的数量大于1：<br><img src="1.png" srcset="/img/loading.gif" alt=""></p>
 <p>当Jenkins Job有新的build请求时，只要匹配的Slave节点有空闲的Executor，即使已经有build在执行，新的build也会立刻被并发执行。如果匹配的Slave节点没有空闲的Executor，这个新的build请求将被放入待执行队列里等待调度。</p>
 <p>Free Style Job缺省并没有打开并发执行的功能。需要在Job的配置中打开选项“Execute concurrent builds if necessary”：<br><img src="2.png" srcset="/img/loading.gif" alt=""></p>
 <p>Pipeline2.0的Job缺省是并发执行模式。如果要禁止并发执行，可以通过添加以下代码：</p>
 <ul>
-<li>Scripted Pipeline</li>
-</ul>
+<li><p>Scripted Pipeline</p>
 <p>在Jenkinsfile头部添加以下属性：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs dsl">properties(<br>  [<br>      disableConcurrentBuilds()<br>  ]<br>)<br></code></pre></td></tr></table></figure>
-<ul>
-<li>Declarative Pipeline</li>
-</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs dsl">properties(<br>  [<br>      disableConcurrentBuilds()<br>  ]<br>)<br></code></pre></td></tr></table></figure></li>
+<li><p>Declarative Pipeline</p>
 <p>在pipeline块中添加以下选项：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs dsl">pipeline &#123;<br>    options &#123;<br>        disableConcurrentBuilds()<br>    &#125;<br>&#125;<br><br></code></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs dsl">pipeline &#123;<br>    options &#123;<br>        disableConcurrentBuilds()<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+</li>
+</ul>
 <h1 id="Jenkins-Job并发执行需要解决的问题"><a href="#Jenkins-Job并发执行需要解决的问题" class="headerlink" title="Jenkins Job并发执行需要解决的问题"></a>Jenkins Job并发执行需要解决的问题</h1><p>Jenkins Job的并发执行是一把双刃剑，用得好，所向披靡，能够充分利用既有资源服务更多的持续集成请求，用得不好，会出现很多预料不到的问题，而且有些问题并不能重复出现，给调试带来了很大的负担。Jenkins Job的并发执行主要面临的问题是资源使用的冲突。下图是一个常见的基于Pipeline2.0实现的一个Jenkins CI Job(yunzai-ci)：<br><img src="3.png" srcset="/img/loading.gif" alt="">按照流程顺序，逐一分析如下：</p>
 <ul>
 <li><p>在“Checkout Code”阶段，同一个Jenkins Job并发执行的build在同一个Slave上的Workspace会存在着冲突。对于这个问题，其实Jenkins已经提供了解决方案，细心的你一定会发现在Slave机子上同一个Job会存在着多个文件夹，比如“yunzai-ci”，“yunzai-ci@1”，“yunzai-ci@2”…，这就是同一个Job并发执行的build对应的不同的Workspace。Jenkins缺省是在Job的名字后面加上符号@和数字来命名不同的Workspace的，当并发执行的build数量大于Workspace的数量，Jenkins会根据命名规则自动创建一个新的Workspace，当并发执行的build数量小于Workspace数量，Jenkins会按顺序重用已有的Workspace。</p>
@@ -354,11 +354,11 @@
 <li><p>Scripted Pipeline只支持使用系统级别配置好的并发执行类别：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs dsl">throttle([&#39;test-cocurrent&#39;]) &#123;<br>  node(&#39;xxxx&#39;) &#123;<br>  &#125;<br>&#125;<br></code></pre></td></tr></table></figure></li>
 <li><p>对于Declarative Pipeline，目前“Throttle Concurrent Builds Plugin”还不支持，所以只能是前面讨论的缺省并发行为。</p>
-</li>
-</ul>
 <blockquote>
 <p>对于插件“Throttle Concurrent Builds Plugin”的详细用法，<br>可以参考插件的Wiki: <a target="_blank" rel="noopener" href="https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds">https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds+Plugin</a>和GitHub地址: <a target="_blank" rel="noopener" href="https://github.com/jenkinsci/throttle-concurrent-builds-plugin">https://github.com/jenkinsci/throttle-concurrent-builds-plugin</a>。</p>
 </blockquote>
+</li>
+</ul>
 <h1 id="Jenkins-Job相同参数build的执行情况"><a href="#Jenkins-Job相同参数build的执行情况" class="headerlink" title="Jenkins Job相同参数build的执行情况"></a>Jenkins Job相同参数build的执行情况</h1><p>所谓相同参数build，就是指同一个Jenkins Job以相同的参数触发多个build。不论是Jenkins Job并发执行，还是非并发执行，只要有符合Jenkins Job执行的Slave和Executor资源而且并发策略允许，所有被触发的build都会被立刻执行。但如果没有足够的执行资源，或者并发策略不允许，而且已经有build在待执行队列里等待的情况下，再次触发与等待的build参数相同的build，行为就会有些区别，总结如下：</p>
 <table>
 <thead>

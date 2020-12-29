@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -312,9 +312,7 @@
               <p>在公司里的服务器往往需要配置网络代理才能访问外网，不同的操作系统设置代理的方式也不同，同一个操作系统在图形化和非图形化下的设置方式也不同。本文将详细介绍如何用命令的方式来设置Windows Server的网络代理，这种方式非常适合于非图形化的Windows Server Core的网络代理的设置，对图形化的Windows Server也同样适用。</p>
 <a id="more"></a>
 
-<h1 id="Windows-Server网络代理说明"><a href="#Windows-Server网络代理说明" class="headerlink" title="Windows Server网络代理说明"></a>Windows Server网络代理说明</h1><p>在图形化的Windows Server中设置网络代理相对来说比较简单，通常在IE浏览器的”Internet Options”里面设置即可：</p>
-<img src="/2020/02/03/windows-core-proxy/1.png" srcset="/img/loading.gif" class="">
-
+<h1 id="Windows-Server网络代理说明"><a href="#Windows-Server网络代理说明" class="headerlink" title="Windows Server网络代理说明"></a>Windows Server网络代理说明</h1><p>在图形化的Windows Server中设置网络代理相对来说比较简单，通常在IE浏览器的”Internet Options”里面设置即可：<br><img src="1.png" srcset="/img/loading.gif" alt=""></p>
 <p>但是这个网络代理只对一部分应用起作用，比如IE浏览器等。仍旧有些应用不是使用这个网络代理。在Windows Server环境中，有以下四类网络使用方式：</p>
 <ul>
 <li><p>使用WinINET库<br>WinINTE是IE浏览器的核心，同时也能被别的应用程序使用。使用WinINET的应用同样会使用IE浏览器的网络代理设置。</p>

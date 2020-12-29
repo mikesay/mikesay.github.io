@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -326,26 +326,16 @@
 <h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
 <li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
 </li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="1.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 <li><p>必要时重启Jenkins让插件生效</p>
 </li>
 </ol>
 <p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
 <h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
-<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="2.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>点击”Create webhook”按钮打开添加Webhook页面</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png" srcset="/img/loading.gif" class="">
-</div>
-
+<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="3.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 </ol>
 <p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
@@ -367,36 +357,19 @@
 <h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
 <li><p>点击”New Item”</p>
 </li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="4.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="5.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 <li><p>点击”Save”按钮保存Jenkins Job</p>
 </li>
-<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png" srcset="/img/loading.gif" class="">
-</div>
-
+<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="6.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 </ol>
 <h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
-<li><p>Bitbucket的合并请求(pull/merge request)</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>Bitbucket的合并请求(pull/merge request)<br><img src="7.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>触发的构建</p>
-<div align=center>
-<img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png" srcset="/img/loading.gif" class="">
-</div>
-
+<li><p>触发的构建<br><img src="8.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 </ol>
 <p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>

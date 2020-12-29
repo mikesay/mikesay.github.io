@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -312,12 +312,8 @@
               <p>Terraform（<a target="_blank" rel="noopener" href="https://www.terraform.io/">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
 <a id="more"></a>
 
-<h1 id="Terraform架构简介"><a href="#Terraform架构简介" class="headerlink" title="Terraform架构简介"></a>Terraform架构简介</h1><p>为了方便后续步骤的理解，在这里对Terraform及其相关组件做一简单介绍。这是Terraform的架构图：</p>
-<div align=center>
-<img src="/2018/11/14/terraform-call-ansible/1.jpg" srcset="/img/loading.gif" class="">
-</div>
-Terraform调用不同云平台（公有或私有）的“Provider”创建和编排基础架构资源，调用不同的“Provisioner”配置新生成的资源。并不是所有的资源都支持“Provisioner”，可以参考对应资源的帮助文档来了解是否支持。基本上，虚拟机资源，比如ECS, EC2等，都支持调用“Provisioner”去配置。
-
+<h1 id="Terraform架构简介"><a href="#Terraform架构简介" class="headerlink" title="Terraform架构简介"></a>Terraform架构简介</h1><p>为了方便后续步骤的理解，在这里对Terraform及其相关组件做一简单介绍。这是Terraform的架构图：<br><img src="1.jpg" srcset="/img/loading.gif" alt=""></p>
+<p>Terraform调用不同云平台（公有或私有）的“Provider”创建和编排基础架构资源，调用不同的“Provisioner”配置新生成的资源。并不是所有的资源都支持“Provisioner”，可以参考对应资源的帮助文档来了解是否支持。基本上，虚拟机资源，比如ECS, EC2等，都支持调用“Provisioner”去配置。</p>
 <h1 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h1><p>组合利用Terraform现有的Provisioner为新创建的虚拟机生成动态的Ansible资源文件，加入到Ansible当前资源文件夹中（Ansible在执行时会合并当前资源文件加下的所有资源文件），最后基于动态资源执行Ansible脚本配置新创建的虚拟机。</p>
 <h1 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h1><p>以自动创建一台虚拟机资源并安装和配置Artifactory软件为例，下图是Terraform+Ansible的代码结构：<br>.<br>├── ansible<br>│   ├── handlers<br>│   ├── inventory<br>│   │   ├── devops<br>│   │   │   ├── group_vars<br>│   │   │   ├── host_vars<br>│   │   │   └── hosts<br>│   │   └── devops-disconf<br>│   │       └── hosts<br>│   ├── roles<br>│   ├── templates<br>│   │   ├── artifactory<br>│   │   │   └── hosts.temp.j2<br>│   ├── configure-ansible-node.sh<br>│   ├── ansible.cfg<br>│   ├── terraform-ansible-inventory.yaml<br>│   ├── artifactory.yaml<br>├── iac<br>│   └── cicd<br>│       ├── vsphere_virtual_machine_art1.tf</p>
 <blockquote>

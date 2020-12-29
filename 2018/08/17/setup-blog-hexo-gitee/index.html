@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -312,11 +312,7 @@
               <p>直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将介绍如何使用Hexo搭建静态博客网站，并将其发布到GITEE(码云)免费提供的静态网页空间里。</p>
 <a id="more"></a>
 
-<h1 id="Hexo是什么"><a href="#Hexo是什么" class="headerlink" title="Hexo是什么"></a>Hexo是什么</h1><p>Hexo是一款免费的用来快速搭建静态博客网站的框架。支持插件机制，简单又不失强大。Hexo是基于Node.js开发的，提供了一组命令用来创建和管理博客应用，创建和管理博客文章，将博客应用和文章发布成静态博客网站。Hexo使用Markdown语言来写博客，方便、快捷，不需要什么额外的排版工具就能使你的文章布局看起来很美观。下图是Hexo博客网站的结构：</p>
-<div align=center>
-<img src="/2018/08/17/setup-blog-hexo-gitee/1.png" srcset="/img/loading.gif" class="" title="Hexo博客网站结构">
-</div>
-
+<h1 id="Hexo是什么"><a href="#Hexo是什么" class="headerlink" title="Hexo是什么"></a>Hexo是什么</h1><p>Hexo是一款免费的用来快速搭建静态博客网站的框架。支持插件机制，简单又不失强大。Hexo是基于Node.js开发的，提供了一组命令用来创建和管理博客应用，创建和管理博客文章，将博客应用和文章发布成静态博客网站。Hexo使用Markdown语言来写博客，方便、快捷，不需要什么额外的排版工具就能使你的文章布局看起来很美观。下图是Hexo博客网站的结构：<br><img src="1.png" srcset="/img/loading.gif" alt=""></p>
 <h1 id="Gitee是什么"><a href="#Gitee是什么" class="headerlink" title="Gitee是什么"></a>Gitee是什么</h1><p>Gitee（码云 <a target="_blank" rel="noopener" href="https://gitee.com/">gitee.com</a>）是国内的一款基于Git的代码托管和协作开发平台，和GitHub, GitLab属于同一类型的产品。同GitHub和GitLab相比，Gitee具有以下几点优势：</p>
 <ul>
 <li>支持免费的私有Git代码仓库</li>
@@ -374,23 +370,34 @@
 <p>这里将根目录下的配置文件”_config.yml“称为”应用配置“以便与后面的“主题配置”区分看来。”主题配置“是位于博客应用的主题根目录下的配置文件，名字也是”_config.yml“。</p>
 </blockquote>
 <ul>
-<li>title: 若一拾得</li>
-<li>subtitle: 若一不一，知之不知</li>
-<li>description:</li>
-<li>keywords: DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python</li>
-<li>author: 若一</li>
-<li>language: zh-Hans</li>
-<li>timezone: Asia/Shanghai</li>
-<li>url: <a target="_blank" rel="noopener" href="http://www.ruokiy.com">http://www.ruokiy.com</a></li>
-<li>root: /</li>
-<li>permalink: :year/:month/:day/:title/ =&gt; 文章页面的永久链接</li>
-<li>permalink_defaults:</li>
-</ul>
+<li><p>title: 若一拾得</p>
 </li>
-</ol>
+<li><p>subtitle: 若一不一，知之不知</p>
+</li>
+<li><p>description:</p>
+</li>
+<li><p>keywords: DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python</p>
+</li>
+<li><p>author: 若一</p>
+</li>
+<li><p>language: zh-Hans</p>
+</li>
+<li><p>timezone: Asia/Shanghai</p>
+</li>
+<li><p>url: <a target="_blank" rel="noopener" href="http://www.ruokiy.com">http://www.ruokiy.com</a></p>
+</li>
+<li><p>root: /</p>
+</li>
+<li><p>permalink: :year/:month/:day/:title/ =&gt; 文章页面的永久链接</p>
+</li>
+<li><p>permalink_defaults:</p>
 <blockquote>
 <p>可以参考Hexo的官方文档了解更多的Hexo命令。</p>
 </blockquote>
+</li>
+</ul>
+</li>
+</ol>
 <h2 id="为博客应用安装新的主题"><a href="#为博客应用安装新的主题" class="headerlink" title="为博客应用安装新的主题"></a>为博客应用安装新的主题</h2><p>Hexo自带的主题“landscape”看起来平平，不够简洁也不够富丽，所以大部分人安装和初始化完Hexo博客应用后，接下来的一步就是安装配置自己喜欢的主题。下面就以以简洁著称的“NexT”主题为例，介绍安装和配置主题的步骤。</p>
 <p>“NexT”主题在GitHub上，地址为<a target="_blank" rel="noopener" href="https://github.com/theme-next/hexo-theme-next">https://github.com/theme-next/hexo-theme-next</a>。</p>
 <blockquote>
@@ -430,16 +437,10 @@
 <p>如果非要尝试畅言的话，可以参考这个博客文章<a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_32518231/article/details/78080184">https://blog.csdn.net/qq_32518231/article/details/78080184</a></p>
 </blockquote>
 <p>给你的博客应用设置Valine评论系统的步骤：<br>(1) 在LeanCloud<a target="_blank" rel="noopener" href="https://www.leancloud.cn">https://www.leancloud.cn</a>上注册一个账号；</p>
-<blockquote>
-<p>博客的评论将存储在LeadCloud中。</p>
-</blockquote>
-<p>(2) 进入控制台，创建一个开发版的应用；</p>
+<pre><code>博客的评论将存储在LeadCloud中。</code></pre><p>(2) 进入控制台，创建一个开发版的应用；</p>
 <p>(3) 点击进入这个应用，并进入设置|应用key页面获取APP ID和APP KEY；</p>
 <p>(4) 修改主题配置，将valine|enable设为true，valine|appid设为上一步获取的APP ID，valine|appkey设为上一步获取的APP KEY。</p>
-<blockquote>
-<p>需要将你的静态博客发布到线上才会看到文章末尾的valine评论模块</p>
-</blockquote>
-<h3 id="文章统计"><a href="#文章统计" class="headerlink" title="文章统计"></a>文章统计</h3><ul>
+<pre><code>需要将你的静态博客发布到线上才会看到文章末尾的valine评论模块</code></pre><h3 id="文章统计"><a href="#文章统计" class="headerlink" title="文章统计"></a>文章统计</h3><ul>
 <li><p>添加“文章字数”和“文章平均阅读时间”统计。</p>
 <p>  (1) 在博客应用的根目录执行以下命令安装“hexo-sysmbols-count-time”插件</p>
   <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">npm install hexo-symbols-count-time --save<br></code></pre></td></tr></table></figure>
@@ -447,15 +448,13 @@
   <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">symbols_count_time:</span><br><span class="hljs-attr">symbols:</span> <span class="hljs-literal">true</span><br><span class="hljs-attr">time:</span> <span class="hljs-literal">true</span><br><span class="hljs-attr">total_symbols:</span> <span class="hljs-literal">true</span><br><span class="hljs-attr">total_time:</span> <span class="hljs-literal">true</span><br></code></pre></td></tr></table></figure>
 <p>  (3) 修改<strong>主题配置</strong>中的以下配置</p>
   <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">symbols_count_time:</span><br><span class="hljs-attr">separated_meta:</span> <span class="hljs-literal">true</span><br><span class="hljs-attr">item_text_post:</span> <span class="hljs-literal">true</span><br><span class="hljs-attr">item_text_total:</span> <span class="hljs-literal">true</span><br><span class="hljs-attr">awl:</span> <span class="hljs-number">4</span><br><span class="hljs-attr">wpm:</span> <span class="hljs-number">275</span><br></code></pre></td></tr></table></figure>
-<h3 id="社交分享"><a href="#社交分享" class="headerlink" title="社交分享"></a>社交分享</h3></li>
+
+</li>
 </ul>
-<p>添加模块<a target="_blank" rel="noopener" href="https://github.com/theme-next/theme-next-needmoreshare2">https://github.com/theme-next/theme-next-needmoreshare2</a>获得博客文章社交分享的功能。</p>
+<h3 id="社交分享"><a href="#社交分享" class="headerlink" title="社交分享"></a>社交分享</h3><p>添加模块<a target="_blank" rel="noopener" href="https://github.com/theme-next/theme-next-needmoreshare2">https://github.com/theme-next/theme-next-needmoreshare2</a>获得博客文章社交分享的功能。</p>
 <p>(1) 执行以下命令安装needmoreshare模块</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">cd</span> themes/next<br>git <span class="hljs-built_in">clone</span> https://github.com/theme-next/theme-next-needmoreshare2 <span class="hljs-built_in">source</span>/lib/needsharebutton<br></code></pre></td></tr></table></figure>
-<blockquote>
-<p>注意，这里一定得是克隆到“source/lib/needsharebutton”目录，名字不能错。</p>
-</blockquote>
-<p>(2) 修改“主题配置”“needmoreshare2”的子选项开启社交分享功能</p>
+<pre><code>注意，这里一定得是克隆到“source/lib/needsharebutton”目录，名字不能错。</code></pre><p>(2) 修改“主题配置”“needmoreshare2”的子选项开启社交分享功能</p>
 <h3 id="博客搜索"><a href="#博客搜索" class="headerlink" title="博客搜索"></a>博客搜索</h3><p>(1) 在博客应用的根目录安装插件<a target="_blank" rel="noopener" href="https://github.com/theme-next/hexo-generator-searchdb">https://github.com/theme-next/hexo-generator-searchdb</a></p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">npm install hexo-generator-searchdb --save<br></code></pre></td></tr></table></figure>
 <p>(2) 在“应用配置”中添加以下配置开启博客搜索功能</p>
@@ -476,11 +475,7 @@
 </li>
 <li><p>在博客应用的根目录执行以下命令完成静态博客文件的上传</p>
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">hexo clean<br>hexo deploy<br></code></pre></td></tr></table></figure></li>
-<li><p>如下图，在码云上点击刚创建的代码仓库页面，点击菜单“Service|Gitee Pages”，在左侧选择“master”分支，点击“create”按钮</p>
- <div align=center>
- <img src="/2018/08/17/setup-blog-hexo-gitee/2.png" srcset="/img/loading.gif" class="">
- </div>
-
+<li><p>如下图，在码云上点击刚创建的代码仓库页面，点击菜单“Service|Gitee Pages”，在左侧选择“master”分支，点击“create”按钮<br> <img src="2.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 </ol>
 <p>不到一分钟，你的静态博客网站就生成了。可以拷贝生成的网址输入到浏览器打开你的博客了，同时你也可以把这个网址分享给你的朋友，或者放在你的个人简介中。</p>

@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -312,15 +312,8 @@
               <p>虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。</p>
 <a id="more"></a>
 
-<h1 id="在Mac中安装Python2和Python3"><a href="#在Mac中安装Python2和Python3" class="headerlink" title="在Mac中安装Python2和Python3"></a>在Mac中安装Python2和Python3</h1><p>从Python的官网中下载Python的Mac安装包，按照向导缺省安装即可。</p>
-<div align=center>
-<img src="/2020/01/31/install-python/7.png" srcset="/img/loading.gif" class="">
-</div>
-
-<div align=center>
-<img src="/2020/01/31/install-python/8.png" srcset="/img/loading.gif" class="">
-</div>
-
+<h1 id="在Mac中安装Python2和Python3"><a href="#在Mac中安装Python2和Python3" class="headerlink" title="在Mac中安装Python2和Python3"></a>在Mac中安装Python2和Python3</h1><p>从Python的官网中下载Python的Mac安装包，按照向导缺省安装即可。<br><img src="7.png" srcset="/img/loading.gif" alt=""></p>
+<p><img src="8.png" srcset="/img/loading.gif" alt=""></p>
 <h2 id="设置Python3为缺省的Python"><a href="#设置Python3为缺省的Python" class="headerlink" title="设置Python3为缺省的Python"></a>设置Python3为缺省的Python</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo rm /Library/Frameworks/Python.framework/Versions/Current<br>sudo ln -s /Library/Frameworks/Python.framework/Versions/3.8 /Library/Frameworks/Python.framework/Versions/Current<br><span class="hljs-built_in">cd</span> /usr/<span class="hljs-built_in">local</span>/bin/<br>sudo python<br>sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/python3 python<br>sudo rm pip<br>sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/pip3 pip<br></code></pre></td></tr></table></figure>
 <p>这样，在Mac中缺省的是Python3，命令行直接调用python或pip即可。如果需要使用Python2，命令行调用python2或pip2。</p>
 <p>在文件“~/.bash_profile”中注释掉或者删除Python安装程序添加的PATH环境变量，因为我们已经在系统路径/usr/local/bin下建立了Python相关命令的软链接，而且许多工具缺省也是从这个路径下搜索Python的。</p>
@@ -369,36 +362,12 @@
 <h2 id="PPA-Personal-Package-Archive-安装Python"><a href="#PPA-Personal-Package-Archive-安装Python" class="headerlink" title="PPA(Personal Package Archive)安装Python"></a>PPA(Personal Package Archive)安装Python</h2><p><a target="_blank" rel="noopener" href="https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa">PPA</a>库包含了为Ubuntu打包的最新的Python版本，但不一定包含所有的版本，所以不是太推荐这个方法。以下是通过PPA安装Python3.8的步骤：</p>
 <h3 id="为apt添加PPA库"><a href="#为apt添加PPA库" class="headerlink" title="为apt添加PPA库"></a>为apt添加PPA库</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo apt-get update<br>sudo apt install -y software-properties-common<br>sudo -E -H add-apt-repository -y ppa:deadsnakes/ppa<br>sudo apt-get update<br></code></pre></td></tr></table></figure>
 <h3 id="安装Python3-8"><a href="#安装Python3-8" class="headerlink" title="安装Python3.8"></a>安装Python3.8</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo apt-get -y -f --allow-unauthenticated install python3.8-dev<br></code></pre></td></tr></table></figure>
-<h1 id="在Windows中安装Python2和Python3"><a href="#在Windows中安装Python2和Python3" class="headerlink" title="在Windows中安装Python2和Python3"></a>在Windows中安装Python2和Python3</h1><p>在Windows中同时安装Python2和Python3相对来说比较容易，下载对应的安装包，按向导安装到缺省目录下即可。</p>
-<div align=center>
-<img src="/2020/01/31/install-python/1.png" srcset="/img/loading.gif" class="">
-</div>
-
-<p>在安装Python2向导中，选择同时安装工具pip以及将python.exe加入Path环境变量中：</p>
-<div align=center>
-<img src="/2020/01/31/install-python/2.png" srcset="/img/loading.gif" class="">
-</div>
-
-<p>在安装Python3向导中，选择自定义安装：</p>
-<div align=center>
-<img src="/2020/01/31/install-python/3.png" srcset="/img/loading.gif" class="">
-</div>
-
-<p>并选择安装工具pip：</p>
-<div align=center>
-<img src="/2020/01/31/install-python/4.png" srcset="/img/loading.gif" class="">
-</div>
-
-<p>将安装目录设置到和Python2相同的地方C:\Python37：</p>
-<div align=center>
-<img src="/2020/01/31/install-python/5.png" srcset="/img/loading.gif" class="">
-</div>
-
-<p>如果要设置Python2为缺省的Python，可以将C:\Python27;C:\Python27\Scripts放到Python3的配置前面：</p>
-<div align=center>
-<img src="/2020/01/31/install-python/6.png" srcset="/img/loading.gif" class="">
-</div>
-
+<h1 id="在Windows中安装Python2和Python3"><a href="#在Windows中安装Python2和Python3" class="headerlink" title="在Windows中安装Python2和Python3"></a>在Windows中安装Python2和Python3</h1><p>在Windows中同时安装Python2和Python3相对来说比较容易，下载对应的安装包，按向导安装到缺省目录下即可。<br><img src="1.png" srcset="/img/loading.gif" alt=""></p>
+<p>在安装Python2向导中，选择同时安装工具pip以及将python.exe加入Path环境变量中：<br><img src="2.png" srcset="/img/loading.gif" alt=""></p>
+<p>在安装Python3向导中，选择自定义安装：<br><img src="3.png" srcset="/img/loading.gif" alt=""></p>
+<p>并选择安装工具pip：<br><img src="4.png" srcset="/img/loading.gif" alt=""></p>
+<p>将安装目录设置到和Python2相同的地方C:\Python37：<br><img src="5.png" srcset="/img/loading.gif" alt=""></p>
+<p>如果要设置Python2为缺省的Python，可以将C:\Python27;C:\Python27\Scripts放到Python3的配置前面：<br><img src="6.png" srcset="/img/loading.gif" alt=""></p>
 
             </div>
             <hr>
@@ -433,7 +402,7 @@
                     
                     
                       <a href="/2020/01/30/jenkins-github-pullrequest/">
-                        <span class="hidden-mobile">Jenkins构建Github合并请求(Pull Request)</span>
+                        <span class="hidden-mobile">Jenkins构建GitHub合并请求(Pull Request)</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

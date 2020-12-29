@@ -260,7 +260,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      1.5k 字
+      1.6k 字
     </span>
   
 
@@ -270,7 +270,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      19
+      21
        分钟
     </span>
   
@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -317,9 +317,7 @@
 <li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
 </li>
 <li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png" srcset="/img/loading.gif" class="">
-</div>
+<p><img src="1.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 <li><p>必要时重启Jenkins让插件生效</p>
 </li>
@@ -327,9 +325,7 @@
 <p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
 <h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
 <li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png" srcset="/img/loading.gif" class="">
-</div>
+<p><img src="3.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 <li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
 </li>
@@ -339,29 +335,19 @@
 <h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
 <li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
 </li>
-<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="2.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="4.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>设置Gitlab详细的连接信息</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png" srcset="/img/loading.gif" class="">
-</div>
-设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。
+<li><p>设置Gitlab详细的连接信息<br><img src="5.png" srcset="/img/loading.gif" alt=""></p>
+<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
 </li>
 <li><p>点击”Save”按钮保存配置</p>
 </li>
 </ol>
 <h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        gitlab(<br>            <span class="hljs-symbol">triggerOnPush:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">triggerOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">triggerOpenMergeRequestOnPush:</span> <span class="hljs-string">&quot;source&quot;</span>,<br>            <span class="hljs-symbol">triggerOnNoteRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">noteRegex:</span> <span class="hljs-string">&quot;.*\\[run\\W+ci\\].*&quot;</span>,<br>            <span class="hljs-symbol">skipWorkInProgressMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">ciSkip:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">setBuildDescription:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addNoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addCiMessage:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addVoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">acceptMergeRequestOnSuccess:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">branchFilterType:</span> <span class="hljs-string">&quot;NameBasedFilter&quot;</span>,<br>            <span class="hljs-symbol">includeBranchesSpec:</span> <span class="hljs-string">&quot;master&quot;</span>,<br>            <span class="hljs-symbol">excludeBranchesSpec:</span> <span class="hljs-string">&quot;&quot;</span><br>        )<br>    &#125;<br>    environment &#123;<br>        GITLAB_URL = <span class="hljs-string">&quot;http://mygitlab.philips.com&quot;</span><br>        GITLAB_ORG = <span class="hljs-string">&quot;mikesay&quot;</span><br>        GITLAB_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>        gitLabConnection <span class="hljs-string">&#x27;mygitlab&#x27;</span><br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;gitlab_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>    post &#123;<br>      failure &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;failed&#x27;</span><br>      &#125;<br>      success &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;success&#x27;</span><br>      &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
 <ol>
-<li>6行-22行设置GitLab触发器，主要设置如下：</li>
-</ol>
+<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
 <table>
 <thead>
 <tr>
@@ -394,7 +380,7 @@
 <td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
 </tr>
 </tbody></table>
-<ol start="2">
+</li>
 <li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
  <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs groovy"><span class="hljs-attr">refspec:</span> <span class="hljs-string">&#x27;+refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span><br></code></pre></td></tr></table></figure></li>
 <li><p>39行: branches选择”origin/mr/${gitlabMergeRequestId}/head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
@@ -406,65 +392,37 @@
 <h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
 <li><p>点击”New Item”</p>
 </li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="6.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="7.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 <li><p>点击”Save”按钮保存Jenkins Job</p>
 </li>
-<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png" srcset="/img/loading.gif" class="">
-</div>
-
+<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="8.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 </ol>
 <h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
-<li><p>进入Jenkins用户设置页面</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>进入Jenkins用户设置页面<br><img src="11.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="12.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 <li><p>点击Save按钮保存</p>
 </li>
 </ol>
 <h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
-<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="13.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>设置Web hook详细信息</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png" srcset="/img/loading.gif" class="">
-</div>
-在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如```https://<jenkins user>:<user's api token>@mykube.com/jenkins/project/gitlab-preflight```，选择"Comments"和"Merge request events"用来监听合并请求(merge request)事件，包括评论更新事件。
-</li>
-<li><p>点击Add webhook按钮添加Web hook</p>
+<li><p>设置Web hook详细信息<br><img src="14.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 </ol>
+<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user&#39;s api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
+<ol start="3">
+<li>点击Add webhook按钮添加Web hook</li>
+</ol>
 <h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
-<li><p>Gitlab的合并请求(merge request)</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png" srcset="/img/loading.gif" class="">
-</div>
+<li><p>Gitlab的合并请求(merge request)<br><img src="9.png" srcset="/img/loading.gif" alt=""></p>
 </li>
-<li><p>触发的构建</p>
-<div align=center>
-<img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png" srcset="/img/loading.gif" class="">
-</div>
-
+<li><p>触发的构建<br><img src="10.png" srcset="/img/loading.gif" alt=""></p>
 </li>
 </ol>
 <p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>

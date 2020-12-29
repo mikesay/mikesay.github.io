@@ -304,7 +304,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2020年12月25日 晚上
+                  本文最后更新于：2020年12月29日 下午
                 
               </p>
             
@@ -338,9 +338,10 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">nginx -s reload<br></code></pre></td></tr></table></figure></li>
 <li><p>重启Nginx服务：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">systemctl restart nginx<br></code></pre></td></tr></table></figure>
-<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1></li>
+
+</li>
 </ol>
-<blockquote>
+<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
 <p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
 </blockquote>
 <h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
@@ -353,21 +354,26 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo rm /usr/<span class="hljs-built_in">local</span>/share/ca-certificates/selfsigned-certificate.crt<br></code></pre></td></tr></table></figure></li>
 <li><p>更新CA存储</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo update-ca-certificates --fresh<br></code></pre></td></tr></table></figure>
-<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3></li>
+
+</li>
 </ol>
-<h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
+<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
 <li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo cp selfsigned-certificate.crt /etc/pki/ca-trust/<span class="hljs-built_in">source</span>/anchors<br></code></pre></td></tr></table></figure></li>
 <li><p>更新CA存储</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo update-ca-trust<br></code></pre></td></tr></table></figure>
-<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4></li>
+
+</li>
+</ol>
+<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
 <li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo rm /etc/pki/ca-trust/<span class="hljs-built_in">source</span>/anchors/selfsigned-certificate.crt<br></code></pre></td></tr></table></figure></li>
 <li><p>更新CA存储</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo update-ca-trust<br></code></pre></td></tr></table></figure>
-<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2></li>
+
+</li>
 </ol>
-<h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
+<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
 <h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo security delete-certificate -c <span class="hljs-string">&quot;&lt;Common Name of existing certificate&gt;&quot;</span><br></code></pre></td></tr></table></figure>
 <blockquote>
 <p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
