@@ -533,9 +533,9 @@
 <p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
 ]]></content>
       <tags>
-        <tag>Git</tag>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
+        <tag>Git</tag>
         <tag>Jenkins</tag>
         <tag>Bitbucket</tag>
       </tags>
@@ -870,9 +870,9 @@
 </ol>
 ]]></content>
       <tags>
-        <tag>Git</tag>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
+        <tag>Git</tag>
         <tag>Jenkins</tag>
         <tag>Github</tag>
       </tags>
@@ -999,9 +999,9 @@
 <p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
 ]]></content>
       <tags>
-        <tag>Git</tag>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
+        <tag>Git</tag>
         <tag>Jenkins</tag>
         <tag>GitLab</tag>
       </tags>
@@ -1065,8 +1065,8 @@ origin/pr/1/merge: 指向临时合并的提交对象</li>
 </ul>
 ]]></content>
       <tags>
-        <tag>Git</tag>
         <tag>DevOps</tag>
+        <tag>Git</tag>
         <tag>Bitbucket</tag>
         <tag>Github</tag>
         <tag>Gitlab</tag>
