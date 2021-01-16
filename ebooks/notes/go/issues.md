@@ -1,3 +1,2 @@
 ## Go issues
-
-> Awesome Go.
+Awesome Go.

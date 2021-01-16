@@ -1,3 +1,2 @@
 ## Gradle issues
-
-> Awesome Gradle.
+Awesome Gradle.

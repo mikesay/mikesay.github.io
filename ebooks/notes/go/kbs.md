@@ -1,3 +1,2 @@
 ## Go kbs
-
-> Awesome Go.
+Awesome Go.
