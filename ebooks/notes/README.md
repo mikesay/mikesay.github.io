@@ -1,3 +1,3 @@
-# Headline
+# Notes
 
-> An awesome project.
+> Record mikesay's knowledge and issues.
