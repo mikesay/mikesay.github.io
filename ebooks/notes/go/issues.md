@@ -1,3 +1,3 @@
-# Headline
+## Go issues
 
 > Awesome Go.

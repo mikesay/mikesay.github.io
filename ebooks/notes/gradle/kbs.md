@@ -1,3 +1,3 @@
-# Headline
+## Gradle issues
 
-> Awesome Maven.
+> Awesome Gradle.

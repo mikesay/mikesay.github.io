@@ -1,6 +1,6 @@
 <!-- _coverpage.md -->
 
-![logo](_media/site.png)
+![logo](/_media/site.png)
 
 # 云斋的笔记
 Cloud, DevOps

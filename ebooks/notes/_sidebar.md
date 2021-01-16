@@ -1,13 +1,13 @@
 <!-- docs/_sidebar.md -->
-- [Python]
-    - [知识点](/python/kbs.md)
-    - [问题解决](/python/issues.md)
-- [Go]
-    - [知识点](/go/kbs.md)
-    - [问题解决](/go/issues.md)
-- [Maven]
-    - [知识点](/maven/kbs.md)
-    - [问题解决](/maven/issues.md)
-- [Gradle]
-    - [知识点](/gradle/kbs.md)
-    - [问题解决](/gradle/issues.md)
+- Python
+    - [KnowledgeBase](/python/kbs.md)
+    - [Issue and Solution](/python/issues.md)
+- Go
+    - [KnowledgeBase](/go/kbs.md)
+    - [Issue and Solution](/go/issues.md)
+- Maven
+    - [KnowledgeBase](/maven/kbs.md)
+    - [Issue and Solution](/maven/issues.md)
+- Gradle
+    - [KnowledgeBase](/gradle/kbs.md)
+    - [Issue and Solution](/gradle/issues.md)
