@@ -1,24 +1,35 @@
 <!-- docs/_sidebar.md -->
 - Docker
-    - [KnowledgeBase](/docker/kbs.md)
+    - [Knowledge Base](/docker/kbs.md)
     - [Issue and Solution](/docker/issues.md)
+- GitLab
+    - [Knowledge Base](/gitlab/kbs.md)
+    - [Issue and Solution](/gitlab/issues.md)
+    - [Install](/gitlab/install.md)
 - Go
-    - [KnowledgeBase](/go/kbs.md)
+    - [Knowledge Base](/go/kbs.md)
     - [Issue and Solution](/go/issues.md)
 - Gradle
-    - [KnowledgeBase](/gradle/kbs.md)
+    - [Knowledge Base](/gradle/kbs.md)
     - [Issue and Solution](/gradle/issues.md)
 - Istio
-    - [KnowledgeBase](/istio/kbs.md)
+    - [Knowledge Base](/istio/kbs.md)
     - [Issue and Solution](/istio/issues.md)
 - Jenkins
-    - [KnowledgeBase](/jenkins/kbs.md)
+    - [Knowledge Base](/jenkins/kbs.md)
     - [Issue and Solution](/jenkins/issues.md)
+    - [Install](/jenkins/install.md)
 - Python
-    - [KnowledgeBase](/python/kbs.md)
+    - [Knowledge Base](/python/kbs.md)
     - [Issue and Solution](/python/issues.md)
+- Linux
+    - [Knowledge Base](/linux/kbs.md)
+    - [Issue and Solution](/linux/issues.md)
+    - Setup
+        - [Samba](/linux/setup/samba.md)
+        - [Bind9](/linux/setup/bind9.md)
 - Maven
-    - [KnowledgeBase](/maven/kbs.md)
+    - [Knowledge Base](/maven/kbs.md)
     - [Issue and Solution](/maven/issues.md)
 - Nginx
     - [KnowledgeBase](/nginx/kbs.md)

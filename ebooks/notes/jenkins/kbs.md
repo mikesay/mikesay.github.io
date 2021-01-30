@@ -130,6 +130,8 @@ pipeline {
     }
 }
 ```
+> Integration with GitLab: 
+> In Jenkinsfile, register a GitLab pipeline by “gitlabBuilds” and update status of GitLab commits by “updateGitlabCommitStatus”
 
 **version**
 ```properties
