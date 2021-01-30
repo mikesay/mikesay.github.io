@@ -1,13 +1,25 @@
 <!-- docs/_sidebar.md -->
-- Python
-    - [KnowledgeBase](/python/kbs.md)
-    - [Issue and Solution](/python/issues.md)
+- Docker
+    - [KnowledgeBase](/docker/kbs.md)
+    - [Issue and Solution](/docker/issues.md)
 - Go
     - [KnowledgeBase](/go/kbs.md)
     - [Issue and Solution](/go/issues.md)
-- Maven
-    - [KnowledgeBase](/maven/kbs.md)
-    - [Issue and Solution](/maven/issues.md)
 - Gradle
     - [KnowledgeBase](/gradle/kbs.md)
     - [Issue and Solution](/gradle/issues.md)
+- Istio
+    - [KnowledgeBase](/istio/kbs.md)
+    - [Issue and Solution](/istio/issues.md)
+- Jenkins
+    - [KnowledgeBase](/jenkins/kbs.md)
+    - [Issue and Solution](/jenkins/issues.md)
+- Python
+    - [KnowledgeBase](/python/kbs.md)
+    - [Issue and Solution](/python/issues.md)
+- Maven
+    - [KnowledgeBase](/maven/kbs.md)
+    - [Issue and Solution](/maven/issues.md)
+- Nginx
+    - [KnowledgeBase](/nginx/kbs.md)
+    - [Issue and Solution](/nginx/issues.md)
