@@ -1,4 +1,15 @@
 ## Install Bind9
+
+### Reference
++ How To Configure BIND as a Private Network DNS Server on Ubuntu 18.04  
+    https://www.digitalocean.com/community/tutorials/how-to-configure-bind-as-a-private-network-dns-server-on-ubuntu-18-04
+
++ Install BIND 9 on Ubuntu and Configure It for Usage  
+    https://linuxhint.com/install_bind9_ubuntu/
+
++ Set Up a Local DNS Resolver on Ubuntu 18.04, 16.04 with BIND9  
+    https://www.linuxbabe.com/ubuntu/set-up-local-dns-resolver-ubuntu-18-04-16-04-bind9
+
 > Following commands need to root permission.
 
 + Run command “apt-get install bind9 bind9utils bind9-doc”
