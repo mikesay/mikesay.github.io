@@ -19,6 +19,12 @@
     - [Knowledge Base](/jenkins/kbs.md)
     - [Issue and Solution](/jenkins/issues.md)
     - [Install](/jenkins/install.md)
+- Kubernetes
+    - [Knowledge Base](/kubernetes/kbs.md)
+    - [Issue and Solution](/kubernetes/issues.md)
+    - operator
+        - [concepts](/kubernetes/operator/concepts.md)
+        - [OperatorSDK](/kubernetes/operator/operator_sdk.md)
 - Python
     - [Knowledge Base](/python/kbs.md)
     - [Issue and Solution](/python/issues.md)
