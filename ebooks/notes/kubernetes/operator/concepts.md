@@ -19,7 +19,7 @@ https://coreos.com/blog/introducing-operator-framework
 https://github.com/kubernetes/client-go
 https://github.com/kubernetes/sample-controller/blob/master/docs/controller-client-go.md
 
-Go clients for talking to a kubernetes cluster. The client-go library contains various mechanisms that you can use when developing your custom controllers. These mechanisms are defined in the tools/cache folder of the library.
+Go clients for talking to a kubernetes cluster. The client-go library contains various mechanisms that you can use when developing your custom controllers. These mechanisms are defined in the tools/cache folder of the library.  
 ![operator](../../_media/operator/operator2.png) 
 
 ### controller-runtime
