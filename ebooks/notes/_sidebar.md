@@ -22,7 +22,7 @@
 - Kubernetes
     - [Knowledge Base](/kubernetes/kbs.md)
     - [Issue and Solution](/kubernetes/issues.md)
-    - operator
+    - Operator
         - [Concepts](/kubernetes/operator/concepts.md)
         - [OperatorSDK](/kubernetes/operator/operator_sdk.md)
 - Python
