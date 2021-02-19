@@ -13,7 +13,7 @@ https://coreos.com/blog/introducing-operators.html
 https://coreos.com/blog/introducing-operator-framework
 
 ## Development technology stack for operator
-![operator](../../_media/operator/operator1.png) 
+![operator](../../_media/operator/operator1.jpeg) 
 
 ### client-go
 https://github.com/kubernetes/client-go
