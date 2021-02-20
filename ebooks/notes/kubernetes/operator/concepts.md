@@ -34,6 +34,8 @@ The Kubernetes controller-runtime Project is a set of go libraries for building 
 https://github.com/operator-framework/operator-sdk  
 https://sdk.operatorframework.io/docs/
 
+![operator](../../_media/operator/operator10.png) 
+
 #### kubebuilder
 https://book.kubebuilder.io/introduction.html
 
