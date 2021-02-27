@@ -55,7 +55,7 @@ https://marketplace.visualstudio.com/items?itemName=golang.go
 https://jfrog.com/blog/why-goproxy-matters-and-which-to-pick/
 
     + Use "GOPRVIATE" and JFrog GoCenter to resolve private modules from private git repository as well as public modules from GoCenter
-        ![go](../../_media/go/1.png)
+        ![go](../_media/go/1.png)
         ```bash
         $ export GOPROXY=https://gocenter.io,direct
         $ export GOPRIVATE=*.internal.mycompany.com
@@ -65,7 +65,7 @@ https://jfrog.com/blog/why-goproxy-matters-and-which-to-pick/
         > (3) GOPRIVATE serves as the default value for the lower-level GONOPROXY and GONOSUMDB variables, which provide finer-grained control over which modules are fetched via proxy and verified using the checksum database.
 
     + Use "GOPROXY" and Artifactory to delegate both public and private repositories
-        ![go](../../_media/go/2.png)
+        ![go](../_media/go/2.png)
         ```bash
         $ export GOPROXY="https://:@my.artifactory.server/artifactory/api/go/go
         $ export GONOSUMDB="github.com/mycompany/*,github.com/mypersonal/*"
