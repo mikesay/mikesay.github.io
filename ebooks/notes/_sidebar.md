@@ -6,9 +6,15 @@
     - [Knowledge Base](/gitlab/kbs.md)
     - [Issue and Solution](/gitlab/issues.md)
     - [Install](/gitlab/install.md)
+- GCP
+    - [Knowledge Base](/gcp/kbs.md)
+    - [Issue and Solution](/gcp/issues.md)
 - Go
     - [Knowledge Base](/go/kbs.md)
     - [Issue and Solution](/go/issues.md)
+    - [Go Concurrency Patterns: Pipelines and cancellation](/go/go_cc1.md)
+    - [Go Concurrency Patterns: Context](/go/go_cc2.md)
+    - [Error handling and Go](/go/go_error.md)
 - Gradle
     - [Knowledge Base](/gradle/kbs.md)
     - [Issue and Solution](/gradle/issues.md)
@@ -25,6 +31,9 @@
     - Operator
         - [Concepts](/kubernetes/operator/concepts.md)
         - [OperatorSDK](/kubernetes/operator/operator_sdk.md)
+- Programming
+    - [Knowledge Base](/programming/kbs.md)
+    - [Issue and Solution](/programming/issues.md)
 - Python
     - [Knowledge Base](/python/kbs.md)
     - [Issue and Solution](/python/issues.md)

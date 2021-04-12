@@ -1,30 +1,44 @@
 ## Dockerfile for Go
+> Use debian version of golang image to buld go program at build stage, because the golang image of alphine version will met network/dns issue (apk update) to run in docker in docker build (dind, dood method).
+
 ```docker
-# 1.14-alpine
+# golang:1.16.2-stretch
+# go version: 1.16.2
 # pull from the exact digest for security purpose to make sure it is the exact image you want
 #
-FROM golang@sha256:e484434a085a28801e81089cc8bcec65bc990dd25a070e3dd6e04b19ceafaced AS builder
+FROM golang@sha256:098e7f9c6a628d24db7283e6b774e0b4a095a96cea157f1fb516d31e3dd575bf AS builder
 
-# Install git for fetching go modules
+# Change go proxy
 #
-RUN apk update && \
-    apk add --no-cache git tzdata
+ENV GOPROXY=https://goproxy.cn,direct
+
+# apk update
+#
+RUN apt-get update && \
+    apt-get install -y git tzdata ca-certificates
+
+# Set timezone to Asia/Shanghai
+#
+RUN rm /etc/localtime && \
+    ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Africa/Shanghai" > /etc/timezone
 
 # Setup non root user with limit option
 #
-RUN adduser \
+RUN adduser -q \
+    --gecos "First Last,RoomNumber,WorkPhone,HomePhone" \
     --disabled-password \
     --home "/nonexistent" \
     --shell "/sbin/nologin" \
     --no-create-home \
     --uid 80008 \
-    mike
+    hello
 
 WORKDIR $GOPATH/src/main/hello/
 COPY . .
 
-RUN go mod download
-RUN go mod verify
+RUN go mod download && \
+    go mod verify
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /go/bin/hello
 
@@ -32,11 +46,20 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /go/bin/h
 ## Build real docker image
 ##
 FROM scratch
-COPY --from=builder /go/bin/hello /go/bin/hello
+
+WORKDIR /opt/work
+
+COPY --from=builder /go/bin/hello /opt/work/hello
 
 # Copy zoneinfo
 #
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/localtime /etc/localtime
+COPY --from=builder /etc/timezone /etc/timezone
+
+# Copy the ca-certificate.crt from the build stage
+#
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy running user
 #
@@ -45,22 +68,18 @@ COPY --from=builder /etc/group /etc/group
 
 # User non root user with limited privelege
 #
-USER mike:mike
+USER hello:hello
 
 # Expose the service by port. Try to use port higher 
 # than 1024, so that no need root priveledge to bind
 #
-EXPOSE 3000
+EXPOSE 39501
 
 # Export directory
 #
-VOLUME /tmp
+VOLUME /opt/work/configs
 
-# Set default environment value
-#
-ENV MESSAGES=Mike
-
-ENTRYPOINT ["/go/bin/hello"]
+ENTRYPOINT ["/opt/work/hello"]
 ```
 
 ## Dockerfile for Python
@@ -168,4 +187,13 @@ then
 fi
 
 nginx -g 'daemon off;'
+```
+
+## Access MacOS host from a docker container
+
+https://medium.com/@balint_sera/access-macos-host-from-a-docker-container-e0c2d0273d7f
+
+The host is:
+```bash
+host.docker.internal
 ```

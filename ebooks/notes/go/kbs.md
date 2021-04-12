@@ -181,3 +181,15 @@ http://www.go-admin.cn/en/
 + Official Doc  
 https://book.go-admin.cn/en
 
+### Go Syntax
+
+#### Go Concurrency Patterns: Pipelines and cancellation
+https://blog.golang.org/pipelines  
+
+#### Go Concurrency Patterns: Context
+https://blog.golang.org/context
+
+## Go learning materials
+
+### Learn Go And Plant Trees
+https://tutorialedge.net/
