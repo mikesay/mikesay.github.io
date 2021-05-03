@@ -197,3 +197,9 @@ The host is:
 ```bash
 host.docker.internal
 ```
+
+## Start a NFS server
+```bash
+docker run -it -d --name nfs-server --privileged -p 2049:2049 -v /Users/mizha53/Documents/MikeStorage/MikeNFSDocker:/nfsshare -e SHARED_DIRECTORY=/nfsshare itsthenetwork/nfs-server-alpine:12
+```
+> Note, the volume mount will not work for client which will meet permission issue.
