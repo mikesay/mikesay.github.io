@@ -48,46 +48,25 @@
 第十九章，动手实验3 - 优化当前状态（12个月后），提供了一个小型大型解决方案设计的例子。  
 第二十章，云架构 - 经验教训，讨论重用的解决方案设计教训。  
 
-## 充分利用这本书
-This book is designed to guide organization digital transformation and cloud transition. To
-get the most out of this guide, the main goal should be to design and build architectures
-supporting specified business or mission use cases. The target should be the use and
-aggregation of cloud architectures to deploy and securely use business and/or mission
-software applications.
+## 充分利用本书
+本书旨在指导组织数字化转型和云迁移。为了充分利用本指南，主要目标应该是设计和构建支持特定业务或任务用例的架构。目标应该是使用和聚合云架构来部署和安全使用业务和/或任务软件应用程序。
 
 ## 使用约定
-There are a number of text conventions used throughout this book.
-CodeInText: Indicates code words in text, database table names, folder names, filenames,
-file extensions, pathnames, dummy URLs, user input, and Twitter handles. Here is an
-example: "Please type dyn in the search box"
+本书使用了许多文本约定。
+文本中的代码：表示文本中的代码文本，数据库表名，文件夹名，文件名，文件扩展名，路径名，假的URLs，用户输入和推特用户。这是一个示例：“qi'请在搜索框中输入 dyn”
+**粗体**：表示新术语，重要的词，或者你在屏幕上看到的词。例如，菜单或对话框中的词在文本中是这样出现的。这是一个示例：“在当前视图同一页面的顶部，有一个**文本搜索**框。”
 
-Bold: Indicates a new term, an important word, or words that you see onscreen. For
-example, words in menus or dialog boxes appear in the text like this. Here is an example:
-"At the top of the same page in current view, there is a Text Search box."
+| ![logo](/_media/warning.png) | 警告或重要说明如下所示。 |
+| :---  | :--- |
 
-![logo](/_media/warning.png) Warnings or important notes appear like this.
-
-![logo](/_media/tips.png) Tips and tricks appear like this.
-
+| ![logo](/_media/tips.png) | 提示和技巧是这样出现的。 |
+| :---  | :--- |
 ## 保持联系
-Feedback from our readers is always welcome.
-General feedback: Email feedback@packtpub.com and mention the book title in the
-subject of your message. If you have questions about any aspect of this book, please email
-us at questions@packtpub.com.
-Errata: Although we have taken every care to ensure the accuracy of our content, mistakes
-do happen. If you have found a mistake in this book, we would be grateful if you would
-report this to us. Please visit www.packtpub.com/submit-errata, selecting your book,
-clicking on the Errata Submission Form link, and entering the details.
-Piracy: If you come across any illegal copies of our works in any form on the Internet, we
-would be grateful if you would provide us with the location address or website name.
-Please contact us at copyright@packtpub.com with a link to the material.
-If you are interested in becoming an author: If there is a topic that you have expertise in
-and you are interested in either writing or contributing to a book, please visit
-authors.packtpub.com.
+随时欢迎读者的反馈。  
+**一般反馈：** 发送电子邮件至 feedback@packtpub.com 并在邮件主题中提及书名。 如果您对本书的任何方面有任何疑问，请发送电子邮件至 questions@packtpub.com。  
+**勘误表：** 虽然我们已尽一切努力确保内容的准确性，但错误还是会发生。 如果您在本书中发现了错误，请向我们报告，我们将不胜感激。 请访问 www.packtpub.com/submit-errata 选择您的书籍，单击勘误提交表链接，然后输入详细信息。  
+**盗版：** 如果您在互联网上发现任何形式的我们作品的非法复制品，请提供位置地址或网站名称，我们将不胜感激。 请通过copyright@packtpub.com与我们联系，并提供材料的链接。 如果您有兴趣成为作者：如果您对某个主题有专业知识并且有兴趣撰写或贡献一本书，请访问authors.packtpub.com。  
 
 ## 评论
-Please leave a review. Once you have read and used this book, why not leave a review on
-the site that you purchased it from? Potential readers can then see and use your unbiased
-opinion to make purchase decisions, we at Packt can understand what you think about our
-products, and our authors can see your feedback on their book. Thank you!
-For more information about Packt, please visit packtpub.com.
+请留下评论。 一旦您阅读并使用了这本书，为什么不在您购买它的网站上留下评论呢？ 然后，潜在读者可以看到并使用您公正的意见来做出购买决定，我们 Packt 可以了解您对我们产品的看法，我们的作者可以看到您对他们书籍的反馈。 谢谢！
+有关 Packt 的更多信息，请访问 packtpub.com。

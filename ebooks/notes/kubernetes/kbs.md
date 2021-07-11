@@ -339,12 +339,13 @@ spec:
   export ALL_PROXY=$all_proxy
   export NO_PROXY=$no_proxy
   ```
+  
   Use hyperkit driver:  
   ```bash
-  minikube start --cpus=4 --memory='6g' --cni='flannel' --disk-size='60g' --driver='hyperkit'
+  minikube start --cpus=4 --memory='6g' --cni='flannel' --disk-size='60g' --driver='hyperkit' --kubernetes-version='v1.19.10' --extra-config=apiserver.service-node-port-range=1-65535
   ```
 
   Use virtualbox driver:  
   ```bash
-  minikube start --cpus=4 --memory='6g' --cni='flannel' --disk-size='60g' --driver='virtualbox'
+  minikube start --cpus=4 --memory='6g' --cni='flannel' --disk-size='60g' --driver='virtualbox' --kubernetes-version='v1.19.10' --extra-config=apiserver.service-node-port-range=1-65535
   ```

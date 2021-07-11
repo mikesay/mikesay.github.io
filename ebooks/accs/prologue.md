@@ -1,114 +1,33 @@
 # 序幕
-140 million results are returned in 0.48 seconds when you search for cloud computing in a
-Google search. With that much information available, and that many conversations active
-around the globe, do we really know what cloud is? Are we confident in knowing what
-cloud can do? Can we explain why the cloud is changing everything?
-If 10 people were asked what cloud computing is and why it is important, we would get at
-least 12 different answers. Where is the disconnect? We know leaders want it. CFOs
-support it. Strategists recommend it. Technical teams request it. Users demand it. Isn't
-cloud easy? Cloud is often associated with acceleration, cost control, added flexibility,
-increased agility, lower complexity, and rapid innovation. Cloud is never described as easy.
-It takes an incredible amount of work and planning to be simple. CIOs are stating that
-cloud skills are a top hiring priority in 2018. What do we need to stay relevant? How do we
-keep up with an industry that is changing every day?
-Cloud computing is changing strategies and enabling innovation at every turn. Cloud is
-changing IT economics. Cloud is blurring the lines and breaking down traditional silos.
-Cloud is blending roles and redefining boundaries. Regardless of which industry we are in,
-or the position we hold, cloud computing is changing everything: how we work, how we
-play, and how we communicate.
+当你用谷歌搜索云计算时，0.48秒内返回1.4亿条结果。这么多可用的信息，以及在全球范围内活跃的许多对话，我们真的知道什么是云吗？我们有信心知道云可以做什么吗？我们能解释为什么云正在改变一切吗？如果问10个人什么是云计算以及为什么它很重要，我们至少会得到12个不同的答案。脱节在哪里？我们知道领导者想要它。首席财务官支持它。战略家推荐它。技术团队要求它。用户需要它。云不是很容易吗？云通常与加速、成本控制、增加了灵活性、提高了敏捷性、降低了复杂性和快速创新。云从来没有被描述为容易。需要大量的工作和计划​​才能让云变得简单。CIO表示云技能是2018年招聘的最高优先级。我们需要什么才能保持相关性？我们如何跟上每天都在变化的行业？云计算正在改变战略，每时每刻都在推动创新。云正在改变IT经济。云正在模糊界限并打破传统的孤岛。云正在融合角色并重新定义边界。无论我们处于哪个行业，或者担任什么职位，云计算正在改变着一切：我们的工作方式、我们的娱乐方式以及我们的沟通方式。
 
 ## 基本规则
-This book is meant as a guide to help you sort through the noise related to cloud
-computing. We intend to help explain what cloud really is and how it affects strategy,
-economics, and technology simultaneously, and discuss how to stay professionally relevant
-through the tremendous changes occurring daily in our industry.
-Our targeted audience is anyone involved in the cloud conversation. There are many
-people asking questions and many more trying to find and/or provide answers.
+本书旨在作为指南，帮助您理清与云计算相关的噪音。我们打算帮助解释到底什么是云以及它如何同时影响战略、经济和技术，并讨论如何在我们行业每天发生的巨大变化中保持专业相关性。
+我们的目标受众是参与云对话的任何人。有很多人提出问题，还有更多人试图寻找和/或提供答案。  
 
-![logo](/_media/warning.png)
-Three of your closest provider friends are not representative of the
-market. Now combine the extremely high cost of failed implementations
-and incorrect strategies and you quickly realize that the old way of
-thinking, the manual tools of Excel, PowerPoint, and email, can no longer
-help someone trying to embrace cloud or lead any kind of digital
-transformation within their organization.
+| ![logo](/_media/warning.png) | 您最亲密的三个供应商朋友不代表市场。现在结合失败实施和错误策略的极高成本，您很快就会意识到旧的思维方式，Excel、PowerPoint 和电子邮件等手动工具，不能再帮助人们在他们的组织内尝试拥抱云或引领任何类型的数字化型。 |
+| :---  | :--- |
 
-In designing this book, we've taken an agnostic view of the market. Digital transformation
-and cloud adoption have many paths. Just like any other journey, there are multiple ways
-to reach the destination, with some paths more optimal than others, depending on what is
-required for a successful outcome. Many books are extremely technical, detailing
-technology knobs and dials, configuration formulas, and technical tasks. Many books
-discuss various concepts for business and strategy. Our approach was to create a book that
-simultaneously aligns strategy, technology, and economics. Fundamentally, we believe
-these cannot be separated. Technically optimal solutions may not fit within economic goals.
-Strategy requirements may alter technical choices. Risk always needs to be offset by
-economics. We believe our industry needs a way to reference and apply these.
-There are thousands of service providers in the market offering services out of tens of
-thousands of locations. Many of them have thousands of products with what seems like
-endless potential combinations The combinatorial effect of options equates to trillions of
-possible solutions available in the market today. How do we begin to sort through the data?
-How do we analyze a representative sample size to make a well informed, marketconscious
-decision?
-In construction, it would be costly to finish half a building just to have a fatal flaw cause
-you to tear it down. The high cost of failure is astronomical. Not to mention the costly
-person-hours expended in the preliminary work needed to design, architect, and fund such
-a project. Cost is why every major modern design process today uses computer-aided
-design, which is particularly the case if the marketplace has a high cost of design coupled
-with a high-cost failure. Industries from computer chip design using Cadence to
-construction using Autodesk have evolved in this way. Can you imagine trying to develop
-computer chips using paper and pencil?
-We see the same thing in the IT industry. IT today is all about hybrid platforms and cloud
-computing. Failure is very, very expensive. Going back to the construction idea mentioned
-previously, it is very cumbersome and expensive to have finished with 40 stories of a
-skyscraper and realize it must be torn down due to a fatal flaw in the foundation.
+在设计本书时，我们对市场采取了不可知论的观点。数字化转型和云采用有很多途径。就像任何其他旅程一样，有多种方法可以到达目的地，其中一些路径比其他路径更优化，具体取决于成功结果所需的条件。许多书籍都非常技术性，详细介绍了技术旋钮和刻度盘、配置公式和技术任务。许多书籍讨论了商业和战略的各种概念。我们的方法是创作一本同时兼顾战略、技术和经济学的书。从根本上说，我们认为这些是不能分开的。技术上的最佳解决方案可能不符合经济目标。策略要求可能会改变技术选型。风险总是需要通过经济来抵消。我们相信我们的行业需要一种方法来参考和使用这些。市场上有成千上万的服务提供商在数以万计的地点提供服务。他们中的许多人拥有数以千计的产品，似乎有无穷无尽的潜在组合。期权的组合效应相当于当今市场上数以万亿计的可能解决方案。我们如何开始对数据进行排序？我们如何分析具有代表性的样本量以做出明智的、具有市场意识的决策。
 
-Today's market is rapidly changing, with new options, pricing, locations, concepts, and
-solutions appearing almost daily. The opportunities to identify, evaluate, and apply new
-solutions and strategies are endless. Today, we have limited data and no way to work in
-real time as we compare, optimize, and choose between options and strategies. The tools
-we use are usually manual, disconnected, expensive, and filled with stop and go serial-built
-processes. Working with limited data in a disconnected way makes it virtually impossible
-to make good decisions as the market has changed before we can act confidently. In a
-situation with little automation, limited data, and disconnected processes, it is impossible to
-align strategy, technology, and economics to move forward quickly. These challenges mean
-we need automation, connected ecosystems, and computer-aided design in our IT toolbox:
+在建筑中，只是为了一个致命的缺陷而将完成一半的建筑拆除，这将是昂贵的。失败的高昂代价是个天文数字。更不用说在设计、构建和资助此类项目所需的初步工作中花费的昂贵的工时。成本是当今每个主要的现代设计过程都使用计算机辅助设计的原因，如果市场设计成本高且失败成本高，则尤其如此。 从使用Cadence的计算机芯片设计行业到使用Autodesk的建筑行业，都以这种方式发展。你能想象尝试用纸和铅笔开发计算机芯片吗？
+
+我们在IT行业看到了同样的事情。今天的IT都是关于混合平台和云计算的。失败是非常非常昂贵的。回到前面提到的建筑思路，在完成了40层的摩天大楼后意识到由于地基的致命缺陷必须拆除它是非常麻烦和昂贵的。
+
+当今的市场瞬息万变，几乎每天都会出现新的选择、定价、位置、概念和解决方案。 识别、评估和应用新解的决方案和策略的机会是无穷无尽的。今天，我们在比较、优化和在选项和策略做选择时，数据有限，无法实时工作。我们使用的工具通常是手动的、不连贯的、昂贵的、充满了停止和继续的串行构建的流程。由于在我们能够自信地采取行动之前，市场已经发生变化，以不连贯的方式处理有限的数据几乎不可能做出正确的决策。 在自动化程度低、数据有限和流程不连贯的情况下，不可能协调战略、技术和经济以快速向前发展。这些挑战意味着在我们的IT工具箱中需要自动、连贯的生态系统和计算机辅助设计：
 
 ![logo](/_media/prologue1.png)
 
-This book will teach a modern approach to IT solution design. In our design process,
-economic, technical, and strategic attributes must always align. Executives have always
-needed to balance economics, return, and risk. As executives modernize their thinking, they
-are having to blend deeper technical detail with the economic and strategic aspects.
-Solution designers and architects must also modernize their thinking by adding economics,
-risk, and strategy with technical detail to make high-value recommendations. Product
-managers updating skill sets and processes require the same level of strategic and economic
-prowess as they do technical. As solutions and answers to modern IT challenges are
-assembled, they must simultaneously align strategy, economics, and technology.
+本书将教授IT解决方案设计的现代方法。在我们的设计过程中，经济、技术和战略属性必须始终保持一致。高管们总是需要平衡经济、回报和风险。随着高管们的思维现代化，他们必须将更深层次的技术细节与经济和战略方面相结合。解决方案设计人员和架构师也必须在技术细节中加入经济、风险和策略来使他们的思维现代化，从而提出高价值建议。产品经理更新技能和流程需要与技术水平相同的战略和经济实力。在收集现代IT挑战的解决方案和答案时，它们必须使战略、经济和技术保持一致。
 
-The examples in this book will use enterprise and mission goals to visualize, map, match,
-and compare solution design patterns modeled using modern computer-aided design
-platforms. Hybrid is not just a term to describe cloud solutions. It is also used to describe
-the modernization of skill sets required when architecting business, economic, technical,
-and risk strategies, new business models, and leading-edge technology solutions.
-This book is not meant to be read front to back. Just like architecting strategy or architecting
-technical solutions, the journey can take different paths, with things of interest moving you
-in one direction or another. The examples in this book help the reader progress through
-architecting interactions in compounding layers. As choices, not decisions, are made,
-scenarios, insights, comparative analysis, and outcomes change. The examples in this book
-will show how multiple choices, and combinations of choices, can derive additional data,
-present unique insights, and identify optimal scenarios that simultaneously satisfy risk,
-economic, strategic, and technical requirements.
-As discussed, architecting is done at many layers and levels. Our examples in this book will
-show how to do the following:
+书中的示例将使用企业和任务目标来可视化、映射、匹配和比较使用现代计算机辅助设计平台建模的解决方案设计模式。混合不仅仅是描述云解决方案的术语。 它还用于描述在构建业务、经济、技术和风险策略、新业务模型和前沿技术解决方案时所需的现代化的技能组合。
 
-+ Collect accurate real-time solution design data and analytics
-+ Leverage automation and high-speed solution design tools
-+ Update your skill set to include business fundamentals, economics, and risk management
-+ Rapidly model solutions, quickly interpret insights, and gain advantage through safe failures leading to success
+本书不需要从头到尾按顺序阅读。就像架构战略或技术解决方案一样，旅程可以有不同的路径，有趣的东西会把你引向一个或另一个方向。本书中的示例帮助读者通过在复合层中构建交互来取得进展。当做出选择而不是决定时，情景、见解、比较分析和结果都会发生变化。本书中的示例将展示多重选择和选择组合如何获得额外数据、呈现独特见解并确定同时满足风险、经济、战略和技术要求的最佳方案。
 
-A final important aspect of our approach is that we are looking at cloud computing with an
-architecting focus, not a solution design focus. It will often be stated throughout the book
-that successful architectures, not designs, must satisfy strategic, economic, and technical
-requirements simultaneously. Designs do not. The focus of this book is on cloud computing
-and the various architectures associated with it. There are many moving pieces and
-intertwining facets for successful cloud architectures. The design is one important part.
+如前所述，架构设计是在许多层和级别上完成的。我们在本书中的例子将展示如何做到以下几点：
++ 收集准确的实时的解决方案设计数据和分析
++ 利用自动化和高速解决方案设计工具
++ 更新您的技能，包括业务基础，经济学和风险管理
++ 快速建模解决方案，快速解释见解，并通过安全的失败获得优势，最终走向成功
+
+我们方法的最后一个重要方面是，我们关注云计算架构，而不是解决方案设计。整本书中经常会提到，成功的架构，而不是设计，必须同时满足战略、经济和技术要求。设计并没有。本书的重点是云计算以及与之相关的各种架构。成功的云架构有许多移动的部分和相互交织的方面。 设计是重要的一环。
