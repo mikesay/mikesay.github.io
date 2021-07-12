@@ -1,28 +1,16 @@
 # 第一章 什么是云计算？
-We hear that the cloud simplifies, yet it makes things more complicated (at first). It saves us
-money, yet unusually high bills have surprised many IT leaders and executives. The cloud
-is flexible, agile, and nimble, yet many get locked into single providers with less than
-optimal architectures and with substantial migration costs to change. We also hear that the
-cloud is not as secure as our data center, even though this has been proven false time and
-again.
-In many ways, cloud computing reflects human nature. Everyone believes their idea is best.
-People sometimes blindly follow their beliefs regardless of the data. No single cloud
-provider, cloud service, or cloud architecture is perfect. They all have things that we wish
-were different. They have rules to follow, and they all peddle the line of being the only way
-to the truth and the promised land.
-The cloud is not an answer for everything. It is a tool in the toolbox that has a purpose.
-When used appropriately, it is an incredible addition. When used incorrectly it can be
-painful, expensive, and career altering. Let's sort out what it is and what it is not.
-We cover the formal definition later, but in essence, cloud computing is a new business model
-for the consumption and provisioning of information technology software, infrastructures, and
-related services. Additionally, this chapter covers:
-+ Cloud computing history
-+ Cloud computing definition
-+ Essential characteristics of cloud computing
-+ Cloud service models
-+ Cloud deployment models
-+ Similar technology models
-+ Cloud washing
+我们听说云简化了事情，但它使事情变得复杂更服务（起初）。它为我们省钱，但异常高的账单让许多IT领导和高管感到惊讶。云是弹性的，敏捷和灵活的，但是许多人被锁定到了单一的提供商，这些提供商的架构不够理想，并且需要大量的迁移成本来做变更。我们还听说云不如我们的数据中心安全，仅管这已经被一再证明是错误的。
+
+在许多方面，云计算反映了人性。每个人都相信自己的想法是最好的。人们有时会不顾数据而盲目地遵循自己的信念。没有一个云供应商，云服务或者云架构是完美的。他们都有我们希望与众不同的东西。他们有规则需要遵循，他们都在兜售作为通往真理和应许之地的唯一途径的路线。
+
+云并不能解决所有的问题。它是工具箱中一个有目的的工具。如果使用得当，它是一个令人难以置信的一个补充。如果使用不当，它可能是痛苦的，昂贵的，并且会改变职业生涯。让我们理清它是什么，不是什么。我们稍后将介绍正式的定义，但本质上，云计算是一种用于消费和提供信息技术软件，基础设施和相关服务的新商业模式。此外，本章还包括：
++ 云计算历史
++ 云计算定义
++ 云计算的基本特征
++ 云服务模型
++ 云部署模型
++ 类似的技术模型
++ 云清洗
 
 ## 云计算历史
 For our purposes, the first age of computing was the 1970s when the focus was on big
