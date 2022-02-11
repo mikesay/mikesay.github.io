@@ -1,0 +1,636 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="云斋">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python">
+  <title>安装Python并搭建Python的虚拟开发环境 - 云斋随笔</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.mikesay.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":200}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>云斋随笔</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-books"></i>
+                文档
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/ebooks/k8cd/" target="_blank">
+                    <i class="iconfont  icon-book"></i>
+                    Kubernetes应用持续交付的探索与实践
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                友链
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/j10c_4.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="安装Python并搭建Python的虚拟开发环境">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-01-31 21:48" pubdate>
+        2020年1月31日 晚上
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      1.4k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      19
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">安装Python并搭建Python的虚拟开发环境</h1>
+            
+              <p class="note note-info">
+                
+                  本文最后更新于：2022年2月11日 下午
+                
+              </p>
+            
+            <div class="markdown-body">
+              <p>虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。</p>
+<span id="more"></span>
+
+<h1 id="在Mac中安装Python2和Python3"><a href="#在Mac中安装Python2和Python3" class="headerlink" title="在Mac中安装Python2和Python3"></a>在Mac中安装Python2和Python3</h1><p>从Python的官网中下载Python的Mac安装包，按照向导缺省安装即可。<br><img src="/2020/01/31/install-python/7.png" srcset="/img/loading.gif"></p>
+<p><img src="/2020/01/31/install-python/8.png" srcset="/img/loading.gif"></p>
+<h2 id="设置Python3为缺省的Python"><a href="#设置Python3为缺省的Python" class="headerlink" title="设置Python3为缺省的Python"></a>设置Python3为缺省的Python</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo rm /Library/Frameworks/Python.framework/Versions/Current<br>sudo ln -s /Library/Frameworks/Python.framework/Versions/3.8 /Library/Frameworks/Python.framework/Versions/Current<br><span class="hljs-built_in">cd</span> /usr/<span class="hljs-built_in">local</span>/bin/<br>sudo python<br>sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/python3 python<br>sudo rm pip<br>sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/pip3 pip<br></code></pre></td></tr></table></figure>
+<p>这样，在Mac中缺省的是Python3，命令行直接调用python或pip即可。如果需要使用Python2，命令行调用python2或pip2。</p>
+<p>在文件“~/.bash_profile”中注释掉或者删除Python安装程序添加的PATH环境变量，因为我们已经在系统路径/usr/local/bin下建立了Python相关命令的软链接，而且许多工具缺省也是从这个路径下搜索Python的。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs sh"><span class="hljs-comment"># Setting PATH for Python 3.8</span><br><span class="hljs-comment"># The original version is saved in .bash_profile.pysave</span><br><span class="hljs-comment">#PATH=&quot;/Library/Frameworks/Python.framework/Versions/3.8/bin:$&#123;PATH&#125;&quot;</span><br><span class="hljs-comment">#export PATH</span><br><br><span class="hljs-comment"># Setting PATH for Python 2.7</span><br><span class="hljs-comment"># The original version is saved in .bash_profile.pysave</span><br><span class="hljs-comment">#PATH=&quot;/Library/Frameworks/Python.framework/Versions/2.7/bin:$&#123;PATH&#125;&quot;</span><br><span class="hljs-comment">#export PATH</span><br></code></pre></td></tr></table></figure>
+
+<h2 id="升级pip工具"><a href="#升级pip工具" class="headerlink" title="升级pip工具"></a>升级pip工具</h2><p>Python安装包里包含的pip工具可能不是最新版本，所以需要升级一下。</p>
+<h3 id="缺省python3"><a href="#缺省python3" class="headerlink" title="缺省python3"></a>缺省python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/loca/bin/python<br></code></pre></td></tr></table></figure>
+
+<h3 id="python2"><a href="#python2" class="headerlink" title="python2"></a>python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/<span class="hljs-built_in">local</span>/bin/  python2<br></code></pre></td></tr></table></figure>
+
+<h2 id="安装virtualenv工具"><a href="#安装virtualenv工具" class="headerlink" title="安装virtualenv工具"></a>安装virtualenv工具</h2><h3 id="缺省Python3"><a href="#缺省Python3" class="headerlink" title="缺省Python3"></a>缺省Python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs sh">pip install virtualenv<br><span class="hljs-built_in">cd</span> /usr/<span class="hljs-built_in">local</span>/bin/<br>sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/3.8/bin/virtualenv virtualenv<br></code></pre></td></tr></table></figure>
+
+<h3 id="Python2"><a href="#Python2" class="headerlink" title="Python2"></a>Python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs sh">pip2 install virtualenv<br><span class="hljs-built_in">cd</span> /usr/<span class="hljs-built_in">local</span>/bin/<br>sudo ln -s ../../../Library/Frameworks/Python.framework/Versions/2.7/bin/virtualenv virtualenv2<br></code></pre></td></tr></table></figure>
+<h2 id="创建Python的虚拟开发环境"><a href="#创建Python的虚拟开发环境" class="headerlink" title="创建Python的虚拟开发环境"></a>创建Python的虚拟开发环境</h2><h3 id="Python3"><a href="#Python3" class="headerlink" title="Python3"></a>Python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">virtualenv --always-copy pyenv3<br></code></pre></td></tr></table></figure>
+
+<h3 id="Python2-1"><a href="#Python2-1" class="headerlink" title="Python2"></a>Python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">virtualenv --always-copy -p python2 pyenv2<br></code></pre></td></tr></table></figure>
+
+<h1 id="在CentOS中安装Python2和Python3"><a href="#在CentOS中安装Python2和Python3" class="headerlink" title="在CentOS中安装Python2和Python3"></a>在CentOS中安装Python2和Python3</h1><p>Python的官方文档并没有提供Linux的二进制安装包或者提供yum的安装方法，因为大部分Linux都包含了Python。但是Linux缺省自带的Python都不是最新版本，比如CentOS 7缺省自带Python2.7.5， 所以我们需要通过源代码构建并安装最新版的Python。</p>
+<h2 id="安装构建Python2和Python3的依赖"><a href="#安装构建Python2和Python3的依赖" class="headerlink" title="安装构建Python2和Python3的依赖"></a>安装构建Python2和Python3的依赖</h2><p><a target="_blank" rel="noopener" href="https://devguide.python.org/setup/#linux">参考官方文档</a>，执行以下shell命令：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo yum install yum-utils<br>sudo yum-builddep python3<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>也可以显式安装所有的依赖：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs sh"><span class="hljs-comment"># 首先确保你的系统是最新的:</span><br>yum update<br><span class="hljs-comment"># 安装编译器和相关的工具:</span><br>yum groupinstall -y <span class="hljs-string">&quot;development tools&quot;</span><br><span class="hljs-comment"># 安装编译全功能Python所需的依赖库:</span><br>yum install -y zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gdbm-devel db4-devel libffi-devel libpcap-devel xz-devel expat-devel<br><span class="hljs-comment"># 如果你的CentOS是”最小化“安装，你需要安装wget工具：</span><br>yum install -y wget<br></code></pre></td></tr></table></figure>
+</blockquote>
+<h2 id="源码安装Python2和Python3"><a href="#源码安装Python2和Python3" class="headerlink" title="源码安装Python2和Python3"></a>源码安装Python2和Python3</h2><ol>
+<li><p>下载最新Python2的源代码并解压<br><a target="_blank" rel="noopener" href="https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz">https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz</a></p>
+</li>
+<li><p>下载最新Python3的源代码并解压<br><a target="_blank" rel="noopener" href="https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tgz">https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tgz</a></p>
+</li>
+<li><p>分别在Python2和Python3的源码根目录中执行下面命令配置，构建并安装Python2和Python3</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs sh">./configure --prefix=/usr/<span class="hljs-built_in">local</span> --enable-shared LDFLAGS=<span class="hljs-string">&quot;-Wl,-rpath /usr/local/lib&quot;</span><br>make &amp;&amp; make altinstall<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>为了区别CentOS中缺省的自带Python，用altinstall将Python安装到不同的路径下。<br>下面是Python2的安装目录：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sh">/usr/<span class="hljs-built_in">local</span>/bin/<br>/usr/<span class="hljs-built_in">local</span>/lib/<br>/usr/<span class="hljs-built_in">local</span>/lib/python3.8/<br>/usr/<span class="hljs-built_in">local</span>/lib/python2.7/<br></code></pre></td></tr></table></figure></blockquote>
+</li>
+<li><p>设置Python3为缺省的Python</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sh"><span class="hljs-built_in">cd</span> /usr/<span class="hljs-built_in">local</span>/bin<br>sudo ln -s python3.8 python3<br>sudo ln -s python3 python<br>sudo ln -s python2.7 python2<br></code></pre></td></tr></table></figure></li>
+</ol>
+<h2 id="安装或升级pip工具"><a href="#安装或升级pip工具" class="headerlink" title="安装或升级pip工具"></a>安装或升级pip工具</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs sh">curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/<span class="hljs-built_in">local</span>/bin/python<br>curl https://bootstrap.pypa.io/get-pip.py | sudo -E -H /usr/<span class="hljs-built_in">local</span>/bin/python2<br><span class="hljs-built_in">cd</span> /usr/<span class="hljs-built_in">local</span>/bin<br>sudo rm pip<br>sudo ln -s pip3 pip<br></code></pre></td></tr></table></figure>
+
+<h2 id="安装virtualenv工具-1"><a href="#安装virtualenv工具-1" class="headerlink" title="安装virtualenv工具"></a>安装virtualenv工具</h2><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo -E -H /usr/<span class="hljs-built_in">local</span>/bin/pip2 install virtualenv<br>sudo mv virtualenv virtualenv2<br>sudo -E -H /usr/<span class="hljs-built_in">local</span>/bin/pip install virtualenv<br></code></pre></td></tr></table></figure>
+
+<h2 id="创建Python的虚拟开发环境-1"><a href="#创建Python的虚拟开发环境-1" class="headerlink" title="创建Python的虚拟开发环境"></a>创建Python的虚拟开发环境</h2><h3 id="Python3-1"><a href="#Python3-1" class="headerlink" title="Python3"></a>Python3</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">virtualenv --always-copy pyenv3<br></code></pre></td></tr></table></figure>
+
+<h3 id="Python2-2"><a href="#Python2-2" class="headerlink" title="Python2"></a>Python2</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">virtualenv --always-copy -p python2 pyenv2<br></code></pre></td></tr></table></figure>
+
+<h1 id="在Ubuntu中安装Python2和Python3"><a href="#在Ubuntu中安装Python2和Python3" class="headerlink" title="在Ubuntu中安装Python2和Python3"></a>在Ubuntu中安装Python2和Python3</h1><p>与CentOS相同，我们需要通过源代码构建并安装最新版的Python。</p>
+<h2 id="安装构建Python3和Python2的依赖"><a href="#安装构建Python3和Python2的依赖" class="headerlink" title="安装构建Python3和Python2的依赖"></a>安装构建Python3和Python2的依赖</h2><p><a target="_blank" rel="noopener" href="https://devguide.python.org/setup/#linux">参考官方文档</a>，编辑/etc/apt/sources.list，为Ubuntu 18添加“deb-src <a target="_blank" rel="noopener" href="http://archive.ubuntu.com/ubuntu/">http://archive.ubuntu.com/ubuntu/</a> bionic main”，或为Ubuntu 16添加“deb-src <a target="_blank" rel="noopener" href="http://archive.ubuntu.com/ubuntu/">http://archive.ubuntu.com/ubuntu/</a> xenial main”。执行下面命令安装编译Python2或Python3的依赖：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo apt-get update<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo apt-get build-dep python3.6<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>如果依赖包的版本找不到，试着降低小版本号，比如python3.5。</p>
+</blockquote>
+<h2 id="源码安装Python2和Python3-1"><a href="#源码安装Python2和Python3-1" class="headerlink" title="源码安装Python2和Python3"></a>源码安装Python2和Python3</h2><p>与CentOS的过程一样，可以参照CentOS章节。</p>
+<h2 id="PPA-Personal-Package-Archive-安装Python"><a href="#PPA-Personal-Package-Archive-安装Python" class="headerlink" title="PPA(Personal Package Archive)安装Python"></a>PPA(Personal Package Archive)安装Python</h2><p><a target="_blank" rel="noopener" href="https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa">PPA</a>库包含了为Ubuntu打包的最新的Python版本，但不一定包含所有的版本，所以不是太推荐这个方法。以下是通过PPA安装Python3.8的步骤：</p>
+<h3 id="为apt添加PPA库"><a href="#为apt添加PPA库" class="headerlink" title="为apt添加PPA库"></a>为apt添加PPA库</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo apt-get update<br>sudo apt install -y software-properties-common<br>sudo -E -H add-apt-repository -y ppa:deadsnakes/ppa<br>sudo apt-get update<br></code></pre></td></tr></table></figure>
+
+<h3 id="安装Python3-8"><a href="#安装Python3-8" class="headerlink" title="安装Python3.8"></a>安装Python3.8</h3><figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sh">sudo apt-get -y -f --allow-unauthenticated install python3.8-dev<br></code></pre></td></tr></table></figure>
+
+<h1 id="在Windows中安装Python2和Python3"><a href="#在Windows中安装Python2和Python3" class="headerlink" title="在Windows中安装Python2和Python3"></a>在Windows中安装Python2和Python3</h1><p>在Windows中同时安装Python2和Python3相对来说比较容易，下载对应的安装包，按向导安装到缺省目录下即可。<br><img src="/2020/01/31/install-python/1.png" srcset="/img/loading.gif"></p>
+<p>在安装Python2向导中，选择同时安装工具pip以及将python.exe加入Path环境变量中：<br><img src="/2020/01/31/install-python/2.png" srcset="/img/loading.gif"></p>
+<p>在安装Python3向导中，选择自定义安装：<br><img src="/2020/01/31/install-python/3.png" srcset="/img/loading.gif"></p>
+<p>并选择安装工具pip：<br><img src="/2020/01/31/install-python/4.png" srcset="/img/loading.gif"></p>
+<p>将安装目录设置到和Python2相同的地方C:\Python37：<br><img src="/2020/01/31/install-python/5.png" srcset="/img/loading.gif"></p>
+<p>如果要设置Python2为缺省的Python，可以将C:\Python27;C:\Python27\Scripts放到Python3的配置前面：<br><img src="/2020/01/31/install-python/6.png" srcset="/img/loading.gif"></p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Python/">Python</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2020/02/03/windows-core-proxy/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">命令方式设置Windows Server网络代理</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2020/01/30/jenkins-github-pullrequest/">
+                        <span class="hidden-mobile">Jenkins构建GitHub合并请求(Pull Request)</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            <!-- 添加打赏功能 只在文章详情中显示-->
+            
+              
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+            原创技术分享，您的支持将鼓励我继续创作!
+         </span>
+        <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏"></a>
+        <br>
+    </div>
+    <div id="donate_guide" class="donate_bar center hidden">
+        <div id="alipay" style="display: inline-block" >
+            <!-- 支付宝打赏图案 -->
+            <img src="/img/alipay.png" srcset="/img/loading.gif" alt="支付宝打赏">
+            <p>支付宝打赏</p>
+        </div>
+        <div id="wechatpay" style="display: inline-block" >
+            <!-- 微信打赏图案 -->
+            <img src="/img/wechatpay.png" srcset="/img/loading.gif" alt="微信打赏">
+            <p>微信打赏</p>
+        </div>
+    </div>
+    <script type="text/javascript">
+        document.getElementById('btn_donate').onclick = function(){
+            if ($('#donate_guide').hasClass('hidden')){
+                $('#donate_guide').removeClass('hidden');
+            }else{
+                $('#donate_guide').addClass('hidden');
+            }
+        }
+    </script>
+</div>
+              
+            
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <div id="SOHUCS" sid='http://www.mikesay.com/2020/01/31/install-python/'></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('SOHUCS', function() {
+      var appid = 'cyvdGhYsy';
+      var conf = '';
+      var width = window.innerWidth || document.documentElement.clientWidth;
+      if (width < 960) {
+        var head = window.document.getElementsByTagName('head')[0]||document.head||document.documentElement;
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.charset = 'utf-8';
+        script.id = 'changyan_mobile_js';
+        script.src = 'https://cy-cdn.kuaizhan.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf;
+        head.appendChild(script);
+        //window.document.write('<script id="changyan_mobile_js" charset="utf-8" type="text/javascript" src="http://changyan.sohu.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf + '"><\/script>');
+      } else {
+        Fluid.utils.createScript("https://changyan.sohu.com/upload/changyan.js", function() {
+          window.changyan.api.config({
+            appid: appid,
+            conf: conf
+          })
+        });
+      }
+    })
+  </script>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":200})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>

@@ -1,0 +1,672 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="云斋">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python">
+  <title>记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查 - 云斋随笔</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.mikesay.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":200}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>云斋随笔</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-books"></i>
+                文档
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/ebooks/k8cd/" target="_blank">
+                    <i class="iconfont  icon-book"></i>
+                    Kubernetes应用持续交付的探索与实践
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                友链
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/j10c_4.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-09-06 09:28" pubdate>
+        2021年9月6日 上午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.3k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      31
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</h1>
+            
+              <p class="note note-info">
+                
+                  本文最后更新于：2022年2月11日 下午
+                
+              </p>
+            
+            <div class="markdown-body">
+              <p>最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。</p>
+<span id="more"></span>
+
+<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>通过以下命令在Pod中通过域名访问某个服务时，有时能正常访问，有时访问不了。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> &#123;1..100&#125;;<span class="hljs-keyword">do</span> curl http://&lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="hljs-keyword">done</span><br></code></pre></td></tr></table></figure>
+<p>错误大致为:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">Couldn<span class="hljs-string">&#x27;t resolve host xxxx</span><br></code></pre></td></tr></table></figure>
+<p>从错误信息来看，是域名解析出了问题。用nslookup命令去检查域名解析，发现解析确实不稳定。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> &#123;1..100&#125;;nslookup &lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="hljs-keyword">done</span><br></code></pre></td></tr></table></figure>
+
+<h1 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h1><h2 id="ACK集群的结构介绍"><a href="#ACK集群的结构介绍" class="headerlink" title="ACK集群的结构介绍"></a>ACK集群的结构介绍</h2><p>在详细排查问题之前，先了解下阿里云ACK集群的结构。<a target="_blank" rel="noopener" href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">阿里云容器服务Kubernetes版（Alibaba Cloud Container Service for Kubernetes，简称容器服务ACK）</a>包含了专有版Kubernetes（Dedicated Kubernetes）、托管版Kubernetes（Managed Kubernetes）、Serverless Kubernetes三种形态。本文讨论的是托管版ACK，结构如下：</p>
+<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/1.png" srcset="/img/loading.gif"></p>
+<p>集群的详细信息：<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/2.jpeg" srcset="/img/loading.gif"></p>
+<ul>
+<li>Pod网络类型是Flannel，CIDR: 172.20.0.0/16。每个工作节点的最大的Pod数量为64 (ECS-1 CIDR: 172.20.0.192/26, ECS-2 CIDR: 172.20.0.128/26 …)</li>
+<li>Service CIDR: 172.21.0.0/20</li>
+<li>系统组件CoreDNS目前有两个Pod，分别运行在两个工作节点上</li>
+</ul>
+<h2 id="检查前的准备"><a href="#检查前的准备" class="headerlink" title="检查前的准备"></a>检查前的准备</h2><p>分别在CoreDNS Pods所在的两个工作节点上各启动一个测试Pod：Pod(Busybox)，Service(Nginx) + Pod(Nginx)。</p>
+<blockquote>
+<p>将测试Pods分散在不同的工作节点上，并调度到CoreDNS Pods所在的工作节点中，这样既能测试同一节点上的CoreDNS访问，也能测试跨节点的CoreDNS访问。</p>
+</blockquote>
+<ul>
+<li><p>在ECS-1主机上启动Pod(Busybox)</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">apiVersion:</span> <span class="hljs-string">apps/v1</span><br><span class="hljs-attr">kind:</span> <span class="hljs-string">Deployment</span><br><span class="hljs-attr">metadata:</span><br>  <span class="hljs-attr">labels:</span><br>    <span class="hljs-attr">app:</span> <span class="hljs-string">busybox</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">busybox</span><br><span class="hljs-attr">spec:</span><br>  <span class="hljs-attr">replicas:</span> <span class="hljs-number">1</span><br>  <span class="hljs-attr">selector:</span><br>    <span class="hljs-attr">matchLabels:</span><br>      <span class="hljs-attr">app:</span> <span class="hljs-string">busybox</span><br>  <span class="hljs-attr">template:</span><br>    <span class="hljs-attr">metadata:</span><br>      <span class="hljs-attr">labels:</span><br>        <span class="hljs-attr">app:</span> <span class="hljs-string">busybox</span><br>    <span class="hljs-attr">spec:</span><br>      <span class="hljs-attr">dnsPolicy:</span> <span class="hljs-string">ClusterFirst</span><br>      <span class="hljs-attr">nodeSelector:</span><br>        <span class="hljs-attr">kubernetes.io/os:</span> <span class="hljs-string">linux</span><br>        <span class="hljs-attr">kubernetes.io/hostname:</span> <span class="hljs-string">cn-shanghai.10.0.1.121</span><br>      <span class="hljs-attr">terminationGracePeriodSeconds:</span> <span class="hljs-number">300</span><br>      <span class="hljs-attr">containers:</span><br>        <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">busybox</span><br>          <span class="hljs-attr">image:</span> <span class="hljs-string">yauritux/busybox-curl:latest</span><br>          <span class="hljs-attr">imagePullPolicy:</span> <span class="hljs-string">IfNotPresent</span><br>          <span class="hljs-attr">args:</span><br>            <span class="hljs-bullet">-</span> <span class="hljs-string">sh</span><br>            <span class="hljs-bullet">-</span> <span class="hljs-string">-c</span><br>            <span class="hljs-bullet">-</span> <span class="hljs-string">&quot;sleep 36000&quot;</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>通过nodeSelector绑定到ECS-1主机（10.0.1.121）上。</p>
+</blockquote>
+</li>
+<li><p>在ECS-2主机上启动Service(Nginx) + Pod(Nginx)</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-meta">---</span><br><span class="hljs-attr">apiVersion:</span> <span class="hljs-string">apps/v1</span><br><span class="hljs-attr">kind:</span> <span class="hljs-string">Deployment</span><br><span class="hljs-attr">metadata:</span><br>  <span class="hljs-attr">labels:</span><br>    <span class="hljs-attr">app:</span> <span class="hljs-string">nginx</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">nginx</span><br><span class="hljs-attr">spec:</span><br>  <span class="hljs-attr">replicas:</span> <span class="hljs-number">1</span><br>  <span class="hljs-attr">selector:</span><br>    <span class="hljs-attr">matchLabels:</span><br>      <span class="hljs-attr">app:</span> <span class="hljs-string">nginx</span><br>  <span class="hljs-attr">template:</span><br>    <span class="hljs-attr">metadata:</span><br>      <span class="hljs-attr">labels:</span><br>        <span class="hljs-attr">app:</span> <span class="hljs-string">nginx</span><br>    <span class="hljs-attr">spec:</span><br>      <span class="hljs-attr">dnsPolicy:</span> <span class="hljs-string">ClusterFirst</span><br>      <span class="hljs-attr">nodeSelector:</span><br>        <span class="hljs-attr">kubernetes.io/os:</span> <span class="hljs-string">linux</span><br>        <span class="hljs-attr">kubernetes.io/hostname:</span> <span class="hljs-string">cn-shanghai.10.0.2.121</span><br>      <span class="hljs-attr">terminationGracePeriodSeconds:</span> <span class="hljs-number">300</span><br>      <span class="hljs-attr">containers:</span><br>        <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">nginx</span><br>          <span class="hljs-attr">image:</span> <span class="hljs-string">nginx:latest</span><br>          <span class="hljs-attr">imagePullPolicy:</span> <span class="hljs-string">IfNotPresent</span><br>          <span class="hljs-attr">ports:</span><br>            <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">http</span><br>              <span class="hljs-attr">containerPort:</span> <span class="hljs-number">80</span><br>              <span class="hljs-attr">protocol:</span> <span class="hljs-string">TCP</span><br><span class="hljs-meta">---</span><br><span class="hljs-attr">apiVersion:</span> <span class="hljs-string">v1</span><br><span class="hljs-attr">kind:</span> <span class="hljs-string">Service</span><br><span class="hljs-attr">metadata:</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">nginx</span><br>  <span class="hljs-attr">namespace:</span> <span class="hljs-string">default</span><br>  <span class="hljs-attr">labels:</span><br>    <span class="hljs-attr">app.kubernetes.io/name:</span> <span class="hljs-string">nginx</span><br>    <span class="hljs-attr">app.kubernetes.io/instance:</span> <span class="hljs-string">nginx</span><br><span class="hljs-attr">spec:</span><br>  <span class="hljs-attr">type:</span> <span class="hljs-string">ClusterIP</span><br>  <span class="hljs-attr">ports:</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">http</span><br>      <span class="hljs-attr">port:</span> <span class="hljs-number">80</span><br>      <span class="hljs-attr">targetPort:</span> <span class="hljs-string">http</span><br>      <span class="hljs-attr">protocol:</span> <span class="hljs-string">TCP</span><br>  <span class="hljs-attr">selector:</span><br>    <span class="hljs-attr">app:</span> <span class="hljs-string">nginx</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>通过nodeSelector绑定到ECS-2主机（10.0.2.121）上。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="检查系统组件CoreDNS"><a href="#检查系统组件CoreDNS" class="headerlink" title="检查系统组件CoreDNS"></a>检查系统组件CoreDNS</h2><blockquote>
+<p>参考官方文档 <a target="_blank" rel="noopener" href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">Debugging DNS Resolution</a></p>
+</blockquote>
+<h3 id="检查CoreDNS-Pod是否正在运行"><a href="#检查CoreDNS-Pod是否正在运行" class="headerlink" title="检查CoreDNS Pod是否正在运行"></a>检查CoreDNS Pod是否正在运行</h3><p>执行命令<code>kubectl get pods</code>验证CoreDNS Pod正在运行。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl get pods -l k8s-app=kube-dns -n kube-system<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">NAME                           READY   STATUS    RESTARTS   AGE<br>pod/coredns-849698df86-j9474   1/1     Running   0          9d<br>pod/coredns-849698df86-xl5g9   1/1     Running   0          9d<br></code></pre></td></tr></table></figure>
+
+<p>如果没有看到CoreDNS Pod正在运行，可能在你当前的环境里缺省没有安装CoreDNS插件，你可能需要手动安装它。如果看到CoreDNS Pod失败，执行命令<code>kubectl describe pod</code>检查CoreDNS Pod的事件。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl describe pod -l k8s-app=kube-dns -n kube-system<br></code></pre></td></tr></table></figure>
+
+<h3 id="检查CoreDNS-Pod是否有运行时错误"><a href="#检查CoreDNS-Pod是否有运行时错误" class="headerlink" title="检查CoreDNS Pod是否有运行时错误"></a>检查CoreDNS Pod是否有运行时错误</h3><p>运行状态正常的Pod并不代表没有错误，有时程序会处理异常以保证服务的可用性。所以需要执行命令<code>kubectl logs</code>检查Pod的日志是否有任何可疑或异常的消息。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl logs -l k8s-app=kube-dns -n=kube-system<br></code></pre></td></tr></table></figure>
+
+<p>正常的CoreDNS日志实例：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs bash">.:53<br>[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b<br>CoreDNS-1.6.7<br>linux/amd64, go1.13.6, da7f65b<br><br>.:53<br>[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b<br>CoreDNS-1.6.7<br>linux/amd64, go1.13.6, da7f65b<br></code></pre></td></tr></table></figure>
+
+<h3 id="检查CoreDNS服务"><a href="#检查CoreDNS服务" class="headerlink" title="检查CoreDNS服务"></a>检查CoreDNS服务</h3><p>执行命令<code>kubect get svc -l k8s-app=kube-dns -n=kube-system</code>检查CoreDNS服务是否存在。如果服务不存在，参考<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>进行排查。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">NAME               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)                  AGE<br>service/kube-dns   ClusterIP   172.21.0.10   &lt;none&gt;        53/UDP,53/TCP,9153/TCP   450d<br></code></pre></td></tr></table></figure>
+
+<h3 id="检查CoreDNS-endpoints对象是否存在"><a href="#检查CoreDNS-endpoints对象是否存在" class="headerlink" title="检查CoreDNS endpoints对象是否存在"></a>检查CoreDNS endpoints对象是否存在</h3><p>执行命令<code>kubectl get endpoints</code>检查CoreDNS endpoints是否存在。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">NAME       ENDPOINTS                                                       AGE<br>kube-dns   172.20.0.146:53,172.20.0.205:53,172.20.0.146:9153 + 3 more...   458d<br></code></pre></td></tr></table></figure>
+<p>如果没有检查到endpoints，参考<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>文档中的endpoints段落。</p>
+<h3 id="检查DNS查询是否被CoreDNS处理"><a href="#检查DNS查询是否被CoreDNS处理" class="headerlink" title="检查DNS查询是否被CoreDNS处理"></a>检查DNS查询是否被CoreDNS处理</h3><p>首先，修改CoreDNS的配置添加日志插件。</p>
+<p>执行以下命令打开CoreDNS的配置：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl edit cm coredns -n kube-system<br></code></pre></td></tr></table></figure>
+<p>在Corefile段落添加<code>log</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs bash">apiVersion: v1<br>kind: ConfigMap<br>data:<br>  Corefile: |-<br>    .:53 &#123;<br>      <span class="hljs-built_in">log</span><br>      autopath @kubernetes<br>      cache 30<br>      errors<br>      forward . /etc/resolv.conf<br>      health<br>      kubernetes cluster.local in-addr.arpa ip6.arpa &#123;<br>        pods verified<br>        fallthrough in-addr.arpa ip6.arpa<br>      &#125;<br>      loadbalance<br>      loop<br>      prometheus :9153<br>      ready<br>      reload<br>    &#125;<br></code></pre></td></tr></table></figure>
+<p>其次，执行以下命令打开CoreDNS Pods日志：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl logs --tail 20 -f -l k8s-app=kube-dns -n kube-system | grep -E <span class="hljs-string">&quot;\&quot;A IN nginx.default.svc.cluster.local&quot;</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>通过grep命令仅提取域名nginx.default.svc.cluster.local的DNS查询日志，后面我们将查询这个域名。</p>
+</blockquote>
+<p>接下来，执行以下命令进入Pod(Busybox)：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl <span class="hljs-built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- sh<br></code></pre></td></tr></table></figure>
+<p>在Pod(Busybox)中，重复查询域名nginx.default.svc.cluster.local多次，例如100次：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> $(seq 1 100); <span class="hljs-keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="hljs-keyword">done</span><br></code></pre></td></tr></table></figure>
+
+<p>检查CoreDNS Pods日志，看是否有同样次数的域名解析日志：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bash">[INFO] 172.20.0.219:48418 - 4 <span class="hljs-string">&quot;A IN nginx.default.svc.cluster.local. udp 49 false 512&quot;</span> NOERROR qr,aa,rd 96 0.000179197s<br>[INFO] 172.20.0.219:59640 - 4 <span class="hljs-string">&quot;A IN nginx.default.svc.cluster.local. udp 49 false 512&quot;</span> NOERROR qr,aa,rd 96 0.000067985s<br>[INFO] 172.20.0.219:34682 - 4 <span class="hljs-string">&quot;A IN nginx.default.svc.cluster.local. udp 49 false 512&quot;</span> NOERROR qr,aa,rd 96 0.000072317s<br>[INFO] 172.20.0.219:37560 - 4 <span class="hljs-string">&quot;A IN nginx.default.svc.cluster.local. udp 49 false 512&quot;</span> NOERROR qr,aa,rd 96 0.000075455s<br>[INFO] 172.20.0.219:59156 - 4 <span class="hljs-string">&quot;A IN nginx.default.svc.cluster.local. udp 49 false 512&quot;</span> NOERROR qr,aa,rd 96 0.00006403s<br>......<br></code></pre></td></tr></table></figure>
+<p>如果域名解析的次数少于查询的次数，说明有些解析请求没有被CoreDNS获取，客户端<code>nslookup</code>命令就会出现有时解析成功，有时解析失败的情况。这也证明了前面描述的域名解析不稳定的问题。</p>
+<h3 id="直接调用CoreDNS的Pod-IP解析域名"><a href="#直接调用CoreDNS的Pod-IP解析域名" class="headerlink" title="直接调用CoreDNS的Pod IP解析域名"></a>直接调用CoreDNS的Pod IP解析域名</h3><p>直接使用CoreDNS Pod IP可以避免CoreDNS服务到CoreDNS Pod的代理解析。如果检查下来问题仍旧存在，说明从CoreDNS服务到CoreDNS Pod的代理解析没有问题，否则需要详细检查kube-proxy的状态。</p>
+<p>Pod(Busybox)缺省使用CoreDNS服务IP调用CoreDNS解析域名。执行以下命令可以查看Pod(Busybox)中的DNS配置：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl <span class="hljs-built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- cat /etc/resolv.conf<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">nameserver 172.21.0.10<br>search default.svc.cluster.local svc.cluster.local cluster.local<br>options ndots:5<br></code></pre></td></tr></table></figure>
+<p>172.21.0.10是CoreDNS的服务IP。</p>
+<p>编辑Pod(Busybox)中的<code>/etc/resolv.conf</code>将nameserver换成同一节点上的CoreDNS Pod IP（172.20.0.205），执行以下命令检查Nginx服务域名的解析情况：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> $(seq 1 100); <span class="hljs-keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="hljs-keyword">done</span><br></code></pre></td></tr></table></figure>
+<p>测试下来发现使用同一个节点上的CoreDNS Pod解析域名正常且稳定。</p>
+<p>将Pod(Busybox)的nameserver换成另一个节点上的CoreDNS Pod IP（172.20.0.146），再执行上面同样的测试发现域名解析都失败了。 这个测试说明Pod(Busybox)可以访问同一节点上的CoreDNS Pod，但是不能访问另一个节点上的CoreDNS Pod，也就是跨节点的Pod之间无法访问。接下来就需要检查跨节点Pod之间的路由信息是否正确了。</p>
+<h2 id="检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息"><a href="#检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息" class="headerlink" title="检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息"></a>检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息</h2><ul>
+<li><p>Pod(Busybox)里的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/3.png" srcset="/img/loading.gif"><br>从Pod(Busybox)出来的流量会通过红色的路由规则进入到节点ECS-1。</p>
+</li>
+<li><p>VPC里跨节点之间的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/4.png" srcset="/img/loading.gif"><br>红框中的系统路由规则使两个节点之间路由可达。</p>
+<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/5.png" srcset="/img/loading.gif"><br>蓝框中的路由规则使流量从ECS-1路由到ECS-2中。</p>
+</li>
+<li><p>ECS-2的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/6.png" srcset="/img/loading.gif"><br>红色路由规则使得流量从ECS-2路由到网桥接口cni0，最终由cni0根据目的Pod IP地址进入CoreDNS Pod（172.20.0.146）。</p>
+</li>
+</ul>
+<p>从路由分析下来看，跨节点Pod之前相互访问没有问题。接下来就需要检查施加在工作节点上的安全组规则，看流量是否被禁止了。</p>
+<h2 id="检查安全组"><a href="#检查安全组" class="headerlink" title="检查安全组"></a>检查安全组</h2><p>通过这个检查，最终发现工作节点上的安全组并不是当前集群对应的安全组，从而导致所有跨节点之前的Pod访问流量被禁止了。安全组用错的原因是在新建ACK集群时并没有创建新的节点而是选择了已经存在的节点。</p>
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>找到问题后，解决方案就简单了，也就是将所有的工作节点的安全组全部换成当前集群的安全组。</p>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>对于这次的问题定位和解决花费了一定的精力，而且这个问题未来也可能再次出现。所以，我们可以将跨节点Pod之间的网络连通性纳入到监控系统中，这样可以保证下次同样的问题出现时，能够通过监控系统快速的发现和定位问题。</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/AliCloud/">AliCloud</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Aliyun/">Aliyun</a>
+                    
+                      <a class="hover-with-bg" href="/tags/ACK/">ACK</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Kubernetes/">Kubernetes</a>
+                    
+                      <a class="hover-with-bg" href="/tags/K8s/">K8s</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/10/06/create-kubernetes-minikube/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Minikube创建本地Kubernetes集群</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/01/17/sonar-plugin-principle/">
+                        <span class="hidden-mobile">浅析SonarQube插件的运行原理</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            <!-- 添加打赏功能 只在文章详情中显示-->
+            
+              
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+            原创技术分享，您的支持将鼓励我继续创作!
+         </span>
+        <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏"></a>
+        <br>
+    </div>
+    <div id="donate_guide" class="donate_bar center hidden">
+        <div id="alipay" style="display: inline-block" >
+            <!-- 支付宝打赏图案 -->
+            <img src="/img/alipay.png" srcset="/img/loading.gif" alt="支付宝打赏">
+            <p>支付宝打赏</p>
+        </div>
+        <div id="wechatpay" style="display: inline-block" >
+            <!-- 微信打赏图案 -->
+            <img src="/img/wechatpay.png" srcset="/img/loading.gif" alt="微信打赏">
+            <p>微信打赏</p>
+        </div>
+    </div>
+    <script type="text/javascript">
+        document.getElementById('btn_donate').onclick = function(){
+            if ($('#donate_guide').hasClass('hidden')){
+                $('#donate_guide').removeClass('hidden');
+            }else{
+                $('#donate_guide').addClass('hidden');
+            }
+        }
+    </script>
+</div>
+              
+            
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <div id="SOHUCS" sid='http://www.mikesay.com/2021/09/06/aliyun-coredns-issue-tracking/'></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('SOHUCS', function() {
+      var appid = 'cyvdGhYsy';
+      var conf = '';
+      var width = window.innerWidth || document.documentElement.clientWidth;
+      if (width < 960) {
+        var head = window.document.getElementsByTagName('head')[0]||document.head||document.documentElement;
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.charset = 'utf-8';
+        script.id = 'changyan_mobile_js';
+        script.src = 'https://cy-cdn.kuaizhan.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf;
+        head.appendChild(script);
+        //window.document.write('<script id="changyan_mobile_js" charset="utf-8" type="text/javascript" src="http://changyan.sohu.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf + '"><\/script>');
+      } else {
+        Fluid.utils.createScript("https://changyan.sohu.com/upload/changyan.js", function() {
+          window.changyan.api.config({
+            appid: appid,
+            conf: conf
+          })
+        });
+      }
+    })
+  </script>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":200})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>

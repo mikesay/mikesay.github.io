@@ -1,0 +1,831 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="云斋">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python">
+  <title>云斋随笔</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.mikesay.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":200}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 100vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>云斋随笔</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-books"></i>
+                文档
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/ebooks/k8cd/" target="_blank">
+                    <i class="iconfont  icon-book"></i>
+                    Kubernetes应用持续交付的探索与实践
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                友链
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/j10c_3.jpeg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.2)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="You just have to get started!">
+              
+            </span>
+
+            
+          </div>
+
+          
+            <div class="scroll-down-bar">
+              <i class="iconfont icon-arrowdown"></i>
+            </div>
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      <div class="container nopadding-x-md">
+        <div class="py-5" id="board"
+          style=margin-top:0>
+          
+          <div class="container">
+            <div class="row">
+              <div class="col-12 col-md-10 m-auto">
+                
+
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/10/10/podman-introduction-and-usage/">Podman介绍和使用</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/10/10/podman-introduction-and-usage/">
+          
+          
+            
+          
+          最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022/1/31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-10-11 04:58" pubdate>
+              2021-10-11
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Docker/">Docker</a>
+            
+              <a href="/tags/Container/">Container</a>
+            
+              <a href="/tags/Podman/">Podman</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/10/10/create-kubernetes-kind/">Kind创建本地Kubernetes集群</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/10/10/create-kubernetes-kind/">
+          
+          
+            
+          
+          在Minikube创建本地Kubernetes集群一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用。通过Hypervisor驱动创建的Kubernetes集群在VPN的情况下也无法访问。正好同事又在尝试一款新的工具Kind（论有一个不断进取的同事的重要性&#x1f604;），而且还解决了Minikube
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-10-10 18:23" pubdate>
+              2021-10-10
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Kubernetes/">Kubernetes</a>
+            
+              <a href="/tags/K8s/">K8s</a>
+            
+              <a href="/tags/Kind/">Kind</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/10/06/create-kubernetes-minikube/">Minikube创建本地Kubernetes集群</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/10/06/create-kubernetes-minikube/">
+          
+          
+            
+          
+          在学习和使用Kubernetes的过程中，都希望能够快速创建一个个人的Kubernetes集群用作测试之用。之前一直使用docker公司的docker for mac创建的Kubernetes集群，但是经常出现启动不起来的问题，又没有详细的日志定位问题，甚是苦恼。另外docker for mac创建的Kubernetes很难去改变系统组件的配置，比如修改API Server或Kubelet的参数，
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-10-06 18:40" pubdate>
+              2021-10-06
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Kubernetes/">Kubernetes</a>
+            
+              <a href="/tags/K8s/">K8s</a>
+            
+              <a href="/tags/Minikube/">Minikube</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/09/06/aliyun-coredns-issue-tracking/">记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/09/06/aliyun-coredns-issue-tracking/">
+          
+          
+            
+          
+          最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-09-06 09:28" pubdate>
+              2021-09-06
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/AliCloud/">AliCloud</a>
+            
+              <a href="/tags/Aliyun/">Aliyun</a>
+            
+              <a href="/tags/ACK/">ACK</a>
+            
+              <a href="/tags/Kubernetes/">Kubernetes</a>
+            
+              <a href="/tags/K8s/">K8s</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/01/17/sonar-plugin-principle/">浅析SonarQube插件的运行原理</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/01/17/sonar-plugin-principle/">
+          
+          
+            
+          
+          最近公司的某个Java项目的SonarQube静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-01-17 23:39" pubdate>
+              2021-01-17
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/SonarQube/">SonarQube</a>
+            
+              <a href="/tags/Code-Quality/">Code Quality</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2021/01/05/aliyun-ram-role-multi-accounts/">阿里云通过RAM角色管理多云账号下的资源</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2021/01/05/aliyun-ram-role-multi-accounts/">
+          
+          
+            
+          
+          云计算经过十几年的发展已经变得很成熟，无论是传统企业还是初创企业都将云计算平台作为其数字化策略的支撑平台。在国内，阿里云是使用最广泛的公有云平台，很多本土企业和外资企业在华的分支机构都是首选阿里云来构建和运行他们的数字化方案。为了能够高效地使用阿里云，同时又能对接阿里云产品服务团队，在这些公司里逐渐地出现了一个新的角色或团队来统一规划、管理阿里云平台，我们就暂且称这个团队为云团队。大部分公司云团队
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2021-01-05 22:45" pubdate>
+              2021-01-05
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/AliCloud/">AliCloud</a>
+            
+              <a href="/tags/Aliyun/">Aliyun</a>
+            
+              <a href="/tags/RAM/">RAM</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2020/12/31/git-install-configure/">Git安装与配置</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2020/12/31/git-install-configure/">
+          
+          
+            
+          
+          Git是目前使用最广泛的分布式版本管理系统。相对于集中式代码管理系统，例如Subversion, Perforce等，来说，它有着无法比拟的优势，比如轻量级的分支管理，适合不同场景的分支合并策略，离线状态下的版本管理和变更历史查询等，而这些优势也正好符合了当前敏捷和精益的软件开发方法。本文将介绍如何在Linux，Mac和Windows系统中安装并配置Git。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-12-31 08:22" pubdate>
+              2020-12-31
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Git/">Git</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2020/12/16/git-encrypt-file-in-repository/">Git加密存储文件</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2020/12/16/git-encrypt-file-in-repository/">
+          
+          
+            
+          
+          不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用git-secret将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-12-16 08:50" pubdate>
+              2020-12-16
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Git/">Git</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2020/09/26/git-clean-bad-data-from-history/">从Git仓库中永久清理脏数据</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2020/09/26/git-clean-bad-data-from-history/">
+          
+          
+            
+          
+          在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-09-26 09:37" pubdate>
+              2020-09-26
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Git/">Git</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2020/03/09/jenkins-gitlab-pullrequest/">Jenkins构建GitLab合并请求(Merge Request)</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2020/03/09/jenkins-gitlab-pullrequest/">
+          
+          
+            
+          
+          写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2020-03-09 18:00" pubdate>
+              2020-03-09
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/DevOps/">DevOps</a>
+            
+              <a href="/tags/CI-CD/">CI/CD</a>
+            
+              <a href="/tags/Git/">Git</a>
+            
+              <a href="/tags/Jenkins/">Jenkins</a>
+            
+              <a href="/tags/GitLab/">GitLab</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+
+
+  <nav aria-label="navigation">
+    <span class="pagination" id="pagination">
+      <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/"><i class="iconfont icon-arrowright"></i></a>
+    </span>
+  </nav>
+  
+  <script>
+    for (ele of document.getElementById("pagination").getElementsByTagName("a")) {
+      ele.href += '#board';
+    }
+  </script>
+
+
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":200})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>

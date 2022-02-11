@@ -1,0 +1,705 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="云斋">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python">
+  <title>Minikube创建本地Kubernetes集群 - 云斋随笔</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.mikesay.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":200}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>云斋随笔</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-books"></i>
+                文档
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/ebooks/k8cd/" target="_blank">
+                    <i class="iconfont  icon-book"></i>
+                    Kubernetes应用持续交付的探索与实践
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                友链
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/j10c_4.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="Minikube创建本地Kubernetes集群">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-10-06 18:40" pubdate>
+        2021年10月6日 晚上
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.2k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      26
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Minikube创建本地Kubernetes集群</h1>
+            
+              <p class="note note-info">
+                
+                  本文最后更新于：2022年2月11日 下午
+                
+              </p>
+            
+            <div class="markdown-body">
+              <p>在学习和使用Kubernetes的过程中，都希望能够快速创建一个个人的Kubernetes集群用作测试之用。之前一直使用docker公司的docker for mac创建的Kubernetes集群，但是经常出现启动不起来的问题，又没有详细的日志定位问题，甚是苦恼。另外docker for mac创建的Kubernetes很难去改变系统组件的配置，比如修改API Server或Kubelet的参数，开启某些Alpaha版本的特性等。虽然Minikube已经存在很久，可能早于docker for mac创建的Kubernetes集群，但是由于种种原因没能尝试，后经同事强烈推荐，尝试了一下，确实蛮强大。本文将简单介绍下Minikube，以及在Mac主机上用Minikube创建一个测试集群。</p>
+<span id="more"></span>
+
+<h1 id="Minikube介绍"><a href="#Minikube介绍" class="headerlink" title="Minikube介绍"></a>Minikube介绍</h1><p>Minikube是一个命令行工具用来在macOS，Linux和Windows平台中快速创建一个用于学习和开发为目的的Kubernetes集群，同时也提供了丰富的集群管理功能。因为Minikub的目标不是用来创建和管理生产用的Kubernetes集群，所以不会支持所有可能的Kubernetes部署配置，例如不同类型的存储，网络等。以下是Minikube的一些指导原则：</p>
+<ul>
+<li>用户友好</li>
+<li>支持所有Kuberenetes特性</li>
+<li>跨平台</li>
+<li>可靠</li>
+<li>最少的第三方软件依赖</li>
+<li>最少的资源消耗</li>
+</ul>
+<h2 id="集群创建能力的抽象"><a href="#集群创建能力的抽象" class="headerlink" title="集群创建能力的抽象"></a>集群创建能力的抽象</h2><p>Minikube缺省使用kubeadm创建和配置Kubernetes集群，但是通过参数(-b, –bootstrapper)将底层创建集群的能力抽像出来，这就为集成其它的Kubernetes集群创建工具提供了可能。</p>
+<h2 id="丰富的插件"><a href="#丰富的插件" class="headerlink" title="丰富的插件"></a>丰富的插件</h2><p>Minikube提供了丰富的开箱即用的插件用来帮助开发人员快速地配置Kubernetes集群，比如ingress插件用来安装ingress controller，dashboard插件用来安装Kubernetes的管理门户。通过命令<code>minikube addons list</code>可以列出支持的所有插件：<br><img src="/2021/10/06/create-kubernetes-minikube/2.jpg" srcset="/img/loading.gif"></p>
+<h2 id="丰富的集群组件配置能力"><a href="#丰富的集群组件配置能力" class="headerlink" title="丰富的集群组件配置能力"></a>丰富的集群组件配置能力</h2><p>比起docker for mac创建的Kubernetes集群，Minikube提供了丰富的参数类型用来配置集群组件。可以参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/commands/start/">https://minikube.sigs.k8s.io/docs/commands/start/</a> 查看<code>minikube start</code>命令中用于配置集群的参数，尤其是<code>--extra-config</code>参数可以用来对不同组件进行设置。参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/handbook/config/">https://minikube.sigs.k8s.io/docs/handbook/config/</a> 查看详细的集群配置功能。</p>
+<h2 id="丰富的集群管理命令"><a href="#丰富的集群管理命令" class="headerlink" title="丰富的集群管理命令"></a>丰富的集群管理命令</h2><p>Minikube的start，stop和pause，unpause命令提供了不同级别的集群启停功能，从而释放出CPU，内存资源。Minikube stop命令会停掉运行Kubernetes集群的虚拟机，同时也会清理掉所有的容器镜像和持久卷，但仍旧会保留当前集群的所有的配置，而Minikube start命令则会重启虚拟机。Minikube pause命令不会停掉运行Kubernetes集群的虚拟机以及清理掉所有的容器镜像和持久卷，只会停掉Kubernetes集群，但也不会停掉docker的守护进程，而Minikube unpause命令会重新启动Kubernetes集群。</p>
+<h1 id="Minikube的架构"><a href="#Minikube的架构" class="headerlink" title="Minikube的架构"></a>Minikube的架构</h1><p><img src="/2021/10/06/create-kubernetes-minikube/1.jpg" srcset="/img/loading.gif"></p>
+<ul>
+<li><p>Minikube驱动层使用docker-machine创建不同类型的运行Kubernetes集群的工作节点。</p>
+</li>
+<li><p>Master和Worker就是Minikube通过驱动层创建出来的Kubernetes集群的工作节点。工作节点可以是运行在主机上的虚拟机、独立的容器，也可以是已经存在的且已经配置好的虚拟机（本地或远程的），或者就是主机本身。</p>
+</li>
+</ul>
+<h2 id="Hypervisor驱动"><a href="#Hypervisor驱动" class="headerlink" title="Hypervisor驱动"></a>Hypervisor驱动</h2><p>Minikube会根据指定的Hypervisor驱动在主机上启动一到多个虚拟机，并将它们配置成即将创建的Kubernetes集群的工作节点。不同类型的主机(Mac, Linux, Windows)支持的虚拟化技术有差异，所以会有不同的Hypervisor驱动。</p>
+<h3 id="Linux主机支持的Hypervisor驱动"><a href="#Linux主机支持的Hypervisor驱动" class="headerlink" title="Linux主机支持的Hypervisor驱动"></a>Linux主机支持的Hypervisor驱动</h3><ul>
+<li>KVM2</li>
+<li>VirtualBox</li>
+</ul>
+<h3 id="Mac主机支持的Hypervisor驱动"><a href="#Mac主机支持的Hypervisor驱动" class="headerlink" title="Mac主机支持的Hypervisor驱动"></a>Mac主机支持的Hypervisor驱动</h3><ul>
+<li>Hyperkit</li>
+<li>VirtualBox</li>
+<li>Parallels</li>
+<li>VMware</li>
+</ul>
+<h3 id="Windows主机支持的Hypervisor驱动"><a href="#Windows主机支持的Hypervisor驱动" class="headerlink" title="Windows主机支持的Hypervisor驱动"></a>Windows主机支持的Hypervisor驱动</h3><ul>
+<li>Hyper-V</li>
+<li>VirtualBox</li>
+<li>VMware</li>
+</ul>
+<h2 id="Docker驱动"><a href="#Docker驱动" class="headerlink" title="Docker驱动"></a>Docker驱动</h2><p>当选择Docker驱动选项时，Minikube会利用docker in docker技术启动一到多个容器，并将它们配置成即将创建的Kubernetes集群的工作节点，即所谓的Kubernetes in docker。</p>
+<h3 id="Linux主机的Docker驱动"><a href="#Linux主机的Docker驱动" class="headerlink" title="Linux主机的Docker驱动"></a>Linux主机的Docker驱动</h3><ul>
+<li>Docker - container-based</li>
+<li>Podman - container（试验阶段）</li>
+</ul>
+<p>Docker是原生支持Linux系统的，所以在Linux主机中Docker的守护进程是直接运行在主机中的，相对来说性能会高点。Podman是另一个取代Docker的容器工具，完全兼容OCI标准。Podman也是原生支持Linux系统，而且在Linux系统中它是没有守护进程的，所谓的daemonless。目前Minikube支持Podman还处于试验阶段。</p>
+<h3 id="Mac主机支持的Docker驱动"><a href="#Mac主机支持的Docker驱动" class="headerlink" title="Mac主机支持的Docker驱动"></a>Mac主机支持的Docker驱动</h3><ul>
+<li>Docker - VM + Container (preferred)</li>
+</ul>
+<p>Docker并没有原生支持Mac，所以Docker会在Mac主机上启动一个Hyperkit的虚拟机，并将它配置为Docker的服务端，而在Mac主机上的客户端则通过Unix Socket与Docker服务通信。</p>
+<h3 id="Windows主机支持的Docker驱动"><a href="#Windows主机支持的Docker驱动" class="headerlink" title="Windows主机支持的Docker驱动"></a>Windows主机支持的Docker驱动</h3><ul>
+<li>Docker - VM + Container (preferred)</li>
+</ul>
+<p>通Mac一样，Docker也没有原生支持WIndows，所以需要在Windows主机上启动一Hyper-V虚拟机。</p>
+<h2 id="SSH驱动"><a href="#SSH驱动" class="headerlink" title="SSH驱动"></a>SSH驱动</h2><p>当使用SSH驱动时，Minikube实际上是通过SSH在已经存在并配置好的一台远程主机上创建Kuberenetes集群。</p>
+<h2 id="None驱动"><a href="#None驱动" class="headerlink" title="None驱动"></a>None驱动</h2><p>目前只支持Linux主机，也就是Minikube直接在当前的Linux主机上创建Kuberentes集群。</p>
+<h1 id="创建Kubernetes集群"><a href="#创建Kubernetes集群" class="headerlink" title="创建Kubernetes集群"></a>创建Kubernetes集群</h1><h2 id="用Docker驱动快速创建一个集群"><a href="#用Docker驱动快速创建一个集群" class="headerlink" title="用Docker驱动快速创建一个集群"></a>用Docker驱动快速创建一个集群</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube start -p mkdockerk8s --driver=docker<br></code></pre></td></tr></table></figure>
+<p>这个命令基于Docker驱动创建了一个单节点的Kubernetes集群。参数-p用来指定集群的名字。</p>
+<p>执行以下命令可以查看创建的集群：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube profile list<br></code></pre></td></tr></table></figure>
+<p><img src="/2021/10/06/create-kubernetes-minikube/3.jpg" srcset="/img/loading.gif"></p>
+<p>执行kubectl命令可以看到集群已经被加到kubeconfig中了：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl config get-contexts<br></code></pre></td></tr></table></figure>
+<p><img src="/2021/10/06/create-kubernetes-minikube/4.jpg" srcset="/img/loading.gif"></p>
+<p>执行以下命令安装dashboard:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> metrics-server<br>minikube addons <span class="hljs-built_in">enable</span> dashboard<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>Dashboard的一些特性依赖于metrics-server，所以先安装metrics-server。</p>
+</blockquote>
+<p><strong>但是用docker driver创建的Kubernetes集群有很大的不足，基本上无法满足开发工作：</strong></p>
+<ul>
+<li><p>不支持ingress，当执行以下命令去安装ingress controller时，会出错</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> ingress<br></code></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs bash">❌  Exiting due to MK_USAGE: Due to networking limitations of driver docker on darwin, ingress addon is not supported.<br>Alternatively to use this addon you can use a vm-based driver:<br><br>	<span class="hljs-string">&#x27;minikube start --vm=true&#x27;</span><br><br>To track the update on this work <span class="hljs-keyword">in</span> progress feature please check:<br>https://github.com/kubernetes/minikube/issues/7332<br><br></code></pre></td></tr></table></figure></li>
+<li><p>不支持LoadBalance类型的服务，执行下面命令时，也会出错</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube tunnel<br></code></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">🤷  The control plane node must be running <span class="hljs-keyword">for</span> this <span class="hljs-built_in">command</span><br>👉  To start a cluster, run: <span class="hljs-string">&quot;minikube start&quot;</span><br></code></pre></td></tr></table></figure></li>
+<li><p>同样无法打开前面安装好的dashboard</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube dashboard<br></code></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">🤷  The control plane node must be running <span class="hljs-keyword">for</span> this <span class="hljs-built_in">command</span><br>👉  To start a cluster, run: <span class="hljs-string">&quot;minikube start&quot;</span><br></code></pre></td></tr></table></figure></li>
+</ul>
+<p>所以，需要通过某个Hypervisor驱动创建一个虚拟机作为Kubernetes集群的工作节点，这样既能支持ingress，又能支持Loadbalance类型的服务，同时还能打开dashboard。下面将通过VirtualBox驱动创建集群。</p>
+<h2 id="用VirtualBox驱动创建集群"><a href="#用VirtualBox驱动创建集群" class="headerlink" title="用VirtualBox驱动创建集群"></a>用VirtualBox驱动创建集群</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube start --cpus=4 --memory=<span class="hljs-string">&#x27;6g&#x27;</span> --cni=<span class="hljs-string">&#x27;flannel&#x27;</span> --disk-size=<span class="hljs-string">&#x27;60g&#x27;</span> --driver=<span class="hljs-string">&#x27;virtualbox&#x27;</span> --kubernetes-version=<span class="hljs-string">&#x27;v1.19.10&#x27;</span> --extra-config=apiserver.service-node-port-range=1-65535 --extra-config=controller-manager.bind-address=0.0.0.0 --extra-config=scheduler.bind-address=0.0.0.0<br></code></pre></td></tr></table></figure>
+<p>创建了一个基于VirtualBox驱动的单节点集群。通过各个参数详细地配置了集群：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>–cpus=4</td>
+<td>指定了节点最大CPU数为4</td>
+</tr>
+<tr>
+<td>–memory=’6g’</td>
+<td>指定了工作节点的最大内存数为6g</td>
+</tr>
+<tr>
+<td>–disk-size=’60g’</td>
+<td>指定了节点的磁盘大小</td>
+</tr>
+<tr>
+<td>-kubernetes-version=’v1.19.10’</td>
+<td>指定创建的集群版本为v1.19.10</td>
+</tr>
+<tr>
+<td>-extra-config=apiserver.service-node-port-range=1-65535</td>
+<td>通过–extra-config配置apiserver，使得运行NodePort类型的服务能够使用1-65535范围的端口</td>
+</tr>
+<tr>
+<td>–extra-config=controller-manager.bind-address=0.0.0.0</td>
+<td>通过–extra-config配置controller-manager，使能够从外面访问controller-manager的API</td>
+</tr>
+<tr>
+<td>–extra-config=scheduler.bind-address=0.0.0.0</td>
+<td>通过–extra-config配置scheduler，使能够从外面访问scheduler的API</td>
+</tr>
+</tbody></table>
+<p>同样，执行以下命令可以查看创建的集群：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube profile list<br></code></pre></td></tr></table></figure>
+<p><img src="/2021/10/06/create-kubernetes-minikube/5.jpg" srcset="/img/loading.gif"></p>
+<p>这个时候就可以通过命令安装ingress controller，从而支持通过ingress暴露内部服务：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> ingress<br></code></pre></td></tr></table></figure>
+
+<p>也可以安装并打开dashboard：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> metrics-server<br>minikube addons <span class="hljs-built_in">enable</span> dashboard<br>minikube dashboard<br></code></pre></td></tr></table></figure>
+
+<p>通过以下命令，可以登录进工作节点：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube ssh<br></code></pre></td></tr></table></figure>
+
+<p>还可以通过命令查询工作节点的IP地址：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube ip<br></code></pre></td></tr></table></figure>
+
+<h3 id="部署NodePoart和Loadbalance类型的服务"><a href="#部署NodePoart和Loadbalance类型的服务" class="headerlink" title="部署NodePoart和Loadbalance类型的服务"></a>部署NodePoart和Loadbalance类型的服务</h3><p>可以详细参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/handbook/accessing/">访问应用</a>这篇文档，在这里就不赘述了。</p>
+<h1 id="Minikbue的缺陷"><a href="#Minikbue的缺陷" class="headerlink" title="Minikbue的缺陷"></a>Minikbue的缺陷</h1><p>目前Minikube在VPN的情况下可能存在问题。如果你的公司支持VPN远程办公，在拨上VPN的情况下，可能无法访问Minikube的集群，因为VPN会强制修改本地路由，除非公司IT同意将你的Minikube用到的网段加入VPN的白名单（这往往不现实）。对于这个问题可以详细参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/handbook/vpn_and_proxy/#vpn">Proxies和VPN</a>这篇文档。</p>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Minikube，它的架构以及使用，希望能够帮助读者对Minikube有个框架性的了解，从而决定是否需要深入使用。对于Minikube更详细的用法，可以参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/">官方文档</a>。</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Kubernetes/">Kubernetes</a>
+                    
+                      <a class="hover-with-bg" href="/tags/K8s/">K8s</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Minikube/">Minikube</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/10/10/create-kubernetes-kind/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Kind创建本地Kubernetes集群</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/09/06/aliyun-coredns-issue-tracking/">
+                        <span class="hidden-mobile">记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            <!-- 添加打赏功能 只在文章详情中显示-->
+            
+              
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+            原创技术分享，您的支持将鼓励我继续创作!
+         </span>
+        <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏"></a>
+        <br>
+    </div>
+    <div id="donate_guide" class="donate_bar center hidden">
+        <div id="alipay" style="display: inline-block" >
+            <!-- 支付宝打赏图案 -->
+            <img src="/img/alipay.png" srcset="/img/loading.gif" alt="支付宝打赏">
+            <p>支付宝打赏</p>
+        </div>
+        <div id="wechatpay" style="display: inline-block" >
+            <!-- 微信打赏图案 -->
+            <img src="/img/wechatpay.png" srcset="/img/loading.gif" alt="微信打赏">
+            <p>微信打赏</p>
+        </div>
+    </div>
+    <script type="text/javascript">
+        document.getElementById('btn_donate').onclick = function(){
+            if ($('#donate_guide').hasClass('hidden')){
+                $('#donate_guide').removeClass('hidden');
+            }else{
+                $('#donate_guide').addClass('hidden');
+            }
+        }
+    </script>
+</div>
+              
+            
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <div id="SOHUCS" sid='http://www.mikesay.com/2021/10/06/create-kubernetes-minikube/'></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('SOHUCS', function() {
+      var appid = 'cyvdGhYsy';
+      var conf = '';
+      var width = window.innerWidth || document.documentElement.clientWidth;
+      if (width < 960) {
+        var head = window.document.getElementsByTagName('head')[0]||document.head||document.documentElement;
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.charset = 'utf-8';
+        script.id = 'changyan_mobile_js';
+        script.src = 'https://cy-cdn.kuaizhan.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf;
+        head.appendChild(script);
+        //window.document.write('<script id="changyan_mobile_js" charset="utf-8" type="text/javascript" src="http://changyan.sohu.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf + '"><\/script>');
+      } else {
+        Fluid.utils.createScript("https://changyan.sohu.com/upload/changyan.js", function() {
+          window.changyan.api.config({
+            appid: appid,
+            conf: conf
+          })
+        });
+      }
+    })
+  </script>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":200})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>

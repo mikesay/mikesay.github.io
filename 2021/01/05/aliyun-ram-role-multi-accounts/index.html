@@ -1,0 +1,643 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="云斋">
+  <meta name="keywords" content="DevOps, Infrastructure As Code(IAC), CI/CD, Operation, Monitor, Python">
+  <title>阿里云通过RAM角色管理多云账号下的资源 - 云斋随笔</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"www.mikesay.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":200}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 60vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>云斋随笔</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-books"></i>
+                文档
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/ebooks/k8cd/" target="_blank">
+                    <i class="iconfont  icon-book"></i>
+                    Kubernetes应用持续交付的探索与实践
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                友链
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/j10c_4.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="阿里云通过RAM角色管理多云账号下的资源">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-01-05 22:45" pubdate>
+        2021年1月5日 晚上
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.2k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      23
+       分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">阿里云通过RAM角色管理多云账号下的资源</h1>
+            
+              <p class="note note-info">
+                
+                  本文最后更新于：2022年2月11日 下午
+                
+              </p>
+            
+            <div class="markdown-body">
+              <p>云计算经过十几年的发展已经变得很成熟，无论是传统企业还是初创企业都将云计算平台作为其数字化策略的支撑平台。在国内，阿里云是使用最广泛的公有云平台，很多本土企业和外资企业在华的分支机构都是首选阿里云来构建和运行他们的数字化方案。为了能够高效地使用阿里云，同时又能对接阿里云产品服务团队，在这些公司里逐渐地出现了一个新的角色或团队来统一规划、管理阿里云平台，我们就暂且称这个团队为云团队。大部分公司云团队往往需要管理多个阿里云账号，而在不同的账号里的用户创建、登录、登出的操作往往会变的很麻烦。本文介绍通过切换身份的方式扮演<a target="_blank" rel="noopener" href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">RAM角色</a>来管理多云账号下的资源。</p>
+<span id="more"></span>
+
+<h1 id="多云账号"><a href="#多云账号" class="headerlink" title="多云账号"></a>多云账号</h1><p>公司在使用阿里云的过程中，基于不同的目的或者受组织架构的约束，或多或少都会创建多个云账号。传统的公司或者绝大部分外资公司在财务上都会为不同的部门或团队创建不同的成本中心(cost center)并分配对应的预算，部门或团队的开支都是走自己的成本中心。这就决定了当某个部门或团队在使用阿里云的时候，必定会创建自己的云账号，而不会去使用别的成本中心下的阿里云账号。一些中小型的互联网公司或者创业公司的财务不会那么复杂，研发可能就一个成本中心，但是往往需要多个阿里云账号来隔离不同的环境，例如开发，测试，预生产和和生产环境。</p>
+<p>使用多个阿里云账号有以下一些优点：</p>
+<ul>
+<li>不同账号的云资源是完全隔离的，相互之间不受影响。</li>
+<li>可以单独出账单，做到按不同成本中心核算。</li>
+<li>如果构建的微服务系统涉及到多个业务部门或团队，各个业务部门或团队在自己的阿里云账号里只维护或运行自己负责的微服务，这样可以降低单个阿里云账号下架构的复杂性。</li>
+</ul>
+<p>但是云团队在管理多个阿里云账号时也会遇到很多麻烦：</p>
+<ul>
+<li>需要重复地登录，登出和双因素认证来切换不同的账号。</li>
+<li>阿里云支持单点登录(SSO)，这样可以省掉双因素认证的步骤，但当出现问题时，无法创建一个非SSO账号给阿里云技术支持用来临时登录进账号调试问题。</li>
+<li>团队成员入职，离职时都需要通知产品拥有者在阿里云账号里创建和删除RAM用户。</li>
+<li>每个云团队成员都需要需要记住很多云账号。</li>
+</ul>
+<h1 id="通过RAM角色管理多云账号"><a href="#通过RAM角色管理多云账号" class="headerlink" title="通过RAM角色管理多云账号"></a>通过RAM角色管理多云账号</h1><p>为了解决多云账号管理的痛点，可以通过RAM用户扮演RAM角色的方式来登录阿里云其它账号。</p>
+<h2 id="什么是RAM角色"><a href="#什么是RAM角色" class="headerlink" title="什么是RAM角色"></a>什么是RAM角色</h2><p>RAM角色（RAM role）与RAM用户一样，都是RAM身份类型的一种。RAM角色是一种虚拟用户，没有确定的身份认证密钥，需要被一个受信的实体用户扮演才能正常使用。</p>
+<p>RAM角色是一种虚拟用户，与实体用户（云账号、RAM用户和云服务）和教科书式角色（Textbook role）不同。</p>
+<ul>
+<li>实体用户：拥有确定的登录密码或访问密钥。</li>
+<li>教科书式角色：教科书式角色或传统意义上的角色是指一组权限集合，类似于RAM里的权限策略。如果一个用户被赋予了这种角色，也就意味着该用户被赋予了一组权限，可以访问被授权的资源。</li>
+<li>RAM角色：RAM角色有确定的身份，可以被赋予一组权限策略，但没有确定的登录密码或访问密钥。RAM角色需要被一个受信的实体用户扮演，扮演成功后实体用户将获得RAM角色的安全令牌，使用这个安全令牌就能以角色身份访问被授权的资源。</li>
+</ul>
+<h2 id="RAM角色使用方法"><a href="#RAM角色使用方法" class="headerlink" title="RAM角色使用方法"></a>RAM角色使用方法</h2><ul>
+<li><p>RAM角色指定可信实体，即指定可以扮演角色的实体用户身份。</p>
+</li>
+<li><p>可信实体通过控制台或调用API扮演角色并获取角色令牌。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/6.png" srcset="/img/loading.gif"></p>
+</li>
+<li><p>为RAM角色绑定权限策略。</p>
+</li>
+<li><p>受信实体通过扮演角色，使用角色令牌访问阿里云资源。</p>
+</li>
+</ul>
+<h2 id="RAM角色类型"><a href="#RAM角色类型" class="headerlink" title="RAM角色类型"></a>RAM角色类型</h2><p>根据RAM可信实体的不同，RAM支持以下三种类型的角色：</p>
+<ul>
+<li><p>阿里云账号：允许RAM用户所扮演的角色。扮演角色的RAM用户可以属于自己的云账号，也可以属于其他云账号。此类角色主要用来解决跨账号访问和临时授权问题。</p>
+</li>
+<li><p>阿里云服务：允许云服务所扮演的角色。此类角色主要用于授权云服务代理您进行资源操作。</p>
+</li>
+<li><p>身份提供商：允许受信身份提供商下的用户所扮演的角色。此类角色主要用于实现与阿里云的SSO。</p>
+</li>
+</ul>
+<h2 id="RAM角色切换的方式管理多云账号的实现"><a href="#RAM角色切换的方式管理多云账号的实现" class="headerlink" title="RAM角色切换的方式管理多云账号的实现"></a>RAM角色切换的方式管理多云账号的实现</h2><p>实现多云账号管理需要满足以下的前提条件：</p>
+<ul>
+<li><p>云团队拥有自己的云账号，假设账号ID为123456789012****，每个成员都有对应的RAM用户。</p>
+</li>
+<li><p>假设某个业务部门的云账号为128888789012****。</p>
+</li>
+</ul>
+<h3 id="实现架构"><a href="#实现架构" class="headerlink" title="实现架构"></a>实现架构</h3><p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/7.png" srcset="/img/loading.gif" alt="RAM用户通过扮演不同云账号里的RAM角色来管理账号里的资源"></p>
+<h3 id="实现步骤"><a href="#实现步骤" class="headerlink" title="实现步骤"></a>实现步骤</h3><ul>
+<li><p>产品拥有者参考“<a target="_blank" rel="noopener" href="https://help.aliyun.com/document_detail/93691.html?spm=a2c4g.11186623.6.584.312068f9HVtYvh">创建可信实体为阿里云账号的RAM角色</a>”，在自己的云账号下为云团队的账号123456789012****创建RAM角色”CloudAdmin”，并给角色分配”AdministratorAccess”权限<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/1.png" srcset="/img/loading.gif" alt="选择授信实体为阿里云账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/2.png" srcset="/img/loading.gif" alt="选择其它云账号，并输入云团队的账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/3.png" srcset="/img/loading.gif" alt="给这个RAM角色授予管理员权限"></p>
+</li>
+<li><p>设置以下授信策略。授信实体为云团队的账号“123456789012****”，并开放给有“AliyunSTSAssumeRoleAccess”权限的RAM用户</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs json">&#123;<br>    <span class="hljs-attr">&quot;Statement&quot;</span>: [<br>        &#123;<br>            <span class="hljs-attr">&quot;Action&quot;</span>: <span class="hljs-string">&quot;sts:AssumeRole&quot;</span>,<br>            <span class="hljs-attr">&quot;Effect&quot;</span>: <span class="hljs-string">&quot;Allow&quot;</span>,<br>            <span class="hljs-attr">&quot;Principal&quot;</span>: &#123;<br>                <span class="hljs-attr">&quot;RAM&quot;</span>: [<br>                    <span class="hljs-string">&quot;acs<span class="github-emoji" alias="ram" style="" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f40f.png?v8">&#x1f40f;</span>:123456789012****:root&quot;</span><br>                ]<br>            &#125;<br>        &#125;<br>    ],<br>    <span class="hljs-attr">&quot;Version&quot;</span>: <span class="hljs-string">&quot;1&quot;</span><br>&#125;<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>也可以将某个授信实体限制为账号下的某个RAM用户，比如mikejianzhang</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs json">&#123;<br>    <span class="hljs-attr">&quot;Statement&quot;</span>: [<br>        &#123;<br>            <span class="hljs-attr">&quot;Action&quot;</span>: <span class="hljs-string">&quot;sts:AssumeRole&quot;</span>,<br>            <span class="hljs-attr">&quot;Effect&quot;</span>: <span class="hljs-string">&quot;Allow&quot;</span>,<br>            <span class="hljs-attr">&quot;Principal&quot;</span>: &#123;<br>                <span class="hljs-attr">&quot;RAM&quot;</span>: [<br>                    <span class="hljs-string">&quot;acs<span class="github-emoji" alias="ram" style="" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f40f.png?v8">&#x1f40f;</span>:123456789012****:user/mikejianzhang&quot;</span><br>                ]<br>            &#125;<br>        &#125;<br>    ],<br>    <span class="hljs-attr">&quot;Version&quot;</span>: <span class="hljs-string">&quot;1&quot;</span><br>&#125;<br></code></pre></td></tr></table></figure></blockquote>
+</li>
+<li><p>云团队在自己的云账号里为RAM用户授予角色扮演权限”AliyunSTSAssumeRoleAccess”。</p>
+</li>
+<li><p>云团队的某个RAM用户首先登录云团队的账号，然后通过切换角色并输入业务部门云账号或者别名，以及对应的角色”CloudAdmin”就能切换进业务部门云账号里。</p>
+<div class="group-image-container"><div class="group-image-row"><div class="group-image-wrap"><img src="/4.png" srcset="/img/loading.gif"></div><div class="group-image-wrap"><img src="/5.png" srcset="/img/loading.gif" alt="输入业务部门云账号ID或别名"></div></div><div class="group-image-row"></div></div></li>
+<li><p>完成管理任务后点击“返回登录身份”退回到自己的账号。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/8.png" srcset="/img/loading.gif"></p>
+</li>
+<li><p>当有云团队成员入职或离职时，只需要在云团队的阿里云账号里添加和删除对应的RAM用户即可。</p>
+</li>
+</ul>
+<p>这样，通过RAM角色切换的方法，云团队就可以管理多个业务部门的云账号。另外，RAM角色切换的方法还有以下两个使用场景：</p>
+<ul>
+<li>通过RAM角色临时授权给阿里云的技术支持帮助调试问题，尤其是在云账号开启了单点登录(SSO)的情况下，只有通过这种方法才能让阿里云的技术支持登录进来。</li>
+<li>当一个企业希望将部分业务授权给另一个企业时，也可以通过RAM角色进行跨阿里云账号授权来管理资源的访问。例如，企业A购买了多种阿里云资源（ECS实例、RDS实例、SLB实例等），但是企业A希望能专注于业务，仅作为资源拥有者。企业A希望可以授权企业B账号来对云资源进行运维，监控和管理，企业A也希望企业B的员工入职和离职时，无需做任何权限变更，同时也希望合同终止时，可以随时撤销对企业B的授权。这种情况下，企业A可以创建一定权限的角色并授权给企业B的阿里云账号，企业B的RAM用户可以通过角色切换的方法登录进企业A的账号对资源进行运维管理。</li>
+</ul>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/AliCloud/">AliCloud</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Aliyun/">Aliyun</a>
+                    
+                      <a class="hover-with-bg" href="/tags/RAM/">RAM</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext row">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/01/17/sonar-plugin-principle/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">浅析SonarQube插件的运行原理</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2020/12/31/git-install-configure/">
+                        <span class="hidden-mobile">Git安装与配置</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            <!-- 添加打赏功能 只在文章详情中显示-->
+            
+              
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+            原创技术分享，您的支持将鼓励我继续创作!
+         </span>
+        <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏"></a>
+        <br>
+    </div>
+    <div id="donate_guide" class="donate_bar center hidden">
+        <div id="alipay" style="display: inline-block" >
+            <!-- 支付宝打赏图案 -->
+            <img src="/img/alipay.png" srcset="/img/loading.gif" alt="支付宝打赏">
+            <p>支付宝打赏</p>
+        </div>
+        <div id="wechatpay" style="display: inline-block" >
+            <!-- 微信打赏图案 -->
+            <img src="/img/wechatpay.png" srcset="/img/loading.gif" alt="微信打赏">
+            <p>微信打赏</p>
+        </div>
+    </div>
+    <script type="text/javascript">
+        document.getElementById('btn_donate').onclick = function(){
+            if ($('#donate_guide').hasClass('hidden')){
+                $('#donate_guide').removeClass('hidden');
+            }else{
+                $('#donate_guide').addClass('hidden');
+            }
+        }
+    </script>
+</div>
+              
+            
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <div id="SOHUCS" sid='http://www.mikesay.com/2021/01/05/aliyun-ram-role-multi-accounts/'></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('SOHUCS', function() {
+      var appid = 'cyvdGhYsy';
+      var conf = '';
+      var width = window.innerWidth || document.documentElement.clientWidth;
+      if (width < 960) {
+        var head = window.document.getElementsByTagName('head')[0]||document.head||document.documentElement;
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.charset = 'utf-8';
+        script.id = 'changyan_mobile_js';
+        script.src = 'https://cy-cdn.kuaizhan.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf;
+        head.appendChild(script);
+        //window.document.write('<script id="changyan_mobile_js" charset="utf-8" type="text/javascript" src="http://changyan.sohu.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf + '"><\/script>');
+      } else {
+        Fluid.utils.createScript("https://changyan.sohu.com/upload/changyan.js", function() {
+          window.changyan.api.config({
+            appid: appid,
+            conf: conf
+          })
+        });
+      }
+    })
+  </script>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":200})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>
