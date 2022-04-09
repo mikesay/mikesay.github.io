@@ -209,7 +209,7 @@
     
     <span class="post-meta mr-2">
       <i class="iconfont icon-chart"></i>
-      2.2k 字
+      2.4k 字
     </span>
   
 
@@ -219,7 +219,7 @@
       <i class="iconfont icon-clock-fill"></i>
       
       
-      26
+      29
        分钟
     </span>
   
@@ -253,7 +253,7 @@
             
               <p class="note note-info">
                 
-                  本文最后更新于：2022年3月16日 晚上
+                  本文最后更新于：2022年4月9日 晚上
                 
               </p>
             
@@ -339,7 +339,7 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">🤷  The control plane node must be running <span class="hljs-keyword">for</span> this <span class="hljs-built_in">command</span><br>👉  To start a cluster, run: <span class="hljs-string">&quot;minikube start&quot;</span><br></code></pre></td></tr></table></figure></li>
 </ul>
 <p>所以，需要通过某个Hypervisor驱动创建一个虚拟机作为Kubernetes集群的工作节点，这样既能支持ingress，又能支持Loadbalance类型的服务，同时还能打开dashboard。下面将通过VirtualBox驱动创建集群。</p>
-<h2 id="用VirtualBox驱动创建集群"><a href="#用VirtualBox驱动创建集群" class="headerlink" title="用VirtualBox驱动创建集群"></a>用VirtualBox驱动创建集群</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube start --cpus=4 --memory=<span class="hljs-string">&#x27;6g&#x27;</span> --cni=<span class="hljs-string">&#x27;flannel&#x27;</span> --disk-size=<span class="hljs-string">&#x27;60g&#x27;</span> --driver=<span class="hljs-string">&#x27;virtualbox&#x27;</span> --kubernetes-version=<span class="hljs-string">&#x27;v1.19.10&#x27;</span> --extra-config=apiserver.service-node-port-range=1-65535 --extra-config=controller-manager.bind-address=0.0.0.0 --extra-config=scheduler.bind-address=0.0.0.0<br></code></pre></td></tr></table></figure>
+<h2 id="用VirtualBox驱动创建集群"><a href="#用VirtualBox驱动创建集群" class="headerlink" title="用VirtualBox驱动创建集群"></a>用VirtualBox驱动创建集群</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube start --cpus=4 --memory=<span class="hljs-string">&#x27;6g&#x27;</span> --cni=<span class="hljs-string">&#x27;flannel&#x27;</span> --disk-size=<span class="hljs-string">&#x27;60g&#x27;</span> --driver=<span class="hljs-string">&#x27;virtualbox&#x27;</span> --kubernetes-version=<span class="hljs-string">&#x27;v1.23.5&#x27;</span> --extra-config=apiserver.service-node-port-range=1-65535 --extra-config=controller-manager.bind-address=0.0.0.0 --extra-config=scheduler.bind-address=0.0.0.0<br></code></pre></td></tr></table></figure>
 <p>创建了一个基于VirtualBox驱动的单节点集群。通过各个参数详细地配置了集群：</p>
 <table>
 <thead>
@@ -361,8 +361,8 @@
 <td>指定了节点的磁盘大小</td>
 </tr>
 <tr>
-<td>-kubernetes-version=’v1.19.10’</td>
-<td>指定创建的集群版本为v1.19.10</td>
+<td>-kubernetes-version=’v1.23.5’</td>
+<td>指定创建的集群版本为v1.23.5</td>
 </tr>
 <tr>
 <td>-extra-config=apiserver.service-node-port-range=1-65535</td>
@@ -380,19 +380,46 @@
 <p>同样，执行以下命令可以查看创建的集群：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube profile list<br></code></pre></td></tr></table></figure>
 <p><img src="/2021/10/06/create-kubernetes-minikube/5.jpg" srcset="/img/loading.gif"></p>
-<p>这个时候就可以通过命令安装ingress controller，从而支持通过ingress暴露内部服务：</p>
+<h3 id="安装MetalLB支持LoadBalancer类型的服务"><a href="#安装MetalLB支持LoadBalancer类型的服务" class="headerlink" title="安装MetalLB支持LoadBalancer类型的服务"></a>安装MetalLB支持LoadBalancer类型的服务</h3><blockquote>
+<p>参考<a target="_blank" rel="noopener" href="https://metallb.universe.tf/installation/">MetalLB官方安装和配置文档</a></p>
+</blockquote>
+<ul>
+<li><p>设置kube-proxy使用ipvs模式：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-string">kubectl</span> <span class="hljs-string">edit</span> <span class="hljs-string">configmap</span> <span class="hljs-string">-n</span> <span class="hljs-string">kube-system</span> <span class="hljs-string">kube-proxy</span><br></code></pre></td></tr></table></figure>
+<p>设置如下：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">apiVersion:</span> <span class="hljs-string">kubeproxy.config.k8s.io/v1alpha1</span><br><span class="hljs-attr">kind:</span> <span class="hljs-string">KubeProxyConfiguration</span><br><span class="hljs-attr">mode:</span> <span class="hljs-string">&quot;ipvs&quot;</span><br><span class="hljs-attr">ipvs:</span><br>  <span class="hljs-attr">strictARP:</span> <span class="hljs-literal">true</span><br></code></pre></td></tr></table></figure></li>
+<li><p>通过minikube的metallb插件安装metallb</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> metallb<br></code></pre></td></tr></table></figure></li>
+<li><p>修改MetalLB的配置添加IP地址池<br>参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/handbook/vpn_and_proxy/">Proxies and VPNs</a>，使用VirtualBox驱动创建的基于VM的集群节点IP地址池为192.168.59.0/24。可以从中选取一段用作给Loadbalancer类型的服务分配IP地址。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kubectl edit cm config  -n metallb-system<br></code></pre></td></tr></table></figure>
+<p>设置如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs bash">apiVersion: v1<br>data:<br>  config: |<br>    address-pools:<br>    - name: default<br>      protocol: layer2<br>      addresses:<br>      - 192.168.59.200 - 192.168.59.250<br></code></pre></td></tr></table></figure>
+<p>重启metallb controller Pod。</p>
+</li>
+</ul>
+<h3 id="安装Nginx-Ingress-Controller："><a href="#安装Nginx-Ingress-Controller：" class="headerlink" title="安装Nginx Ingress Controller："></a>安装Nginx Ingress Controller：</h3><blockquote>
+<p>minikube自带的Nginx Ingress Controller的服务类型是NodePort类型。</p>
+</blockquote>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> ingress<br></code></pre></td></tr></table></figure>
 
-<p>也可以安装并打开dashboard：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> metrics-server<br>minikube addons <span class="hljs-built_in">enable</span> dashboard<br>minikube dashboard<br></code></pre></td></tr></table></figure>
+<h3 id="安装Kong-Ingress-Controller"><a href="#安装Kong-Ingress-Controller" class="headerlink" title="安装Kong Ingress Controller"></a>安装Kong Ingress Controller</h3><blockquote>
+<p>minikube自带的Kong Ingress Controller的服务类型是LoadBalancer类型，MetalLB会分配对应的IP地址。</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> kong<br></code></pre></td></tr></table></figure>
 
-<p>通过以下命令，可以登录进工作节点：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube ssh<br></code></pre></td></tr></table></figure>
+<h3 id="安装并dashboard："><a href="#安装并dashboard：" class="headerlink" title="安装并dashboard："></a>安装并dashboard：</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube addons <span class="hljs-built_in">enable</span> metrics-server<br>minikube addons <span class="hljs-built_in">enable</span> dashboard<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>Dashboard中的某些数据依赖于metrics-server。</p>
+</blockquote>
+<p>启动Dashboard</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube dashboard<br></code></pre></td></tr></table></figure>
 
-<p>还可以通过命令查询工作节点的IP地址：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube ip<br></code></pre></td></tr></table></figure>
-
-<h3 id="部署NodePoart和Loadbalance类型的服务"><a href="#部署NodePoart和Loadbalance类型的服务" class="headerlink" title="部署NodePoart和Loadbalance类型的服务"></a>部署NodePoart和Loadbalance类型的服务</h3><p>可以详细参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/handbook/accessing/">访问应用</a>这篇文档，在这里就不赘述了。</p>
+<h3 id="一些常用的命令"><a href="#一些常用的命令" class="headerlink" title="一些常用的命令"></a>一些常用的命令</h3><ul>
+<li><p>登录进工作节点</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube ssh<br></code></pre></td></tr></table></figure></li>
+<li><p>查询工作节点的IP地址</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">minikube ip<br></code></pre></td></tr></table></figure></li>
+</ul>
 <h1 id="Minikbue的缺陷"><a href="#Minikbue的缺陷" class="headerlink" title="Minikbue的缺陷"></a>Minikbue的缺陷</h1><p>目前Minikube在VPN的情况下可能存在问题。如果你的公司支持VPN远程办公，在拨上VPN的情况下，可能无法访问Minikube的集群，因为VPN会强制修改本地路由，除非公司IT同意将你的Minikube用到的网段加入VPN的白名单（这往往不现实）。对于这个问题可以详细参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/handbook/vpn_and_proxy/#vpn">Proxies和VPN</a>这篇文档。</p>
 <h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Minikube，它的架构以及使用，希望能够帮助读者对Minikube有个框架性的了解，从而决定是否需要深入使用。对于Minikube更详细的用法，可以参考<a target="_blank" rel="noopener" href="https://minikube.sigs.k8s.io/docs/">官方文档</a>。</p>
 
