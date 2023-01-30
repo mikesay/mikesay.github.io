@@ -166,7 +166,7 @@
 </nav>
 
     <div class="banner" id="banner" parallax=true
-         style="background: url('/img/j10c_3.jpeg') no-repeat center center;
+         style="background: url('/img/home.png') no-repeat center center;
            background-size: cover;">
       <div class="full-bg-img">
         <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.2)">
@@ -199,6 +199,57 @@
               <div class="col-12 col-md-10 m-auto">
                 
 
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/04/10/creating-self-hosted-actions-runner-k8s/">在Kubernetes中创建自托管GitHub Actions Runner</a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2022/04/10/creating-self-hosted-actions-runner-k8s/">
+          
+          
+            
+          
+          GitHub Action是GitHub提供的CI/CD平台，用来自动化构建，测试和部署流水线。它缺省提供了基于虚拟机的多种类型的Runners供用户在自己的公有仓库中免费使用，而对于私有仓库的使用则需要收费（GitHub为付费用户提供了一定的免费使用额度，详细可以参考GitHub Actions的计费），如果不想付费使用GitHub提供的Runners，则需要自己部署自托管的Runner。本文将
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-04-11 02:21" pubdate>
+              2022-04-11
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Kubernetes/">Kubernetes</a>
+            
+              <a href="/tags/K8s/">K8s</a>
+            
+              <a href="/tags/DevOps/">DevOps</a>
+            
+              <a href="/tags/CI-CD/">CI/CD</a>
+            
+              <a href="/tags/Git/">Git</a>
+            
+              <a href="/tags/Github/">Github</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
 
   <div class="row mx-auto index-card">
     
@@ -260,7 +311,7 @@
           
             
           
-          在Minikube创建本地Kubernetes集群一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用。通过Hypervisor驱动创建的Kubernetes集群在VPN的情况下也无法访问。正好同事又在尝试一款新的工具Kind（论有一个不断进取的同事的重要性&#x1f604;），而且还解决了Minikube
+          在Minikube创建本地Kubernetes集群一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用，而通过Hypervisor驱动创建的Kubernetes集群也需要一些额外的配置(端口转发)才能在VPN的情况下使用。Kind是另一款在Docker容器中创建并运行本地Kubernetes集群的工具，比M
         </a>
       </p>
 
@@ -588,55 +639,6 @@
             <i class="iconfont icon-tags"></i>
             
               <a href="/tags/Git/">Git</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2020/03/09/jenkins-gitlab-pullrequest/">Jenkins构建GitLab合并请求(Merge Request)</a>
-      </h1>
-
-      <p class="index-excerpt">
-        <a href="/2020/03/09/jenkins-gitlab-pullrequest/">
-          
-          
-            
-          
-          写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事
-        </a>
-      </p>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2020-03-09 18:00" pubdate>
-              2020-03-09
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/DevOps/">DevOps</a>
-            
-              <a href="/tags/CI-CD/">CI/CD</a>
-            
-              <a href="/tags/Git/">Git</a>
-            
-              <a href="/tags/Jenkins/">Jenkins</a>
-            
-              <a href="/tags/GitLab/">GitLab</a>
             
           </div>
         
