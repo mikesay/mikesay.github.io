@@ -28,7 +28,7 @@
 <meta property="og:image" content="https://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/1.png">
 <meta property="og:image" content="https://www.mikesay.com/2020/12/16/git-encrypt-file-in-repository/2.png">
 <meta property="article:published_time" content="2020-12-16T00:50:00.000Z">
-<meta property="article:modified_time" content="2023-03-18T16:16:00.350Z">
+<meta property="article:modified_time" content="2023-03-18T16:28:43.078Z">
 <meta property="article:author" content="Mike">
 <meta property="article:tag" content="Git">
 <meta name="twitter:card" content="summary_large_image">
@@ -395,7 +395,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#107;&#101;&#x6a;&#105;&#x61;&#x6e;&#122;&#104;&#97;&#110;&#x67;&#64;&#49;&#54;&#51;&#46;&#99;&#x6f;&#109;">&#x6d;&#105;&#107;&#101;&#x6a;&#105;&#x61;&#x6e;&#122;&#104;&#97;&#110;&#x67;&#64;&#49;&#54;&#51;&#46;&#99;&#x6f;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#x69;&#107;&#101;&#x6a;&#105;&#x61;&#x6e;&#122;&#104;&#97;&#110;&#103;&#64;&#x31;&#x36;&#51;&#46;&#99;&#111;&#109;">&#x6d;&#x69;&#107;&#101;&#x6a;&#105;&#x61;&#x6e;&#122;&#104;&#97;&#110;&#103;&#64;&#x31;&#x36;&#51;&#46;&#99;&#111;&#109;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -487,7 +487,36 @@
 </li>
 </ul>
 
-                
+                <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+            原创技术分享，您的支持将鼓励我继续创作!
+         </span>
+        <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏"></a>
+        <br>
+    </div>
+    <div id="donate_guide" class="donate_bar center hidden">
+        <div id="alipay" style="display: inline-block" >
+            <!-- 支付宝打赏图案 -->
+            <img src="/img/alipay1.jpeg" srcset="/img/loading.gif" lazyload alt="支付宝打赏">
+            <p>支付宝打赏</p>
+        </div>
+        <div id="wechatpay" style="display: inline-block" >
+            <!-- 微信打赏图案 -->
+            <img src="/img/wechatpay1.jpeg" srcset="/img/loading.gif" lazyload alt="微信打赏">
+            <p>微信打赏</p>
+        </div>
+    </div>
+    <script type="text/javascript">
+        document.getElementById('btn_donate').onclick = function(){
+            if ($('#donate_guide').hasClass('hidden')){
+                $('#donate_guide').removeClass('hidden');
+            }else{
+                $('#donate_guide').addClass('hidden');
+            }
+        }
+    </script>
+</div>
               </div>
             
             <hr/>
@@ -628,36 +657,7 @@
     </article>
   
 
-<div class ="post-donate">
-    <div id="donate_board" class="donate_bar center">
-        <span class="donate_txt">
-            原创技术分享，您的支持将鼓励我继续创作!
-         </span>
-        <a id="btn_donate" class="btn_donate" href="javascript:;" title="打赏"></a>
-        <br>
-    </div>
-    <div id="donate_guide" class="donate_bar center hidden">
-        <div id="alipay" style="display: inline-block" >
-            <!-- 支付宝打赏图案 -->
-            <img src="/img/alipay1.jpeg" srcset="/img/loading.gif" lazyload alt="支付宝打赏">
-            <p>支付宝打赏</p>
-        </div>
-        <div id="wechatpay" style="display: inline-block" >
-            <!-- 微信打赏图案 -->
-            <img src="/img/wechatpay1.jpeg" srcset="/img/loading.gif" lazyload alt="微信打赏">
-            <p>微信打赏</p>
-        </div>
-    </div>
-    <script type="text/javascript">
-        document.getElementById('btn_donate').onclick = function(){
-            if ($('#donate_guide').hasClass('hidden')){
-                $('#donate_guide').removeClass('hidden');
-            }else{
-                $('#donate_guide').addClass('hidden');
-            }
-        }
-    </script>
-</div>
+
           </article>
         </div>
       </div>
