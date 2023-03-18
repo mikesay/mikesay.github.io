@@ -34,7 +34,7 @@
 <meta property="og:image" content="https://www.mikesay.com/2020/02/23/jenkins-bibucket-pullrequest/7.png">
 <meta property="og:image" content="https://www.mikesay.com/2020/02/23/jenkins-bibucket-pullrequest/8.png">
 <meta property="article:published_time" content="2020-02-23T10:46:00.000Z">
-<meta property="article:modified_time" content="2023-03-18T16:28:43.098Z">
+<meta property="article:modified_time" content="2023-03-18T16:32:37.872Z">
 <meta property="article:author" content="Mike">
 <meta property="article:tag" content="DevOps">
 <meta property="article:tag" content="CI&#x2F;CD">
@@ -402,7 +402,34 @@
 </ol>
 <p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
 
-                <div class ="post-donate">
+                
+  <div id="SOHUCS" sid='https://www.mikesay.com/2020/02/23/jenkins-bibucket-pullrequest/'></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('SOHUCS', function() {
+      var appid = 'cyvdGhYsy';
+      var conf = '';
+      var width = window.innerWidth || document.documentElement.clientWidth;
+      if (width < 960) {
+        var head = window.document.getElementsByTagName('head')[0]||document.head||document.documentElement;
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.charset = 'utf-8';
+        script.id = 'changyan_mobile_js';
+        script.src = 'https://cy-cdn.kuaizhan.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf;
+        head.appendChild(script);
+        //window.document.write('<script id="changyan_mobile_js" charset="utf-8" type="text/javascript" src="http://changyan.sohu.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf + '"><\/script>');
+      } else {
+        Fluid.utils.createScript("https://changyan.sohu.com/upload/changyan.js", function() {
+          window.changyan.api.config({
+            appid: appid,
+            conf: conf
+          })
+        });
+      }
+    })
+  </script>
+
+<div class ="post-donate">
     <div id="donate_board" class="donate_bar center">
         <span class="donate_txt">
             原创技术分享，您的支持将鼓励我继续创作!
