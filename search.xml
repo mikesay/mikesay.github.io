@@ -104,6 +104,9 @@
 <h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>找到问题后，解决方案就简单了，也就是将所有的工作节点的安全组全部换成当前集群的安全组。</p>
 <h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>对于这次的问题定位和解决花费了一定的精力，而且这个问题未来也可能再次出现。所以，我们可以将跨节点Pod之间的网络连通性纳入到监控系统中，这样可以保证下次同样的问题出现时，能够通过监控系统快速的发现和定位问题。</p>
 ]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
       <tags>
         <tag>AliCloud</tag>
         <tag>Aliyun</tag>
@@ -261,6 +264,9 @@
 </ul>
 <h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Kind，它的架构以及使用，希望能够帮助读者对Kind有个框架性的了解，从而决定是否需要深入使用。对于Kind更详细的用法，可以参考<a href="https://kind.sigs.k8s.io/">官方文档</a>。</p>
 ]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
       <tags>
         <tag>Kubernetes</tag>
         <tag>K8s</tag>
@@ -482,6 +488,9 @@
 
 <h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Minikube，它的架构以及使用，希望能够帮助读者对Minikube有个框架性的了解，从而决定是否需要深入使用。对于Minikube更详细的用法，可以参考<a href="https://minikube.sigs.k8s.io/docs/">官方文档</a>。</p>
 ]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
       <tags>
         <tag>Kubernetes</tag>
         <tag>K8s</tag>
@@ -921,7 +930,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#107;&#101;&#x6a;&#105;&#97;&#110;&#x7a;&#104;&#97;&#x6e;&#103;&#x40;&#x31;&#54;&#51;&#x2e;&#99;&#111;&#109;">&#109;&#x69;&#107;&#101;&#x6a;&#105;&#97;&#110;&#x7a;&#104;&#97;&#x6e;&#103;&#x40;&#x31;&#54;&#51;&#x2e;&#99;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#105;&#x6b;&#x65;&#106;&#x69;&#97;&#110;&#x7a;&#x68;&#97;&#110;&#103;&#64;&#49;&#54;&#x33;&#x2e;&#99;&#x6f;&#109;">&#109;&#105;&#x6b;&#x65;&#106;&#x69;&#97;&#110;&#x7a;&#x68;&#97;&#110;&#103;&#64;&#49;&#54;&#x33;&#x2e;&#99;&#x6f;&#109;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -1405,6 +1414,9 @@
 </ol>
 <p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
 ]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
       <tags>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
@@ -1493,6 +1505,9 @@
 <p>以上是根据实测得到的结果，并没有任何官方文档提供详细的说明，所以随着Jenkins版本的升级，其行为有可能会变化。</p>
 <h1 id="容器作为Slave节点会让并发执行变得容易吗？"><a href="#容器作为Slave节点会让并发执行变得容易吗？" class="headerlink" title="容器作为Slave节点会让并发执行变得容易吗？"></a>容器作为Slave节点会让并发执行变得容易吗？</h1><p>最近几年容器技术借助于Docker在IT领域里掀起了巨大的变革，容器编排平台Kubernetes的出现更是将容器化的应用推向高潮。在CI&#x2F;CD领域也不例外，越来越多的组织开始尝试利用Docker容器作为CI Job执行的Slave节点，通过Kubernetes平台统一管理调度虚拟机资源，以期望更加细粒度地控制和使用计算资源。Docker容器作为Slave节点确实是实现了本地执行环境的隔离，但每次执行都会启动全新的容器，都得重新下载代码和构建工具的本地缓存，使得每次的构建都要花费更长的时间，所以还是要考虑如何提升效率。</p>
 ]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
       <tags>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
@@ -1602,6 +1617,9 @@
 </ol>
 <p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
 ]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
       <tags>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
@@ -1742,6 +1760,9 @@
 </li>
 </ol>
 ]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
       <tags>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
@@ -1873,6 +1894,9 @@
 </ol>
 <p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
 ]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
       <tags>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
