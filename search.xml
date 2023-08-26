@@ -653,7 +653,7 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm repo update<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>安装Actions Runner Controller  </p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm upgrade  actions-runner-controller actions-runner-controller/actions-runner-controller \<br>  -i --create-namespace \<br>  --<span class="hljs-built_in">set</span>=authSecret.create=<span class="hljs-literal">true</span> \<br>  --<span class="hljs-built_in">set</span>=authSecret.github_token=<span class="hljs-variable">$&#123;GITHUB_TOKEN&#125;</span> \<br>  --<span class="hljs-built_in">wait</span> \<br>  --version <span class="hljs-variable">$&#123;ACTION_RUNNER_CONTROLLER_VERSION&#125;</span>&gt; \<br>  -n actions-runner-system<br></code></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm upgrade -i actions-runner-controller actions-runner-controller/actions-runner-controller \<br>  -i --create-namespace \<br>  --<span class="hljs-built_in">set</span>=authSecret.create=<span class="hljs-literal">true</span> \<br>  --<span class="hljs-built_in">set</span>=authSecret.github_token=<span class="hljs-variable">$&#123;GITHUB_TOKEN&#125;</span> \<br>  --<span class="hljs-built_in">wait</span> \<br>  --version <span class="hljs-variable">$&#123;ACTION_RUNNER_CONTROLLER_VERSION&#125;</span>&gt; \<br>  -n actions-runner-system<br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <ul>
@@ -662,7 +662,7 @@
 </ul>
 </blockquote>
 <div class="note note-info">
-            <p>helm方式的安装会为参数中提供的GitHub PAT自动生成一个名为“controller-manager”的secret资源。</p>
+            <p>helm方式的安装会为参数中提供的GitHub PAT自动生成一个名为“controller-manager”的secret资源。也可以参考kubectl部署方式，提前创建好”controller-manager” secret，在执行helm命令时，就不需要设置authSecret.create和authSecret.github_token。</p>
           </div></li>
 </ul>
 <h1 id="创建GitHub-Runners"><a href="#创建GitHub-Runners" class="headerlink" title="创建GitHub Runners"></a>创建GitHub Runners</h1><p>GitHub自托管Runners可以部署在管理层次结构的各个级别  </p>
@@ -944,7 +944,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#107;&#101;&#106;&#105;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#x40;&#49;&#x36;&#x33;&#x2e;&#x63;&#x6f;&#109;">&#x6d;&#105;&#107;&#101;&#106;&#105;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#x40;&#49;&#x36;&#x33;&#x2e;&#x63;&#x6f;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#105;&#107;&#x65;&#x6a;&#105;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#x40;&#x31;&#54;&#x33;&#x2e;&#x63;&#111;&#109;">&#109;&#105;&#107;&#x65;&#x6a;&#105;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#x40;&#x31;&#54;&#x33;&#x2e;&#x63;&#111;&#109;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
