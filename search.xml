@@ -597,16 +597,21 @@
     <content><![CDATA[<p>GitHub Actions 是一个持续集成和持续交付 (CI&#x2F;CD) 平台，利用工作流（Workflow）可以创建自动化构建、测试和部署管道。GitHub Actions 不仅限于 DevOps，还允许在代码仓库中发生其它事件时运行工作流， 例如，可以运行一个工作流，当代码仓库中有新的问题创建时自动添加适当的标签。GitHub Runner是执行工作流的服务器，本文介绍了利用开源项目<a href="https://github.com/actions/actions-runner-controller">Actions Runner Controller</a>在Kubernetes中部署和管理自托管的容器版本的GitHub Action Runner。</p>
 <span id="more"></span>
 
-<h1 id="GitHub-Runner"><a href="#GitHub-Runner" class="headerlink" title="GitHub Runner"></a>GitHub Runner</h1><p><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/1.png"><br>上图是GitHub Actions包含的组件。</p>
+<h1 id="GitHub-Action"><a href="#GitHub-Action" class="headerlink" title="GitHub Action"></a>GitHub Action</h1><p><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/1.png"><br>上图是GitHub Action包含的组件。</p>
 <ul>
 <li>Workflows（工作流）是一个可配置的自动化过程，它运行一个或多个Jobs（作业）。  </li>
 <li>Events（事件）是代码仓库中触发工作流的特定活动。  </li>
 <li>Jobs（作业）是在同一GitHub Runner上执行的工作流中的一组步骤。  </li>
 <li>Actions（动作）是GitHub Actions平台的自定义应用程序，执行复杂但经常重复的任务。  </li>
-<li>GitHub Runner是在工作流被触发时运行您的工作流的服务器。每个GitHub Runner一次可以运行一个作业。 GitHub Runner 可以在 GitHub 托管的云或自托管环境中运行。 自托管环境提供了对硬件、操作系统和软件工具的更多控制。 它们可以在物理机、虚拟机或容器中运行。 容器化环境轻量级、松散耦合、高效并且可以集中管理。 然而，它们并不易于使用。GitHub提供了虚拟机版本的Runner包括Ubuntu Linux、Microsoft Windows 和 macOS，每个工作流运行都将运行在一个全新的的虚拟机中。</li>
+<li>GitHub Action Runner是在工作流被触发时运行工作流的软件。一个GitHub Action Runner一次可以执行一个作业。 GitHub提供了一些缺省的Runners供公共仓库免费使用，但是私有仓库则需要付费使用（GitHub为付费用户提供了一定的免费使用额度，详细可以参考<a href="https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions#about-spending-limits">GitHub Actions的计费</a>），另一种方法就是自己部署GitHub Action Runner。</li>
 </ul>
-<h1 id="Actions-Runner-Controller"><a href="#Actions-Runner-Controller" class="headerlink" title="Actions Runner Controller"></a>Actions Runner Controller</h1><p>但是GitHubGitHub上的私有仓库如果需要收费使用GitHub提供的Runner， GitHub为付费用户提供了一定的免费使用额度，详细可以参考<a href="https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions#about-spending-limits">GitHub Actions的计费</a>）， 。<br>GitHub的官网只介绍了在虚拟机中<a href="https://docs.github.com/en/enterprise-cloud@latest/actions/hosting-your-own-runners/adding-self-hosted-runners">部署自托管的GitHub Action Runner</a>部署自托管Runner的方法，但是随着云原生技术和Kubernetes的发展，越来越多的CI&#x2F;CD系统逐渐容器化并运行在Kubernetes平台中，从而使系统本身变得更具弹性和韧性，比如Jenkins的agent。GitHub Runner也可以通过容器运行在Kubernetes平台中，而Actions Runner Controller是一个自定义的Kubernetes Operator，通过声明式的方式来定义、创建、配置和管理运行在Kubernetes中的GitHub Runner。</p>
-<h1 id="安装GitHub-Runner"><a href="#安装GitHub-Runner" class="headerlink" title="安装GitHub Runner"></a>安装GitHub Runner</h1><h2 id="设置GitHub-API认证"><a href="#设置GitHub-API认证" class="headerlink" title="设置GitHub API认证"></a>设置GitHub API认证</h2><p>本文选择PAT（Personal Access Token，个人访问令牌）的方式认证GitHub API。另一种认证方式为GitHub App，两种认证方式的区别以及配置GitHub App认证可以参考<a href="https://github.com/actions/actions-runner-controller/blob/master/docs/authenticating-to-the-github-api.md">Authenticating to the GitHub API</a>。  </p>
+<h1 id="Actions-Runner-Controller"><a href="#Actions-Runner-Controller" class="headerlink" title="Actions Runner Controller"></a>Actions Runner Controller</h1><p>GitHub的官网只介绍了在虚拟机中<a href="https://docs.github.com/en/enterprise-cloud@latest/actions/hosting-your-own-runners/adding-self-hosted-runners">部署自托管的GitHub Action Runner</a>部署自托管Runner的方法，但是随着云原生技术和Kubernetes的发展，越来越多的CI&#x2F;CD系统逐渐容器化并运行在Kubernetes平台中，从而使系统本身变得更具弹性和韧性，比如Jenkins的agent，GitHub Action Runner也可以通过容器运行在Kubernetes平台中。Actions Runner Controller是一个自定义的Kubernetes Operator，通过声明式的方式来定义、创建、配置和管理运行在Kubernetes中的GitHub Action Runner。</p>
+<h1 id="安装Actions-Runner-Controller"><a href="#安装Actions-Runner-Controller" class="headerlink" title="安装Actions Runner Controller"></a>安装Actions Runner Controller</h1><p>推荐使用Helm的方式安装Actions Runner Controller，因为Actions Runner Controller的Helm Chart提供了丰富的模板参数用来定制安装。</p>
+<h2 id="设置GitHub-API认证"><a href="#设置GitHub-API认证" class="headerlink" title="设置GitHub API认证"></a>设置GitHub API认证</h2><p>本文选择PAT（Personal Access Token，个人访问令牌）的方式认证GitHub API。</p>
+<div class="note note-info">
+            <p>另一种认证方式为GitHub App，两种认证方式的区别以及配置GitHub App认证可以参考[Authenticating to the GitHub API][4]。</p>
+          </div>
+
 <p>点击<a href="https://github.com/settings/tokens/new">创建PAT</a>，并参考以下不同级别的Runner所需要的权限创建PAT：</p>
 <p><strong>代码仓库级别的Runner需要的权限</strong></p>
 <ul>
@@ -624,48 +629,38 @@
 </ul>
 <p><strong>企业级别的Runners需要的权限</strong></p>
 <ul>
-<li><p>admin:enterprise (manage_runners:enterprise)</p>
-<blockquote>
-<p>当您部署企业Runner时，它们将获得对GitHub组织（Org）的访问权限，但是，默认情况下<strong>不允许</strong>访问代码仓库本身。 每个GitHub组织（Org）都必须允许在代码仓库中使用企业Runner Group作为初始的一次性配置步骤，这只需要完成一次，之后对于该Runner Group来说是永久性的。<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/3.jpg"><br>组织和企业级别的Runner需要创建在Runner Group里，通过Runner Group对这些Runners分类和统一赋权，即哪些代码仓库和工作流可以使用这个Group里的Runners。<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/4.jpg"></p>
+<li>admin:enterprise (manage_runners:enterprise)<blockquote>
+<p>当您部署企业Runner时，它们将获得对GitHub组织（Org）的访问权限，但是，默认情况下<strong>不允许</strong>访问代码仓库本身。 每个GitHub组织（Org）都必须允许在代码仓库中使用企业&gt; Runner Group作为初始的一次性配置步骤，这只需要完成一次，之后对于该Runner Group来说是永久性的。<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/3.jpg"><br>组织和企业级别的Runner需要创建在Runner Group里，通过Runner Group对这些Runners分类和统一赋权，即哪些代码仓库和工作流可以使用这个Group里的Runners。<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/4.jpg"></p>
 </blockquote>
 </li>
 </ul>
-<h2 id="安装cert-manager"><a href="#安装cert-manager" class="headerlink" title="安装cert-manager"></a>安装cert-manager</h2><figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm repo add jetstack https://charts.jetstack.io<br>helm upgrade -i cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --version <span class="hljs-variable">$&#123;CERT_MANAGER_VERSION&#125;</span> --<span class="hljs-built_in">set</span> installCRDs=<span class="hljs-literal">true</span><br></code></pre></td></tr></table></figure>
+<h2 id="安装cert-manager"><a href="#安装cert-manager" class="headerlink" title="安装cert-manager"></a>安装cert-manager</h2><figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm repo add jetstack https://charts.jetstack.io<br>helm repo update<br>helm upgrade -i cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --version <span class="hljs-variable">$&#123;CERT_MANAGER_VERSION&#125;</span> --<span class="hljs-built_in">set</span> installCRDs=<span class="hljs-literal">true</span><br></code></pre></td></tr></table></figure>
 <div class="note note-info">
             <p>Actions Runner Controller中的admission webhook需要使用cert-manager创建一个自签名的ssl证书。</p>
           </div>
 
-<h2 id="Kubectl方式部署"><a href="#Kubectl方式部署" class="headerlink" title="Kubectl方式部署"></a>Kubectl方式部署</h2><ul>
+<h2 id="Helm方式安装Actions-Runner-Controller"><a href="#Helm方式安装Actions-Runner-Controller" class="headerlink" title="Helm方式安装Actions Runner Controller"></a>Helm方式安装Actions Runner Controller</h2><ul>
+<li><p>创建命名空间</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">kubectl create ns acr-system<br></code></pre></td></tr></table></figure>
+</li>
 <li><p>用前面生成的PAT创建一个名为“controller-manager”的secret资源  </p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">kubectl create secret generic controller-manager \<br>    -n actions-runner-system \<br>    --from-literal=github_token=<span class="hljs-variable">$&#123;GITHUB_TOKEN&#125;</span><br></code></pre></td></tr></table></figure>
 </li>
-<li><p>执行kubectl命令部署指定版本的action runner controller  </p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">kubectl create -f https://github.com/actions/actions-runner-controller/releases/download/<span class="hljs-variable">$&#123;ACTION_RUNNER_CONTROLLER_VERSION&#125;</span>/actions-runner-controller.yaml \<br>    -n actions-runner-system<br></code></pre></td></tr></table></figure>
-<div class="note note-info">
-            <p>用期望的版本替换变量${ACTION_RUNNER_CONTROLLER_VERSION}。</p>
-          </div></li>
-</ul>
-<h2 id="Helm方式安装Actions-Runner-Controller"><a href="#Helm方式安装Actions-Runner-Controller" class="headerlink" title="Helm方式安装Actions Runner Controller"></a>Helm方式安装Actions Runner Controller</h2><ul>
-<li><p>添加helm chart仓库  </p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm repo add actions-runner-controller  https://github.com/actions-runner-controller/actions-runner-controller<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>更新本地的helm chart仓库  </p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm repo update<br></code></pre></td></tr></table></figure>
+<li><p>添加helm chart仓库并更新</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm repo add actions-runner-controller  https://github.com/actions-runner-controller/actions-runner-controller<br>helm repo update<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>安装Actions Runner Controller  </p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm upgrade -i actions-runner-controller actions-runner-controller/actions-runner-controller \<br>  -i --create-namespace \<br>  --<span class="hljs-built_in">set</span>=authSecret.create=<span class="hljs-literal">true</span> \<br>  --<span class="hljs-built_in">set</span>=authSecret.github_token=<span class="hljs-variable">$&#123;GITHUB_TOKEN&#125;</span> \<br>  --<span class="hljs-built_in">wait</span> \<br>  --version <span class="hljs-variable">$&#123;ACTION_RUNNER_CONTROLLER_VERSION&#125;</span>&gt; \<br>  -n actions-runner-system<br></code></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm upgrade -i actions-runner-controller actions-runner-controller/actions-runner-controller \<br>  --version <span class="hljs-variable">$&#123;ACTION_RUNNER_CONTROLLER_VERSION&#125;</span>&gt; \<br>  -n actions-runner-system<br></code></pre></td></tr></table></figure>
 
 <blockquote>
 <ul>
 <li>可以执行命令 <code>helm search repo actions-runner-controller</code> 查询最新的helm chart版本：<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/2.png">  </li>
-<li>actions runner controller缺省会关注所有命名空间的runner资源。可以通过添加选项<code>--set=scope.singleNamespace=true</code>只关注actions runner controller所在的命名空间的runner资源。</li>
+<li>actions runner controller缺省会监听所有命名空间中的Runner CRD资源。可以通过添加选项<code>--set=scope.singleNamespace=true</code>只关注actions runner controller所在的命名空间的runner资源。</li>
 </ul>
 </blockquote>
-<div class="note note-info">
-            <p>helm方式的安装会为参数中提供的GitHub PAT自动生成一个名为“controller-manager”的secret资源。也可以参考kubectl部署方式，提前创建好”controller-manager” secret，在执行helm命令时，就不需要设置authSecret.create和authSecret.github_token。</p>
-          </div></li>
+</li>
 </ul>
-<h1 id="创建GitHub-Runners"><a href="#创建GitHub-Runners" class="headerlink" title="创建GitHub Runners"></a>创建GitHub Runners</h1><p>GitHub自托管Runners可以部署在管理层次结构的各个级别  </p>
+<h1 id="创建GitHub-Action-Runners"><a href="#创建GitHub-Action-Runners" class="headerlink" title="创建GitHub Action Runners"></a>创建GitHub Action Runners</h1><p>GitHub自托管Runners可以部署在管理层次结构的各个级别  </p>
 <ul>
 <li>代码仓库级别</li>
 <li>组织级别</li>
@@ -944,7 +939,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#x69;&#x6b;&#x65;&#106;&#105;&#x61;&#x6e;&#x7a;&#x68;&#97;&#110;&#103;&#64;&#x31;&#54;&#x33;&#x2e;&#99;&#111;&#109;">&#x6d;&#x69;&#x6b;&#x65;&#106;&#105;&#x61;&#x6e;&#x7a;&#x68;&#97;&#110;&#103;&#64;&#x31;&#54;&#x33;&#x2e;&#99;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#x65;&#x6a;&#105;&#x61;&#x6e;&#x7a;&#x68;&#97;&#110;&#x67;&#x40;&#49;&#x36;&#x33;&#x2e;&#x63;&#111;&#x6d;">&#x6d;&#105;&#x6b;&#x65;&#x6a;&#105;&#x61;&#x6e;&#x7a;&#x68;&#97;&#110;&#x67;&#x40;&#49;&#x36;&#x33;&#x2e;&#x63;&#111;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
