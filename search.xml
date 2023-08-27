@@ -629,11 +629,11 @@
 </ul>
 <p><strong>企业级别的Runners需要的权限</strong></p>
 <ul>
-<li>admin:enterprise (manage_runners:enterprise)<blockquote>
+<li>admin:enterprise (manage_runners:enterprise)</li>
+</ul>
+<blockquote>
 <p>当您部署企业Runner时，它们将获得对GitHub组织（Org）的访问权限，但是，默认情况下<strong>不允许</strong>访问代码仓库本身。 每个GitHub组织（Org）都必须允许在代码仓库中使用企业&gt; Runner Group作为初始的一次性配置步骤，这只需要完成一次，之后对于该Runner Group来说是永久性的。<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/3.jpg"><br>组织和企业级别的Runner需要创建在Runner Group里，通过Runner Group对这些Runners分类和统一赋权，即哪些代码仓库和工作流可以使用这个Group里的Runners。<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/4.jpg"></p>
 </blockquote>
-</li>
-</ul>
 <h2 id="安装cert-manager"><a href="#安装cert-manager" class="headerlink" title="安装cert-manager"></a>安装cert-manager</h2><figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">helm repo add jetstack https://charts.jetstack.io<br>helm repo update<br>helm upgrade -i cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --version <span class="hljs-variable">$&#123;CERT_MANAGER_VERSION&#125;</span> --<span class="hljs-built_in">set</span> installCRDs=<span class="hljs-literal">true</span><br></code></pre></td></tr></table></figure>
 <div class="note note-info">
             <p>Actions Runner Controller中的admission webhook需要使用cert-manager创建一个自签名的ssl证书。</p>
@@ -939,7 +939,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#x65;&#x6a;&#105;&#x61;&#x6e;&#x7a;&#x68;&#97;&#110;&#x67;&#x40;&#49;&#x36;&#x33;&#x2e;&#x63;&#111;&#x6d;">&#x6d;&#105;&#x6b;&#x65;&#x6a;&#105;&#x61;&#x6e;&#x7a;&#x68;&#97;&#110;&#x67;&#x40;&#49;&#x36;&#x33;&#x2e;&#x63;&#111;&#x6d;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#x69;&#107;&#x65;&#x6a;&#105;&#97;&#110;&#122;&#104;&#97;&#x6e;&#103;&#64;&#49;&#54;&#51;&#x2e;&#x63;&#111;&#x6d;">&#x6d;&#x69;&#107;&#x65;&#x6a;&#105;&#97;&#110;&#122;&#104;&#97;&#x6e;&#103;&#64;&#49;&#54;&#51;&#x2e;&#x63;&#111;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
