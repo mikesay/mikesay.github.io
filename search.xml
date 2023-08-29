@@ -605,7 +605,7 @@
 <li>Actions（动作）是GitHub Actions平台的自定义应用程序，执行复杂但经常重复的任务。  </li>
 <li>GitHub Action Runner是在工作流被触发时运行工作流的软件。一个GitHub Action Runner一次可以执行一个作业。 GitHub提供了一些缺省的Runners供公共仓库免费使用，但是私有仓库则需要付费使用（GitHub为付费用户提供了一定的免费使用额度，详细可以参考<a href="https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions#about-spending-limits">GitHub Actions的计费</a>），另一种方法就是自己部署GitHub Action Runner。</li>
 </ul>
-<h1 id="Actions-Runner-Controller"><a href="#Actions-Runner-Controller" class="headerlink" title="Actions Runner Controller"></a>Actions Runner Controller</h1><p>GitHub的官网只介绍了在虚拟机中<a href="https://docs.github.com/en/enterprise-cloud@latest/actions/hosting-your-own-runners/adding-self-hosted-runners">部署自托管的GitHub Action Runner</a>部署自托管Runner的方法，但是随着云原生技术和Kubernetes的发展，越来越多的CI&#x2F;CD系统逐渐容器化并运行在Kubernetes平台中，从而使系统本身变得更具弹性和韧性，比如Jenkins的agent，GitHub Action Runner也可以通过容器运行在Kubernetes平台中。Actions Runner Controller是一个自定义的Kubernetes Operator，通过声明式的方式来定义、创建、配置和管理运行在Kubernetes中的GitHub Action Runner。</p>
+<h1 id="Actions-Runner-Controller"><a href="#Actions-Runner-Controller" class="headerlink" title="Actions Runner Controller"></a>Actions Runner Controller</h1><p>GitHub的官网只介绍了在虚拟机中<a href="https://docs.github.com/en/enterprise-cloud@latest/actions/hosting-your-own-runners/adding-self-hosted-runners">部署自托管的GitHub Action Runner</a>部署自托管Runner的方法，但是随着云原生技术和Kubernetes的发展，越来越多的CI&#x2F;CD系统逐渐容器化并运行在Kubernetes平台中，从而使系统本身变得更具弹性和韧性，比如Jenkins的agent，GitHub Action Runner也可以通过容器运行在Kubernetes平台中。Actions Runner Controller是一个自定义的Kubernetes Operator，通过声明式的方式来定义、创建、配置和管理运行在Kubernetes中的GitHub Action Runner。具体架构如下图：<br><img src="/2022/04/10/creating-self-hosted-actions-runner-k8s/5.png"></p>
 <h1 id="安装Actions-Runner-Controller"><a href="#安装Actions-Runner-Controller" class="headerlink" title="安装Actions Runner Controller"></a>安装Actions Runner Controller</h1><p>推荐使用Helm的方式安装Actions Runner Controller，因为Actions Runner Controller的Helm Chart提供了丰富的模板参数用来定制安装。</p>
 <h2 id="设置GitHub-API认证"><a href="#设置GitHub-API认证" class="headerlink" title="设置GitHub API认证"></a>设置GitHub API认证</h2><p>本文选择PAT（Personal Access Token，个人访问令牌）的方式认证GitHub API。</p>
 <blockquote>
@@ -962,7 +962,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#x6b;&#101;&#106;&#x69;&#97;&#110;&#122;&#x68;&#x61;&#110;&#x67;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#111;&#109;">&#109;&#x69;&#x6b;&#101;&#106;&#x69;&#97;&#110;&#122;&#x68;&#x61;&#110;&#x67;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#107;&#101;&#106;&#x69;&#97;&#110;&#x7a;&#x68;&#97;&#x6e;&#x67;&#x40;&#49;&#54;&#x33;&#x2e;&#99;&#111;&#109;">&#109;&#x69;&#107;&#101;&#106;&#x69;&#97;&#110;&#x7a;&#x68;&#97;&#x6e;&#x67;&#x40;&#49;&#54;&#x33;&#x2e;&#99;&#111;&#109;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
