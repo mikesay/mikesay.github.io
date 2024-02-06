@@ -962,7 +962,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#107;&#x65;&#x6a;&#105;&#x61;&#110;&#x7a;&#104;&#x61;&#x6e;&#103;&#64;&#49;&#x36;&#51;&#x2e;&#x63;&#111;&#109;">&#x6d;&#105;&#107;&#x65;&#x6a;&#105;&#x61;&#110;&#x7a;&#104;&#x61;&#x6e;&#103;&#64;&#49;&#x36;&#51;&#x2e;&#x63;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#x65;&#106;&#x69;&#97;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#64;&#49;&#x36;&#x33;&#x2e;&#x63;&#x6f;&#x6d;">&#x6d;&#105;&#x6b;&#x65;&#106;&#x69;&#97;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#64;&#49;&#x36;&#x33;&#x2e;&#x63;&#x6f;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -1378,86 +1378,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
-    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
-    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
-<span id="more"></span>
-<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
-<ol>
-<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
-<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
-</ol>
-<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
-<ul>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
-</ul>
-<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
-<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
-<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
-</li>
-<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
-</li>
-</ol>
-<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
-<ul>
-<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
-<li>Pull request事件: 选择”Opened”和”Modified”</li>
-<li>Repository事件: 选择”Push”<blockquote>
-<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
-</blockquote>
-</li>
-</ul>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        bitBucketTrigger(<br>            [<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>,<br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerCreatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ], <br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerUpdatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ],<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRRepositoryTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<br>                                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRServerRepositoryPushActionFilter&#x27;</span>, <br>                                    <span class="hljs-symbol">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfNothingChanged:</span> <span class="hljs-literal">true</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfTagPush:</span> <span class="hljs-literal">false</span><br>                                ]<br>                ]<br>            ]<br>        )<br>    &#125;<br>    environment &#123;<br>        BITBUCKET_URL = <span class="hljs-string">&quot;http://130.147.249.221:7990&quot;</span><br>        BITBUCKET_ORG = <span class="hljs-string">&quot;miks&quot;</span><br>        BITBUCKET_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/pr/*/merge&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;ghe_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/pull-requests/*:refs/remotes/origin/pr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;BITBUCKET_URL&#125;/scm/$&#123;BITBUCKET_ORG&#125;/$&#123;BITBUCKET_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
-
-<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
-<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull&#x2F;merge request)的本质”</a>。</p>
-<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/$&#123;BITBUCKET_PULL_REQUEST_ID&#125;/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
-<blockquote>
-<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
-</blockquote>
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
-</li>
-</ol>
-<h1 id="创建合并请求-pull-x2F-merge-request-触发构建"><a href="#创建合并请求-pull-x2F-merge-request-触发构建" class="headerlink" title="创建合并请求(pull&#x2F;merge request)触发构建"></a>创建合并请求(pull&#x2F;merge request)触发构建</h1><ol>
-<li><p>Bitbucket的合并请求(pull&#x2F;merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
-</li>
-</ol>
-<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
-]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>Bitbucket</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins Job的并发执行</title>
     <url>/2019/07/08/jenkins-concurrent-builds/</url>
     <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI&#x2F;CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
@@ -1544,6 +1464,86 @@
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
         <tag>Jenkins</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
+    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
+    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
+<span id="more"></span>
+<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
+<ol>
+<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
+<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
+</ol>
+<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
+<ul>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
+</ul>
+<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
+<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
+<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
+</li>
+<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
+</li>
+</ol>
+<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
+<ul>
+<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
+<li>Pull request事件: 选择”Opened”和”Modified”</li>
+<li>Repository事件: 选择”Push”<blockquote>
+<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
+</blockquote>
+</li>
+</ul>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        bitBucketTrigger(<br>            [<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>,<br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerCreatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ], <br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerUpdatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ],<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRRepositoryTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<br>                                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRServerRepositoryPushActionFilter&#x27;</span>, <br>                                    <span class="hljs-symbol">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfNothingChanged:</span> <span class="hljs-literal">true</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfTagPush:</span> <span class="hljs-literal">false</span><br>                                ]<br>                ]<br>            ]<br>        )<br>    &#125;<br>    environment &#123;<br>        BITBUCKET_URL = <span class="hljs-string">&quot;http://130.147.249.221:7990&quot;</span><br>        BITBUCKET_ORG = <span class="hljs-string">&quot;miks&quot;</span><br>        BITBUCKET_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/pr/*/merge&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;ghe_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/pull-requests/*:refs/remotes/origin/pr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;BITBUCKET_URL&#125;/scm/$&#123;BITBUCKET_ORG&#125;/$&#123;BITBUCKET_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
+<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull&#x2F;merge request)的本质”</a>。</p>
+<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/$&#123;BITBUCKET_PULL_REQUEST_ID&#125;/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
+<blockquote>
+<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
+</blockquote>
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
+</li>
+</ol>
+<h1 id="创建合并请求-pull-x2F-merge-request-触发构建"><a href="#创建合并请求-pull-x2F-merge-request-触发构建" class="headerlink" title="创建合并请求(pull&#x2F;merge request)触发构建"></a>创建合并请求(pull&#x2F;merge request)触发构建</h1><ol>
+<li><p>Bitbucket的合并请求(pull&#x2F;merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
+</li>
+</ol>
+<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
+]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Git</tag>
+        <tag>Jenkins</tag>
+        <tag>Bitbucket</tag>
       </tags>
   </entry>
   <entry>
@@ -2040,6 +2040,71 @@
       </tags>
   </entry>
   <entry>
+    <title>浅析SonarQube插件的运行原理</title>
+    <url>/2021/01/17/sonar-plugin-principle/</url>
+    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
+<span id="more"></span>
+
+<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar<br>(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]<br>[ERROR]<br>[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.<br>[ERROR] Re-run Maven using the -X switch to enable full debug logging.<br>[ERROR]<br>[ERROR] For more information about the errors and possible solutions, please read the following articles:<br>[ERROR] [Help 1]<br></code></pre></td></tr></table></figure>
+
+<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[INFO] Load metrics repository<br>[INFO] Load metrics repository (done) | time=268ms<br>[INFO] Sensor JavaSquidSensor [java]<br>[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms<br>[INFO] Sensor PmdSensor [pmd]<br>[INFO] Execute PMD 6.10.0<br>[INFO] Execute PMD 6.10.0 (done) | time=15ms<br></code></pre></td></tr></table></figure>
+
+<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="hljs-tag">&lt;/<span class="hljs-name">pmd.plugin.version</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">pmd.version</span>&gt;</span>6.29.0<span class="hljs-tag">&lt;/<span class="hljs-name">pmd.version</span>&gt;</span><br><span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span><br><span class="hljs-tag">&lt;<span class="hljs-name">build</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">pluginManagement</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.plugin.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-core<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-java<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-javascript<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-jsp<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span><br>  <span class="hljs-tag">&lt;/<span class="hljs-name">pluginManagement</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">configuration</span>&gt;</span><br>            <span class="hljs-comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">failOnViolation</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">failOnViolation</span>&gt;</span><br>            <span class="hljs-comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">printFailingErrors</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">printFailingErrors</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">targetJdk</span>&gt;</span>14<span class="hljs-tag">&lt;/<span class="hljs-name">targetJdk</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">configuration</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">executions</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">execution</span>&gt;</span><br>                <span class="hljs-tag">&lt;<span class="hljs-name">goals</span>&gt;</span><br>                    <span class="hljs-tag">&lt;<span class="hljs-name">goal</span>&gt;</span>check<span class="hljs-tag">&lt;/<span class="hljs-name">goal</span>&gt;</span><br>                <span class="hljs-tag">&lt;/<span class="hljs-name">goals</span>&gt;</span><br>            <span class="hljs-tag">&lt;/<span class="hljs-name">execution</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">executions</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span><br>  <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span><br><span class="hljs-tag">&lt;/<span class="hljs-name">build</span>&gt;</span><br></code></pre></td></tr></table></figure>
+<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---<br>[INFO] PMD version: 6.29.0<br>[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml<br></code></pre></td></tr></table></figure>
+<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---<br>[INFO] User cache: /xxxx/.sonar/cache<br>[INFO] SonarQube version: 7.9.4<br>[INFO] Default locale: &quot;en_CN&quot;, source code encoding: &quot;UTF-8&quot;<br>[INFO] Load global settings<br>[INFO] Load global settings (done) | time=1676ms<br>[INFO] Server id: 9C01C42E-1505da3410fc976<br>[INFO] User cache: /xxxx/.sonar/cache<br>[INFO] Load/download plugins<br>[INFO] Load plugins index<br>[INFO] Load plugins index (done) | time=295ms<br>[INFO] Load/download plugins (done) | time=501ms<br></code></pre></td></tr></table></figure>
+
+<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa<br><br>Jan 18:58 sonar-pmd-plugin.jar<br>Jan 18:58 sonar-pmd-plugin.jar_unzip<br></code></pre></td></tr></table></figure>
+
+<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib<br><br>-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar<br>-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar<br></code></pre></td></tr></table></figure>
+<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
+<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
+<ul>
+<li><p>SonarQube服务包含了三个进程：</p>
+<ul>
+<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
+<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
+<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
+</ul>
+</li>
+<li><p>SonarQube数据库用来存储：</p>
+<ul>
+<li>SonarQube实例的配置（安全，插件配置等）</li>
+<li>项目或视图的质量快照</li>
+</ul>
+</li>
+<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
+</li>
+<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
+</li>
+<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
+</li>
+</ul>
+<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
+<ul>
+<li>扫描器(Scanner)，执行源代码分析</li>
+<li>计算引擎，整合扫描器的结果</li>
+<li>Web应用</li>
+<li>SonarLint</li>
+</ul>
+<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
+<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-meta">@ScannerSide</span><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PmdConfiguration</span> &#123;<br>    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">PROPERTY_GENERATE_XML</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;sonar.pmd.generateXml&quot;</span>;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">PMD_RESULT_XML</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;pmd-result.xml&quot;</span>;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Logger</span> <span class="hljs-variable">LOG</span> <span class="hljs-operator">=</span> Loggers.get(PmdConfiguration.class);<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> FileSystem fileSystem;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Configuration settings;<br><br>    <span class="hljs-keyword">public</span> <span class="hljs-title function_">PmdConfiguration</span><span class="hljs-params">(FileSystem fileSystem, Configuration settings)</span> &#123;<br>        <span class="hljs-built_in">this</span>.fileSystem = fileSystem;<br>        <span class="hljs-built_in">this</span>.settings = settings;<br>    &#125;<br>...<br></code></pre></td></tr></table></figure>
+
+<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
+]]></content>
+      <tags>
+        <tag>SonarQube</tag>
+        <tag>Code Quality</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hexo+Gitee(码云)搭建静态博客网站</title>
     <url>/2018/08/17/setup-blog-hexo-gitee/</url>
     <content><![CDATA[<p>直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将介绍如何使用Hexo搭建静态博客网站，并将其发布到GITEE(码云)免费提供的静态网页空间里。</p>
@@ -2232,71 +2297,6 @@
       <tags>
         <tag>Hexo</tag>
         <tag>Gitee</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>浅析SonarQube插件的运行原理</title>
-    <url>/2021/01/17/sonar-plugin-principle/</url>
-    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
-<span id="more"></span>
-
-<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar<br>(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]<br>[ERROR]<br>[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.<br>[ERROR] Re-run Maven using the -X switch to enable full debug logging.<br>[ERROR]<br>[ERROR] For more information about the errors and possible solutions, please read the following articles:<br>[ERROR] [Help 1]<br></code></pre></td></tr></table></figure>
-
-<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[INFO] Load metrics repository<br>[INFO] Load metrics repository (done) | time=268ms<br>[INFO] Sensor JavaSquidSensor [java]<br>[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms<br>[INFO] Sensor PmdSensor [pmd]<br>[INFO] Execute PMD 6.10.0<br>[INFO] Execute PMD 6.10.0 (done) | time=15ms<br></code></pre></td></tr></table></figure>
-
-<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="hljs-tag">&lt;/<span class="hljs-name">pmd.plugin.version</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">pmd.version</span>&gt;</span>6.29.0<span class="hljs-tag">&lt;/<span class="hljs-name">pmd.version</span>&gt;</span><br><span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span><br><span class="hljs-tag">&lt;<span class="hljs-name">build</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">pluginManagement</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.plugin.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-core<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-java<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-javascript<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>pmd-jsp<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br>          <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span><br>  <span class="hljs-tag">&lt;/<span class="hljs-name">pluginManagement</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">configuration</span>&gt;</span><br>            <span class="hljs-comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">failOnViolation</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">failOnViolation</span>&gt;</span><br>            <span class="hljs-comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">printFailingErrors</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">printFailingErrors</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">targetJdk</span>&gt;</span>14<span class="hljs-tag">&lt;/<span class="hljs-name">targetJdk</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">configuration</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">executions</span>&gt;</span><br>            <span class="hljs-tag">&lt;<span class="hljs-name">execution</span>&gt;</span><br>                <span class="hljs-tag">&lt;<span class="hljs-name">goals</span>&gt;</span><br>                    <span class="hljs-tag">&lt;<span class="hljs-name">goal</span>&gt;</span>check<span class="hljs-tag">&lt;/<span class="hljs-name">goal</span>&gt;</span><br>                <span class="hljs-tag">&lt;/<span class="hljs-name">goals</span>&gt;</span><br>            <span class="hljs-tag">&lt;/<span class="hljs-name">execution</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">executions</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span><br>  <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span><br><span class="hljs-tag">&lt;/<span class="hljs-name">build</span>&gt;</span><br></code></pre></td></tr></table></figure>
-<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---<br>[INFO] PMD version: 6.29.0<br>[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml<br></code></pre></td></tr></table></figure>
-<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---<br>[INFO] User cache: /xxxx/.sonar/cache<br>[INFO] SonarQube version: 7.9.4<br>[INFO] Default locale: &quot;en_CN&quot;, source code encoding: &quot;UTF-8&quot;<br>[INFO] Load global settings<br>[INFO] Load global settings (done) | time=1676ms<br>[INFO] Server id: 9C01C42E-1505da3410fc976<br>[INFO] User cache: /xxxx/.sonar/cache<br>[INFO] Load/download plugins<br>[INFO] Load plugins index<br>[INFO] Load plugins index (done) | time=295ms<br>[INFO] Load/download plugins (done) | time=501ms<br></code></pre></td></tr></table></figure>
-
-<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa<br><br>Jan 18:58 sonar-pmd-plugin.jar<br>Jan 18:58 sonar-pmd-plugin.jar_unzip<br></code></pre></td></tr></table></figure>
-
-<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><code class="hljs txt">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib<br><br>-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar<br>-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar<br></code></pre></td></tr></table></figure>
-<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
-<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
-<ul>
-<li><p>SonarQube服务包含了三个进程：</p>
-<ul>
-<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
-<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
-<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
-</ul>
-</li>
-<li><p>SonarQube数据库用来存储：</p>
-<ul>
-<li>SonarQube实例的配置（安全，插件配置等）</li>
-<li>项目或视图的质量快照</li>
-</ul>
-</li>
-<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
-</li>
-<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
-</li>
-<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
-</li>
-</ul>
-<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
-<ul>
-<li>扫描器(Scanner)，执行源代码分析</li>
-<li>计算引擎，整合扫描器的结果</li>
-<li>Web应用</li>
-<li>SonarLint</li>
-</ul>
-<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
-<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-meta">@ScannerSide</span><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PmdConfiguration</span> &#123;<br>    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">PROPERTY_GENERATE_XML</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;sonar.pmd.generateXml&quot;</span>;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">PMD_RESULT_XML</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;pmd-result.xml&quot;</span>;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Logger</span> <span class="hljs-variable">LOG</span> <span class="hljs-operator">=</span> Loggers.get(PmdConfiguration.class);<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> FileSystem fileSystem;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Configuration settings;<br><br>    <span class="hljs-keyword">public</span> <span class="hljs-title function_">PmdConfiguration</span><span class="hljs-params">(FileSystem fileSystem, Configuration settings)</span> &#123;<br>        <span class="hljs-built_in">this</span>.fileSystem = fileSystem;<br>        <span class="hljs-built_in">this</span>.settings = settings;<br>    &#125;<br>...<br></code></pre></td></tr></table></figure>
-
-<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
-]]></content>
-      <tags>
-        <tag>SonarQube</tag>
-        <tag>Code Quality</tag>
       </tags>
   </entry>
   <entry>
