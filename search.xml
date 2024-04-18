@@ -1,93 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>阿里云通过RAM角色管理多云账号下的资源</title>
-    <url>/2021/01/05/aliyun-ram-role-multi-accounts/</url>
-    <content><![CDATA[<p>云计算经过十几年的发展已经变得很成熟，无论是传统企业还是初创企业都将云计算平台作为其数字化策略的支撑平台。在国内，阿里云是使用最广泛的公有云平台，很多本土企业和外资企业在华的分支机构都是首选阿里云来构建和运行他们的数字化方案。为了能够高效地使用阿里云，同时又能对接阿里云产品服务团队，在这些公司里逐渐地出现了一个新的角色或团队来统一规划、管理阿里云平台，我们就暂且称这个团队为云团队。大部分公司云团队往往需要管理多个阿里云账号，而在不同的账号里的用户创建、登录、登出的操作往往会变的很麻烦。本文介绍通过切换身份的方式扮演<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">RAM角色</a>来管理多云账号下的资源。</p>
-<span id="more"></span>
-
-<h1 id="多云账号"><a href="#多云账号" class="headerlink" title="多云账号"></a>多云账号</h1><p>公司在使用阿里云的过程中，基于不同的目的或者受组织架构的约束，或多或少都会创建多个云账号。传统的公司或者绝大部分外资公司在财务上都会为不同的部门或团队创建不同的成本中心(cost center)并分配对应的预算，部门或团队的开支都是走自己的成本中心。这就决定了当某个部门或团队在使用阿里云的时候，必定会创建自己的云账号，而不会去使用别的成本中心下的阿里云账号。一些中小型的互联网公司或者创业公司的财务不会那么复杂，研发可能就一个成本中心，但是往往需要多个阿里云账号来隔离不同的环境，例如开发，测试，预生产和和生产环境。</p>
-<p>使用多个阿里云账号有以下一些优点：</p>
-<ul>
-<li>不同账号的云资源是完全隔离的，相互之间不受影响。</li>
-<li>可以单独出账单，做到按不同成本中心核算。</li>
-<li>如果构建的微服务系统涉及到多个业务部门或团队，各个业务部门或团队在自己的阿里云账号里只维护或运行自己负责的微服务，这样可以降低单个阿里云账号下架构的复杂性。</li>
-</ul>
-<p>但是云团队在管理多个阿里云账号时也会遇到很多麻烦：</p>
-<ul>
-<li>需要重复地登录，登出和双因素认证来切换不同的账号。</li>
-<li>阿里云支持单点登录(SSO)，这样可以省掉双因素认证的步骤，但当出现问题时，无法创建一个非SSO账号给阿里云技术支持用来临时登录进账号调试问题。</li>
-<li>团队成员入职，离职时都需要通知产品拥有者在阿里云账号里创建和删除RAM用户。</li>
-<li>每个云团队成员都需要需要记住很多云账号。</li>
-</ul>
-<h1 id="通过RAM角色管理多云账号"><a href="#通过RAM角色管理多云账号" class="headerlink" title="通过RAM角色管理多云账号"></a>通过RAM角色管理多云账号</h1><p>为了解决多云账号管理的痛点，可以通过RAM用户扮演RAM角色的方式来登录阿里云其它账号。</p>
-<h2 id="什么是RAM角色"><a href="#什么是RAM角色" class="headerlink" title="什么是RAM角色"></a>什么是RAM角色</h2><p>RAM角色（RAM role）与RAM用户一样，都是RAM身份类型的一种。RAM角色是一种虚拟用户，没有确定的身份认证密钥，需要被一个受信的实体用户扮演才能正常使用。</p>
-<p>RAM角色是一种虚拟用户，与实体用户（云账号、RAM用户和云服务）和教科书式角色（Textbook role）不同。</p>
-<ul>
-<li>实体用户：拥有确定的登录密码或访问密钥。</li>
-<li>教科书式角色：教科书式角色或传统意义上的角色是指一组权限集合，类似于RAM里的权限策略。如果一个用户被赋予了这种角色，也就意味着该用户被赋予了一组权限，可以访问被授权的资源。</li>
-<li>RAM角色：RAM角色有确定的身份，可以被赋予一组权限策略，但没有确定的登录密码或访问密钥。RAM角色需要被一个受信的实体用户扮演，扮演成功后实体用户将获得RAM角色的安全令牌，使用这个安全令牌就能以角色身份访问被授权的资源。</li>
-</ul>
-<h2 id="RAM角色使用方法"><a href="#RAM角色使用方法" class="headerlink" title="RAM角色使用方法"></a>RAM角色使用方法</h2><ul>
-<li><p>RAM角色指定可信实体，即指定可以扮演角色的实体用户身份。</p>
-</li>
-<li><p>可信实体通过控制台或调用API扮演角色并获取角色令牌。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/6.png"></p>
-</li>
-<li><p>为RAM角色绑定权限策略。</p>
-</li>
-<li><p>受信实体通过扮演角色，使用角色令牌访问阿里云资源。</p>
-</li>
-</ul>
-<h2 id="RAM角色类型"><a href="#RAM角色类型" class="headerlink" title="RAM角色类型"></a>RAM角色类型</h2><p>根据RAM可信实体的不同，RAM支持以下三种类型的角色：</p>
-<ul>
-<li><p>阿里云账号：允许RAM用户所扮演的角色。扮演角色的RAM用户可以属于自己的云账号，也可以属于其他云账号。此类角色主要用来解决跨账号访问和临时授权问题。</p>
-</li>
-<li><p>阿里云服务：允许云服务所扮演的角色。此类角色主要用于授权云服务代理您进行资源操作。</p>
-</li>
-<li><p>身份提供商：允许受信身份提供商下的用户所扮演的角色。此类角色主要用于实现与阿里云的SSO。</p>
-</li>
-</ul>
-<h2 id="RAM角色切换的方式管理多云账号的实现"><a href="#RAM角色切换的方式管理多云账号的实现" class="headerlink" title="RAM角色切换的方式管理多云账号的实现"></a>RAM角色切换的方式管理多云账号的实现</h2><p>实现多云账号管理需要满足以下的前提条件：</p>
-<ul>
-<li><p>云团队拥有自己的云账号，假设账号ID为123456789012****，每个成员都有对应的RAM用户。</p>
-</li>
-<li><p>假设某个业务部门的云账号为128888789012****。</p>
-</li>
-</ul>
-<h3 id="实现架构"><a href="#实现架构" class="headerlink" title="实现架构"></a>实现架构</h3><p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/7.png" alt="RAM用户通过扮演不同云账号里的RAM角色来管理账号里的资源"></p>
-<h3 id="实现步骤"><a href="#实现步骤" class="headerlink" title="实现步骤"></a>实现步骤</h3><ul>
-<li><p>产品拥有者参考“<a href="https://help.aliyun.com/document_detail/93691.html?spm=a2c4g.11186623.6.584.312068f9HVtYvh">创建可信实体为阿里云账号的RAM角色</a>”，在自己的云账号下为云团队的账号123456789012****创建RAM角色”CloudAdmin”，并给角色分配”AdministratorAccess”权限<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/1.png" alt="选择授信实体为阿里云账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/2.png" alt="选择其它云账号，并输入云团队的账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/3.png" alt="给这个RAM角色授予管理员权限"></p>
-</li>
-<li><p>设置以下授信策略。授信实体为云团队的账号“123456789012****”，并开放给有“AliyunSTSAssumeRoleAccess”权限的RAM用户</p>
-<figure class="highlight json"><table><tr><td class="code"><pre><code class="hljs json"><span class="hljs-punctuation">&#123;</span><br>    <span class="hljs-attr">&quot;Statement&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>        <span class="hljs-punctuation">&#123;</span><br>            <span class="hljs-attr">&quot;Action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sts:AssumeRole&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Effect&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Allow&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Principal&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">&#123;</span><br>                <span class="hljs-attr">&quot;RAM&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>                    <span class="hljs-string">&quot;acs<span class="github-emoji" alias="ram" style="" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f40f.png?v8">&#x1f40f;</span>:123456789012****:root&quot;</span><br>                <span class="hljs-punctuation">]</span><br>            <span class="hljs-punctuation">&#125;</span><br>        <span class="hljs-punctuation">&#125;</span><br>    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>    <span class="hljs-attr">&quot;Version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><br><span class="hljs-punctuation">&#125;</span><br></code></pre></td></tr></table></figure>
-<blockquote>
-<p>也可以将某个授信实体限制为账号下的某个RAM用户，比如mikejianzhang</p>
-<figure class="highlight json"><table><tr><td class="code"><pre><code class="hljs json"><span class="hljs-punctuation">&#123;</span><br>    <span class="hljs-attr">&quot;Statement&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>        <span class="hljs-punctuation">&#123;</span><br>            <span class="hljs-attr">&quot;Action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sts:AssumeRole&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Effect&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Allow&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Principal&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">&#123;</span><br>                <span class="hljs-attr">&quot;RAM&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>                    <span class="hljs-string">&quot;acs<span class="github-emoji" alias="ram" style="" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f40f.png?v8">&#x1f40f;</span>:123456789012****:user/mikejianzhang&quot;</span><br>                <span class="hljs-punctuation">]</span><br>            <span class="hljs-punctuation">&#125;</span><br>        <span class="hljs-punctuation">&#125;</span><br>    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>    <span class="hljs-attr">&quot;Version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><br><span class="hljs-punctuation">&#125;</span><br></code></pre></td></tr></table></figure>
-</blockquote>
-</li>
-<li><p>云团队在自己的云账号里为RAM用户授予角色扮演权限”AliyunSTSAssumeRoleAccess”。</p>
-</li>
-<li><p>云团队的某个RAM用户首先登录云团队的账号，然后通过切换角色并输入业务部门云账号或者别名，以及对应的角色”CloudAdmin”就能切换进业务部门云账号里。</p>
-<div class="group-image-container"><div class="group-image-row"><div class="group-image-wrap"><img src="/4.png"></div><div class="group-image-wrap"><img src="/5.png" alt="输入业务部门云账号ID或别名"></div></div><div class="group-image-row"></div></div>
-</li>
-<li><p>完成管理任务后点击“返回登录身份”退回到自己的账号。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/8.png"></p>
-</li>
-<li><p>当有云团队成员入职或离职时，只需要在云团队的阿里云账号里添加和删除对应的RAM用户即可。</p>
-</li>
-</ul>
-<p>这样，通过RAM角色切换的方法，云团队就可以管理多个业务部门的云账号。另外，RAM角色切换的方法还有以下两个使用场景：</p>
-<ul>
-<li>通过RAM角色临时授权给阿里云的技术支持帮助调试问题，尤其是在云账号开启了单点登录(SSO)的情况下，只有通过这种方法才能让阿里云的技术支持登录进来。</li>
-<li>当一个企业希望将部分业务授权给另一个企业时，也可以通过RAM角色进行跨阿里云账号授权来管理资源的访问。例如，企业A购买了多种阿里云资源（ECS实例、RDS实例、SLB实例等），但是企业A希望能专注于业务，仅作为资源拥有者。企业A希望可以授权企业B账号来对云资源进行运维，监控和管理，企业A也希望企业B的员工入职和离职时，无需做任何权限变更，同时也希望合同终止时，可以随时撤销对企业B的授权。这种情况下，企业A可以创建一定权限的角色并授权给企业B的阿里云账号，企业B的RAM用户可以通过角色切换的方法登录进企业A的账号对资源进行运维管理。</li>
-</ul>
-]]></content>
-      <tags>
-        <tag>AliCloud</tag>
-        <tag>Aliyun</tag>
-        <tag>RAM</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</title>
     <url>/2021/09/06/aliyun-coredns-issue-tracking/</url>
     <content><![CDATA[<p>最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。</p>
@@ -200,6 +113,93 @@
         <tag>ACK</tag>
         <tag>Kubernetes</tag>
         <tag>K8s</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>阿里云通过RAM角色管理多云账号下的资源</title>
+    <url>/2021/01/05/aliyun-ram-role-multi-accounts/</url>
+    <content><![CDATA[<p>云计算经过十几年的发展已经变得很成熟，无论是传统企业还是初创企业都将云计算平台作为其数字化策略的支撑平台。在国内，阿里云是使用最广泛的公有云平台，很多本土企业和外资企业在华的分支机构都是首选阿里云来构建和运行他们的数字化方案。为了能够高效地使用阿里云，同时又能对接阿里云产品服务团队，在这些公司里逐渐地出现了一个新的角色或团队来统一规划、管理阿里云平台，我们就暂且称这个团队为云团队。大部分公司云团队往往需要管理多个阿里云账号，而在不同的账号里的用户创建、登录、登出的操作往往会变的很麻烦。本文介绍通过切换身份的方式扮演<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">RAM角色</a>来管理多云账号下的资源。</p>
+<span id="more"></span>
+
+<h1 id="多云账号"><a href="#多云账号" class="headerlink" title="多云账号"></a>多云账号</h1><p>公司在使用阿里云的过程中，基于不同的目的或者受组织架构的约束，或多或少都会创建多个云账号。传统的公司或者绝大部分外资公司在财务上都会为不同的部门或团队创建不同的成本中心(cost center)并分配对应的预算，部门或团队的开支都是走自己的成本中心。这就决定了当某个部门或团队在使用阿里云的时候，必定会创建自己的云账号，而不会去使用别的成本中心下的阿里云账号。一些中小型的互联网公司或者创业公司的财务不会那么复杂，研发可能就一个成本中心，但是往往需要多个阿里云账号来隔离不同的环境，例如开发，测试，预生产和和生产环境。</p>
+<p>使用多个阿里云账号有以下一些优点：</p>
+<ul>
+<li>不同账号的云资源是完全隔离的，相互之间不受影响。</li>
+<li>可以单独出账单，做到按不同成本中心核算。</li>
+<li>如果构建的微服务系统涉及到多个业务部门或团队，各个业务部门或团队在自己的阿里云账号里只维护或运行自己负责的微服务，这样可以降低单个阿里云账号下架构的复杂性。</li>
+</ul>
+<p>但是云团队在管理多个阿里云账号时也会遇到很多麻烦：</p>
+<ul>
+<li>需要重复地登录，登出和双因素认证来切换不同的账号。</li>
+<li>阿里云支持单点登录(SSO)，这样可以省掉双因素认证的步骤，但当出现问题时，无法创建一个非SSO账号给阿里云技术支持用来临时登录进账号调试问题。</li>
+<li>团队成员入职，离职时都需要通知产品拥有者在阿里云账号里创建和删除RAM用户。</li>
+<li>每个云团队成员都需要需要记住很多云账号。</li>
+</ul>
+<h1 id="通过RAM角色管理多云账号"><a href="#通过RAM角色管理多云账号" class="headerlink" title="通过RAM角色管理多云账号"></a>通过RAM角色管理多云账号</h1><p>为了解决多云账号管理的痛点，可以通过RAM用户扮演RAM角色的方式来登录阿里云其它账号。</p>
+<h2 id="什么是RAM角色"><a href="#什么是RAM角色" class="headerlink" title="什么是RAM角色"></a>什么是RAM角色</h2><p>RAM角色（RAM role）与RAM用户一样，都是RAM身份类型的一种。RAM角色是一种虚拟用户，没有确定的身份认证密钥，需要被一个受信的实体用户扮演才能正常使用。</p>
+<p>RAM角色是一种虚拟用户，与实体用户（云账号、RAM用户和云服务）和教科书式角色（Textbook role）不同。</p>
+<ul>
+<li>实体用户：拥有确定的登录密码或访问密钥。</li>
+<li>教科书式角色：教科书式角色或传统意义上的角色是指一组权限集合，类似于RAM里的权限策略。如果一个用户被赋予了这种角色，也就意味着该用户被赋予了一组权限，可以访问被授权的资源。</li>
+<li>RAM角色：RAM角色有确定的身份，可以被赋予一组权限策略，但没有确定的登录密码或访问密钥。RAM角色需要被一个受信的实体用户扮演，扮演成功后实体用户将获得RAM角色的安全令牌，使用这个安全令牌就能以角色身份访问被授权的资源。</li>
+</ul>
+<h2 id="RAM角色使用方法"><a href="#RAM角色使用方法" class="headerlink" title="RAM角色使用方法"></a>RAM角色使用方法</h2><ul>
+<li><p>RAM角色指定可信实体，即指定可以扮演角色的实体用户身份。</p>
+</li>
+<li><p>可信实体通过控制台或调用API扮演角色并获取角色令牌。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/6.png"></p>
+</li>
+<li><p>为RAM角色绑定权限策略。</p>
+</li>
+<li><p>受信实体通过扮演角色，使用角色令牌访问阿里云资源。</p>
+</li>
+</ul>
+<h2 id="RAM角色类型"><a href="#RAM角色类型" class="headerlink" title="RAM角色类型"></a>RAM角色类型</h2><p>根据RAM可信实体的不同，RAM支持以下三种类型的角色：</p>
+<ul>
+<li><p>阿里云账号：允许RAM用户所扮演的角色。扮演角色的RAM用户可以属于自己的云账号，也可以属于其他云账号。此类角色主要用来解决跨账号访问和临时授权问题。</p>
+</li>
+<li><p>阿里云服务：允许云服务所扮演的角色。此类角色主要用于授权云服务代理您进行资源操作。</p>
+</li>
+<li><p>身份提供商：允许受信身份提供商下的用户所扮演的角色。此类角色主要用于实现与阿里云的SSO。</p>
+</li>
+</ul>
+<h2 id="RAM角色切换的方式管理多云账号的实现"><a href="#RAM角色切换的方式管理多云账号的实现" class="headerlink" title="RAM角色切换的方式管理多云账号的实现"></a>RAM角色切换的方式管理多云账号的实现</h2><p>实现多云账号管理需要满足以下的前提条件：</p>
+<ul>
+<li><p>云团队拥有自己的云账号，假设账号ID为123456789012****，每个成员都有对应的RAM用户。</p>
+</li>
+<li><p>假设某个业务部门的云账号为128888789012****。</p>
+</li>
+</ul>
+<h3 id="实现架构"><a href="#实现架构" class="headerlink" title="实现架构"></a>实现架构</h3><p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/7.png" alt="RAM用户通过扮演不同云账号里的RAM角色来管理账号里的资源"></p>
+<h3 id="实现步骤"><a href="#实现步骤" class="headerlink" title="实现步骤"></a>实现步骤</h3><ul>
+<li><p>产品拥有者参考“<a href="https://help.aliyun.com/document_detail/93691.html?spm=a2c4g.11186623.6.584.312068f9HVtYvh">创建可信实体为阿里云账号的RAM角色</a>”，在自己的云账号下为云团队的账号123456789012****创建RAM角色”CloudAdmin”，并给角色分配”AdministratorAccess”权限<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/1.png" alt="选择授信实体为阿里云账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/2.png" alt="选择其它云账号，并输入云团队的账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/3.png" alt="给这个RAM角色授予管理员权限"></p>
+</li>
+<li><p>设置以下授信策略。授信实体为云团队的账号“123456789012****”，并开放给有“AliyunSTSAssumeRoleAccess”权限的RAM用户</p>
+<figure class="highlight json"><table><tr><td class="code"><pre><code class="hljs json"><span class="hljs-punctuation">&#123;</span><br>    <span class="hljs-attr">&quot;Statement&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>        <span class="hljs-punctuation">&#123;</span><br>            <span class="hljs-attr">&quot;Action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sts:AssumeRole&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Effect&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Allow&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Principal&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">&#123;</span><br>                <span class="hljs-attr">&quot;RAM&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>                    <span class="hljs-string">&quot;acs<span class="github-emoji" alias="ram" style="" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f40f.png?v8">&#x1f40f;</span>:123456789012****:root&quot;</span><br>                <span class="hljs-punctuation">]</span><br>            <span class="hljs-punctuation">&#125;</span><br>        <span class="hljs-punctuation">&#125;</span><br>    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>    <span class="hljs-attr">&quot;Version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><br><span class="hljs-punctuation">&#125;</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>也可以将某个授信实体限制为账号下的某个RAM用户，比如mikejianzhang</p>
+<figure class="highlight json"><table><tr><td class="code"><pre><code class="hljs json"><span class="hljs-punctuation">&#123;</span><br>    <span class="hljs-attr">&quot;Statement&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>        <span class="hljs-punctuation">&#123;</span><br>            <span class="hljs-attr">&quot;Action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sts:AssumeRole&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Effect&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Allow&quot;</span><span class="hljs-punctuation">,</span><br>            <span class="hljs-attr">&quot;Principal&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">&#123;</span><br>                <span class="hljs-attr">&quot;RAM&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><br>                    <span class="hljs-string">&quot;acs<span class="github-emoji" alias="ram" style="" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f40f.png?v8">&#x1f40f;</span>:123456789012****:user/mikejianzhang&quot;</span><br>                <span class="hljs-punctuation">]</span><br>            <span class="hljs-punctuation">&#125;</span><br>        <span class="hljs-punctuation">&#125;</span><br>    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>    <span class="hljs-attr">&quot;Version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><br><span class="hljs-punctuation">&#125;</span><br></code></pre></td></tr></table></figure>
+</blockquote>
+</li>
+<li><p>云团队在自己的云账号里为RAM用户授予角色扮演权限”AliyunSTSAssumeRoleAccess”。</p>
+</li>
+<li><p>云团队的某个RAM用户首先登录云团队的账号，然后通过切换角色并输入业务部门云账号或者别名，以及对应的角色”CloudAdmin”就能切换进业务部门云账号里。</p>
+<div class="group-image-container"><div class="group-image-row"><div class="group-image-wrap"><img src="/4.png"></div><div class="group-image-wrap"><img src="/5.png" alt="输入业务部门云账号ID或别名"></div></div><div class="group-image-row"></div></div>
+</li>
+<li><p>完成管理任务后点击“返回登录身份”退回到自己的账号。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/8.png"></p>
+</li>
+<li><p>当有云团队成员入职或离职时，只需要在云团队的阿里云账号里添加和删除对应的RAM用户即可。</p>
+</li>
+</ul>
+<p>这样，通过RAM角色切换的方法，云团队就可以管理多个业务部门的云账号。另外，RAM角色切换的方法还有以下两个使用场景：</p>
+<ul>
+<li>通过RAM角色临时授权给阿里云的技术支持帮助调试问题，尤其是在云账号开启了单点登录(SSO)的情况下，只有通过这种方法才能让阿里云的技术支持登录进来。</li>
+<li>当一个企业希望将部分业务授权给另一个企业时，也可以通过RAM角色进行跨阿里云账号授权来管理资源的访问。例如，企业A购买了多种阿里云资源（ECS实例、RDS实例、SLB实例等），但是企业A希望能专注于业务，仅作为资源拥有者。企业A希望可以授权企业B账号来对云资源进行运维，监控和管理，企业A也希望企业B的员工入职和离职时，无需做任何权限变更，同时也希望合同终止时，可以随时撤销对企业B的授权。这种情况下，企业A可以创建一定权限的角色并授权给企业B的阿里云账号，企业B的RAM用户可以通过角色切换的方法登录进企业A的账号对资源进行运维管理。</li>
+</ul>
+]]></content>
+      <tags>
+        <tag>AliCloud</tag>
+        <tag>Aliyun</tag>
+        <tag>RAM</tag>
       </tags>
   </entry>
   <entry>
@@ -962,7 +962,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#107;&#101;&#106;&#x69;&#x61;&#x6e;&#122;&#x68;&#97;&#x6e;&#x67;&#x40;&#49;&#x36;&#51;&#x2e;&#99;&#x6f;&#x6d;">&#109;&#x69;&#107;&#101;&#106;&#x69;&#x61;&#x6e;&#122;&#x68;&#97;&#x6e;&#x67;&#x40;&#49;&#x36;&#51;&#x2e;&#99;&#x6f;&#x6d;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#107;&#101;&#x6a;&#x69;&#x61;&#110;&#x7a;&#x68;&#97;&#110;&#x67;&#64;&#49;&#x36;&#51;&#46;&#x63;&#x6f;&#x6d;">&#109;&#x69;&#107;&#101;&#x6a;&#x69;&#x61;&#110;&#x7a;&#x68;&#97;&#110;&#x67;&#64;&#49;&#x36;&#51;&#46;&#x63;&#x6f;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -1659,140 +1659,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
-    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
-    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
-<span id="more"></span>
-
-<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
-<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
-<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
-</li>
-<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
-</li>
-<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
-</li>
-</ol>
-<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
-</li>
-<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
-</li>
-<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
-</li>
-<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
-<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        gitlab(<br>            <span class="hljs-symbol">triggerOnPush:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">triggerOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">triggerOpenMergeRequestOnPush:</span> <span class="hljs-string">&quot;source&quot;</span>,<br>            <span class="hljs-symbol">triggerOnNoteRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">noteRegex:</span> <span class="hljs-string">&quot;.*\\[run\\W+ci\\].*&quot;</span>,<br>            <span class="hljs-symbol">skipWorkInProgressMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">ciSkip:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">setBuildDescription:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addNoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addCiMessage:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addVoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">acceptMergeRequestOnSuccess:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">branchFilterType:</span> <span class="hljs-string">&quot;NameBasedFilter&quot;</span>,<br>            <span class="hljs-symbol">includeBranchesSpec:</span> <span class="hljs-string">&quot;master&quot;</span>,<br>            <span class="hljs-symbol">excludeBranchesSpec:</span> <span class="hljs-string">&quot;&quot;</span><br>        )<br>    &#125;<br>    environment &#123;<br>        GITLAB_URL = <span class="hljs-string">&quot;http://mygitlab.philips.com&quot;</span><br>        GITLAB_ORG = <span class="hljs-string">&quot;mikesay&quot;</span><br>        GITLAB_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>        gitLabConnection <span class="hljs-string">&#x27;mygitlab&#x27;</span><br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;gitlab_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>    post &#123;<br>      failure &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;failed&#x27;</span><br>      &#125;<br>      success &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;success&#x27;</span><br>      &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
-
-<ol>
-<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>triggerOnPush</td>
-<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnMergeRequest</td>
-<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOpenMergeRequestOnPush</td>
-<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnNoteRequest</td>
-<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
-</tr>
-<tr>
-<td>ciSkip</td>
-<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
-</tr>
-<tr>
-<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
-<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
- <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy"><span class="hljs-attr">refspec:</span> <span class="hljs-string">&#x27;+refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span><br></code></pre></td></tr></table></figure>
-</li>
-<li><p>39行: branches选择”origin&#x2F;mr&#x2F;${gitlabMergeRequestId}&#x2F;head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
- <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">[<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]]<br></code></pre></td></tr></table></figure></li>
-</ol>
-<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
-<figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">gitlabBranch<br>gitlabSourceBranch<br>gitlabActionType<br>gitlabUserName<br>gitlabUserUsername<br>gitlabUserEmail<br>gitlabSourceRepoHomepage<br>gitlabSourceRepoName<br>gitlabSourceNamespace<br>gitlabSourceRepoURL<br>gitlabSourceRepoSshUrl<br>gitlabSourceRepoHttpUrl<br>gitlabMergeRequestTitle<br>gitlabMergeRequestDescription<br>gitlabMergeRequestId<br>gitlabMergeRequestIid<br>gitlabMergeRequestState<br>gitlabMergedByUser<br>gitlabMergeRequestAssignee<br>gitlabMergeRequestLastCommit<br>gitlabMergeRequestTargetProjectId<br>gitlabTargetBranch<br>gitlabTargetRepoName<br>gitlabTargetNamespace<br>gitlabTargetRepoSshUrl<br>gitlabTargetRepoHttpUrl<br>gitlabBefore<br>gitlabAfter<br>gitlabTriggerPhrase<br></code></pre></td></tr></table></figure>
-
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
-</li>
-</ol>
-<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
-<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
-</li>
-<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
-</li>
-<li><p>点击Save按钮保存</p>
-</li>
-</ol>
-<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
-<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
-</li>
-<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
-</li>
-</ol>
-<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user&#39;s api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
-<ol start="3">
-<li>点击Add webhook按钮添加Web hook</li>
-</ol>
-<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
-<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
-</li>
-</ol>
-<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
-]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>GitLab</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins构建GitHub合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull&#x2F;merge request)的本质”</a>中已经说明了合并请求(pull&#x2F;merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull&#x2F;merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull&#x2F;merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
@@ -1938,6 +1804,140 @@
       </tags>
   </entry>
   <entry>
+    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
+    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
+    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
+<span id="more"></span>
+
+<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
+<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
+<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
+</li>
+<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
+</li>
+<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
+</li>
+</ol>
+<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
+</li>
+<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
+</li>
+<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
+<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        gitlab(<br>            <span class="hljs-symbol">triggerOnPush:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">triggerOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">triggerOpenMergeRequestOnPush:</span> <span class="hljs-string">&quot;source&quot;</span>,<br>            <span class="hljs-symbol">triggerOnNoteRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">noteRegex:</span> <span class="hljs-string">&quot;.*\\[run\\W+ci\\].*&quot;</span>,<br>            <span class="hljs-symbol">skipWorkInProgressMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">ciSkip:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">setBuildDescription:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addNoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addCiMessage:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addVoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">acceptMergeRequestOnSuccess:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">branchFilterType:</span> <span class="hljs-string">&quot;NameBasedFilter&quot;</span>,<br>            <span class="hljs-symbol">includeBranchesSpec:</span> <span class="hljs-string">&quot;master&quot;</span>,<br>            <span class="hljs-symbol">excludeBranchesSpec:</span> <span class="hljs-string">&quot;&quot;</span><br>        )<br>    &#125;<br>    environment &#123;<br>        GITLAB_URL = <span class="hljs-string">&quot;http://mygitlab.philips.com&quot;</span><br>        GITLAB_ORG = <span class="hljs-string">&quot;mikesay&quot;</span><br>        GITLAB_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>        gitLabConnection <span class="hljs-string">&#x27;mygitlab&#x27;</span><br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;gitlab_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>    post &#123;<br>      failure &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;failed&#x27;</span><br>      &#125;<br>      success &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;success&#x27;</span><br>      &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<ol>
+<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>triggerOnPush</td>
+<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnMergeRequest</td>
+<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOpenMergeRequestOnPush</td>
+<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnNoteRequest</td>
+<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
+</tr>
+<tr>
+<td>ciSkip</td>
+<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
+</tr>
+<tr>
+<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
+<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
+ <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy"><span class="hljs-attr">refspec:</span> <span class="hljs-string">&#x27;+refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p>39行: branches选择”origin&#x2F;mr&#x2F;${gitlabMergeRequestId}&#x2F;head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
+ <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">[<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]]<br></code></pre></td></tr></table></figure></li>
+</ol>
+<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
+<figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">gitlabBranch<br>gitlabSourceBranch<br>gitlabActionType<br>gitlabUserName<br>gitlabUserUsername<br>gitlabUserEmail<br>gitlabSourceRepoHomepage<br>gitlabSourceRepoName<br>gitlabSourceNamespace<br>gitlabSourceRepoURL<br>gitlabSourceRepoSshUrl<br>gitlabSourceRepoHttpUrl<br>gitlabMergeRequestTitle<br>gitlabMergeRequestDescription<br>gitlabMergeRequestId<br>gitlabMergeRequestIid<br>gitlabMergeRequestState<br>gitlabMergedByUser<br>gitlabMergeRequestAssignee<br>gitlabMergeRequestLastCommit<br>gitlabMergeRequestTargetProjectId<br>gitlabTargetBranch<br>gitlabTargetRepoName<br>gitlabTargetNamespace<br>gitlabTargetRepoSshUrl<br>gitlabTargetRepoHttpUrl<br>gitlabBefore<br>gitlabAfter<br>gitlabTriggerPhrase<br></code></pre></td></tr></table></figure>
+
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
+<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
+</li>
+<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
+</li>
+<li><p>点击Save按钮保存</p>
+</li>
+</ol>
+<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
+<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
+</li>
+<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
+</li>
+</ol>
+<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user&#39;s api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
+<ol start="3">
+<li>点击Add webhook按钮添加Web hook</li>
+</ol>
+<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
+<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
+</li>
+</ol>
+<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
+]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Git</tag>
+        <tag>Jenkins</tag>
+        <tag>GitLab</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Podman介绍和使用</title>
     <url>/2021/10/10/podman-introduction-and-usage/</url>
     <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022&#x2F;1&#x2F;31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
@@ -1976,67 +1976,6 @@
         <tag>Docker</tag>
         <tag>Container</tag>
         <tag>Podman</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Git合并请求(Pull/Merge request)的本质</title>
-    <url>/2020/01/29/pullrequest-essential/</url>
-    <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull&#x2F;merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull&#x2F;merge request)合并到主分支上。合并请求(pull&#x2F;merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull&#x2F;merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull&#x2F;merget request)的实现来阐明合并请求(pull&#x2F;merge request)的本质。<span id="more"></span></p>
-<p>实际上，合并请求(pull&#x2F;merge request)在代码层面上是Git仓库中的一个特殊分支。当开发在代码协作平台上创建并提交合并请求(pull&#x2F;merge request)后，代码协作平台在服务器端将私有分支和主分支临时合并产生一个合并提交(merge commit)，同时创建一个特殊分支指向这个合并提交(merge commit)。如果临时合并出现冲突，则在Web层面显示有冲突，需要开发提交新的代码到个人分支以消除冲突。</p>
-<p>要真正的理解合并请求(pull&#x2F;merge request)这一特殊分支，我们需要先理解下Git的分支。</p>
-<h1 id="Git分支"><a href="#Git分支" class="headerlink" title="Git分支"></a>Git分支</h1><p>相对于传统的版本管理工具创建分支的操作，Git的分支方式及其轻巧，分支操作几乎是实时的，并且在分支之前切换也非常快。许多人认为Git这一分支模式算得上是一个“杀手级”功能。下图描述了一个含有三个文件的文件夹，且只有一个提交的Git仓库：</p>
-<p><img src="/2020/01/29/pullrequest-essential/1.png"></p>
-<p>在Git中，数据是以树形结构存储，每个文件对应着一个blob对象，每个文件夹对应着一个tree对象。每一次Git提交(commit)，都会根据文件或路径的变化创建一系列新的blog对象或tree对象，checksum不变的对象会被重复引用，其中最顶层的tree对象由于每次都需要变化，所以每次都会创建新的顶层tree对象，同时会创建一个commit对象指向新的顶层tree对象，整个过程犹如给数据做了个快照，而当前的commit对象则是这个快照的标签。如果要获取这个快照对应的代码，只要git checkout到这个commit对象即可。</p>
-<p>当再次提交时，新创建的commit对象会保存一个指针指向前面的一个commit对象形成一个提交链(快照链)。下图就是Git仓库中的一个提交链：</p>
-<p><img src="/2020/01/29/pullrequest-essential/2.png"></p>
-<p>而Git中的分支则是一个轻量的可移动的指针指向其中一个commit对象。缺省的分支名字叫master，每一次新的提交master分支都会移动并指向到最新的commit对象。下图是Git中的分支和提交历史：</p>
-<p><img src="/2020/01/29/pullrequest-essential/3.png"></p>
-<p>HEAD对象是指针的指针，它指向当前所在的分支。切换分支时，只要将HEAD指向新的分支即可，所以说Git切换分支的操作是相当轻量的。</p>
-<p>所以正如前文所说，合并请求(pull&#x2F;merge request)也是个分支，也就是指针，它是指向私有分支和主分支临时合并后产生的合并提交(commit)对象。下图是Git中的合并请求(pull&#x2F;merge request)分支：</p>
-<p><img src="/2020/01/29/pullrequest-essential/4.png"></p>
-<p>如图”defect235”分支是为了修复defect235而创建的私有分支，commit”f40ac”是代码协作平台临时合并分支”defect235”和”master”而创建的合并提交对象，分支”refs&#x2F;pull&#x2F;1&#x2F;merge”则是那个特殊的分支，指向合并提交对象”f40ac”。不过,常规的Git克隆或者拉取是无法获取这个分支信息的，因为常规Git只会认为在缺省路径“refs&#x2F;heads&#x2F;“下的分支是Git分支。当开发在Web界面中合并合并请求(pull&#x2F;merge request)后，私有分支”defect235”和特殊的分支也会被删除掉(通常代码协作平台会提供一些设置来控制是否要删除私有分支和合并请求分支)。下图是Git中合并请求被合并后的分支情况：</p>
-<p><img src="/2020/01/29/pullrequest-essential/5.png"></p>
-<p>不同的代码协作平台在实现合并请求(pull&#x2F;merget request)的原理上是相同的，但是也有一些细微的差别。</p>
-<h1 id="GitHub合并请求-Pull-Request"><a href="#GitHub合并请求-Pull-Request" class="headerlink" title="GitHub合并请求(Pull Request)"></a>GitHub合并请求(Pull Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*<br>  git pull --rebase<br>  git branch -a<br><br>  add_test<br>* master<br>  remotes/origin/HEAD -&gt; origin/master<br>  remotes/origin/add_test<br>  remotes/origin/master<br>  remotes/origin/pr/1/head<br>  remotes/origin/pr/1/merge<br><br>  git checkout  -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure>
-<p>origin&#x2F;pr&#x2F;1&#x2F;head: 指向当前合并请求(pull request)中的私有分支<br>origin&#x2F;pr&#x2F;1&#x2F;merge: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*<br>git checkout  -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
-</ul>
-<h1 id="GitLab合并请求-Merge-Request"><a href="#GitLab合并请求-Merge-Request" class="headerlink" title="GitLab合并请求(Merge Request)"></a>GitLab合并请求(Merge Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(merge request)的信息</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/merge-requests/*:refs/remotes/origin/mr/*<br>  git pull --rebase<br>  git branch -a<br><br>  change2<br>  change_readme<br>* master<br>  remotes/origin/HEAD -&gt; origin/master<br>  remotes/origin/change2<br>  remotes/origin/change_readme<br>  remotes/origin/master<br>  remotes/origin/mr/1/head<br>  remotes/origin/mr/2/head<br><br>  git checkout -b mr/2 origin/mr/2/head<br></code></pre></td></tr></table></figure>
-<p>origin&#x2F;mr&#x2F;1&#x2F;head: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/merge-requests/2/*:refs/remotes/origin/mr/2/*<br>git checkout -b mr/2 origin/mr/2/head<br></code></pre></td></tr></table></figure></li>
-</ul>
-<h1 id="Bitbuckt合并请求-pull-Request"><a href="#Bitbuckt合并请求-pull-Request" class="headerlink" title="Bitbuckt合并请求(pull Request)"></a>Bitbuckt合并请求(pull Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/pull-requests/*:refs/remotes/origin/pr/*<br>  git pull --rebase<br>  git branch -a<br><br>  fix_defect1<br>* master<br>  remotes/origin/fix_defect1<br>  remotes/origin/master<br>  remotes/origin/pr/1/from<br>  remotes/origin/pr/1/merge<br><br>  git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure>
-<p>origin&#x2F;pr&#x2F;1&#x2F;from: 指向当前合并请求(pull request)中的私有分支<br>origin&#x2F;pr&#x2F;1&#x2F;merge: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/pull-requests/1/*:refs/remotes/origin/pr/1/*<br>git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
-</ul>
-<h1 id="TFS-Git合并请求-pull-Request"><a href="#TFS-Git合并请求-pull-Request" class="headerlink" title="TFS Git合并请求(pull Request)"></a>TFS Git合并请求(pull Request)</h1><ul>
-<li>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息  <figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*<br>  git pull --rebase<br>  git branch -a<br><br>  fix_defect1<br>* master<br>  remotes/origin/fix_defect1<br>  remotes/origin/master<br>  remotes/origin/pr/1/merge<br><br>  git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
-</ul>
-<p>  origin&#x2F;pr&#x2F;1&#x2F;merge: 指向临时合并的提交对象</p>
-<ul>
-<li>仅拉取某个合并请求(pull request)的信息<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*<br>git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
-</ul>
-<p>当然，除了上面四个基于Git的代码协作平台外，还有许多优秀的平台，比如国内的码云<a href="https://gitee.com/">https://gitee.com/</a>，各大公有云平台也都提供了自己的代码协作平台。读者可以根据本文的说明自行研究合并请求(pull&#x2F;merge request)。</p>
-]]></content>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>Git</tag>
-        <tag>Github</tag>
-        <tag>Bitbucket</tag>
-        <tag>Gitlab</tag>
-        <tag>TFS Git</tag>
       </tags>
   </entry>
   <entry>
@@ -2232,6 +2171,67 @@
       <tags>
         <tag>Hexo</tag>
         <tag>Gitee</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git合并请求(Pull/Merge request)的本质</title>
+    <url>/2020/01/29/pullrequest-essential/</url>
+    <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull&#x2F;merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull&#x2F;merge request)合并到主分支上。合并请求(pull&#x2F;merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull&#x2F;merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull&#x2F;merget request)的实现来阐明合并请求(pull&#x2F;merge request)的本质。<span id="more"></span></p>
+<p>实际上，合并请求(pull&#x2F;merge request)在代码层面上是Git仓库中的一个特殊分支。当开发在代码协作平台上创建并提交合并请求(pull&#x2F;merge request)后，代码协作平台在服务器端将私有分支和主分支临时合并产生一个合并提交(merge commit)，同时创建一个特殊分支指向这个合并提交(merge commit)。如果临时合并出现冲突，则在Web层面显示有冲突，需要开发提交新的代码到个人分支以消除冲突。</p>
+<p>要真正的理解合并请求(pull&#x2F;merge request)这一特殊分支，我们需要先理解下Git的分支。</p>
+<h1 id="Git分支"><a href="#Git分支" class="headerlink" title="Git分支"></a>Git分支</h1><p>相对于传统的版本管理工具创建分支的操作，Git的分支方式及其轻巧，分支操作几乎是实时的，并且在分支之前切换也非常快。许多人认为Git这一分支模式算得上是一个“杀手级”功能。下图描述了一个含有三个文件的文件夹，且只有一个提交的Git仓库：</p>
+<p><img src="/2020/01/29/pullrequest-essential/1.png"></p>
+<p>在Git中，数据是以树形结构存储，每个文件对应着一个blob对象，每个文件夹对应着一个tree对象。每一次Git提交(commit)，都会根据文件或路径的变化创建一系列新的blog对象或tree对象，checksum不变的对象会被重复引用，其中最顶层的tree对象由于每次都需要变化，所以每次都会创建新的顶层tree对象，同时会创建一个commit对象指向新的顶层tree对象，整个过程犹如给数据做了个快照，而当前的commit对象则是这个快照的标签。如果要获取这个快照对应的代码，只要git checkout到这个commit对象即可。</p>
+<p>当再次提交时，新创建的commit对象会保存一个指针指向前面的一个commit对象形成一个提交链(快照链)。下图就是Git仓库中的一个提交链：</p>
+<p><img src="/2020/01/29/pullrequest-essential/2.png"></p>
+<p>而Git中的分支则是一个轻量的可移动的指针指向其中一个commit对象。缺省的分支名字叫master，每一次新的提交master分支都会移动并指向到最新的commit对象。下图是Git中的分支和提交历史：</p>
+<p><img src="/2020/01/29/pullrequest-essential/3.png"></p>
+<p>HEAD对象是指针的指针，它指向当前所在的分支。切换分支时，只要将HEAD指向新的分支即可，所以说Git切换分支的操作是相当轻量的。</p>
+<p>所以正如前文所说，合并请求(pull&#x2F;merge request)也是个分支，也就是指针，它是指向私有分支和主分支临时合并后产生的合并提交(commit)对象。下图是Git中的合并请求(pull&#x2F;merge request)分支：</p>
+<p><img src="/2020/01/29/pullrequest-essential/4.png"></p>
+<p>如图”defect235”分支是为了修复defect235而创建的私有分支，commit”f40ac”是代码协作平台临时合并分支”defect235”和”master”而创建的合并提交对象，分支”refs&#x2F;pull&#x2F;1&#x2F;merge”则是那个特殊的分支，指向合并提交对象”f40ac”。不过,常规的Git克隆或者拉取是无法获取这个分支信息的，因为常规Git只会认为在缺省路径“refs&#x2F;heads&#x2F;“下的分支是Git分支。当开发在Web界面中合并合并请求(pull&#x2F;merge request)后，私有分支”defect235”和特殊的分支也会被删除掉(通常代码协作平台会提供一些设置来控制是否要删除私有分支和合并请求分支)。下图是Git中合并请求被合并后的分支情况：</p>
+<p><img src="/2020/01/29/pullrequest-essential/5.png"></p>
+<p>不同的代码协作平台在实现合并请求(pull&#x2F;merget request)的原理上是相同的，但是也有一些细微的差别。</p>
+<h1 id="GitHub合并请求-Pull-Request"><a href="#GitHub合并请求-Pull-Request" class="headerlink" title="GitHub合并请求(Pull Request)"></a>GitHub合并请求(Pull Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*<br>  git pull --rebase<br>  git branch -a<br><br>  add_test<br>* master<br>  remotes/origin/HEAD -&gt; origin/master<br>  remotes/origin/add_test<br>  remotes/origin/master<br>  remotes/origin/pr/1/head<br>  remotes/origin/pr/1/merge<br><br>  git checkout  -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure>
+<p>origin&#x2F;pr&#x2F;1&#x2F;head: 指向当前合并请求(pull request)中的私有分支<br>origin&#x2F;pr&#x2F;1&#x2F;merge: 指向临时合并的提交对象</p>
+</li>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*<br>git checkout  -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
+</ul>
+<h1 id="GitLab合并请求-Merge-Request"><a href="#GitLab合并请求-Merge-Request" class="headerlink" title="GitLab合并请求(Merge Request)"></a>GitLab合并请求(Merge Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(merge request)的信息</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/merge-requests/*:refs/remotes/origin/mr/*<br>  git pull --rebase<br>  git branch -a<br><br>  change2<br>  change_readme<br>* master<br>  remotes/origin/HEAD -&gt; origin/master<br>  remotes/origin/change2<br>  remotes/origin/change_readme<br>  remotes/origin/master<br>  remotes/origin/mr/1/head<br>  remotes/origin/mr/2/head<br><br>  git checkout -b mr/2 origin/mr/2/head<br></code></pre></td></tr></table></figure>
+<p>origin&#x2F;mr&#x2F;1&#x2F;head: 指向临时合并的提交对象</p>
+</li>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/merge-requests/2/*:refs/remotes/origin/mr/2/*<br>git checkout -b mr/2 origin/mr/2/head<br></code></pre></td></tr></table></figure></li>
+</ul>
+<h1 id="Bitbuckt合并请求-pull-Request"><a href="#Bitbuckt合并请求-pull-Request" class="headerlink" title="Bitbuckt合并请求(pull Request)"></a>Bitbuckt合并请求(pull Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/pull-requests/*:refs/remotes/origin/pr/*<br>  git pull --rebase<br>  git branch -a<br><br>  fix_defect1<br>* master<br>  remotes/origin/fix_defect1<br>  remotes/origin/master<br>  remotes/origin/pr/1/from<br>  remotes/origin/pr/1/merge<br><br>  git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure>
+<p>origin&#x2F;pr&#x2F;1&#x2F;from: 指向当前合并请求(pull request)中的私有分支<br>origin&#x2F;pr&#x2F;1&#x2F;merge: 指向临时合并的提交对象</p>
+</li>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/pull-requests/1/*:refs/remotes/origin/pr/1/*<br>git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
+</ul>
+<h1 id="TFS-Git合并请求-pull-Request"><a href="#TFS-Git合并请求-pull-Request" class="headerlink" title="TFS Git合并请求(pull Request)"></a>TFS Git合并请求(pull Request)</h1><ul>
+<li>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息  <figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*<br>  git pull --rebase<br>  git branch -a<br><br>  fix_defect1<br>* master<br>  remotes/origin/fix_defect1<br>  remotes/origin/master<br>  remotes/origin/pr/1/merge<br><br>  git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
+</ul>
+<p>  origin&#x2F;pr&#x2F;1&#x2F;merge: 指向临时合并的提交对象</p>
+<ul>
+<li>仅拉取某个合并请求(pull request)的信息<figure class="highlight sh"><table><tr><td class="code"><pre><code class="hljs sh">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*<br>git checkout -b <span class="hljs-built_in">pr</span>/1 origin/pr/1/merge<br></code></pre></td></tr></table></figure></li>
+</ul>
+<p>当然，除了上面四个基于Git的代码协作平台外，还有许多优秀的平台，比如国内的码云<a href="https://gitee.com/">https://gitee.com/</a>，各大公有云平台也都提供了自己的代码协作平台。读者可以根据本文的说明自行研究合并请求(pull&#x2F;merge request)。</p>
+]]></content>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>Git</tag>
+        <tag>Github</tag>
+        <tag>Bitbucket</tag>
+        <tag>Gitlab</tag>
+        <tag>TFS Git</tag>
       </tags>
   </entry>
   <entry>
