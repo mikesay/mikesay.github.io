@@ -436,7 +436,10 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo pfctl -vnf /etc/pf.anchors/kubernetes.ingress-controller.forwarding<br></code></pre></td></tr></table></figure>
 </li>
 <li><p>创建&#x2F;etc&#x2F;pf-kubernetes-ingress-controller.conf文件<br>添加下面的配置：  </p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">  rdr-anchor <span class="hljs-string">&quot;forwarding&quot;</span> <br>  load anchor <span class="hljs-string">&quot;forwarding&quot;</span> from <span class="hljs-string">&quot;/etc/pf.anchors/kubernetes.ingress-controller.forwarding&quot;</span><br>  ```  <br><br>+ 创建一个shell脚本，比如<span class="hljs-string">&quot;./minikube-start/pf.sh&quot;</span>，配置在系统启动时执行  <br>  ```bash<br>  <span class="hljs-comment">#!/bin/bash</span><br>  sudo pfctl -ef /etc/pf-kubernetes-ingress-controller.conf<br></code></pre></td></tr></table></figure></li>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">rdr-anchor <span class="hljs-string">&quot;forwarding&quot;</span> <br>load anchor <span class="hljs-string">&quot;forwarding&quot;</span> from <span class="hljs-string">&quot;/etc/pf.anchors/kubernetes.ingress-controller.forwarding&quot;</span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p>创建一个shell脚本，比如”.&#x2F;minikube-start&#x2F;pf.sh”，配置在系统启动时执行  </p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-meta">#!/bin/bash</span><br>sudo pfctl -ef /etc/pf-kubernetes-ingress-controller.conf<br></code></pre></td></tr></table></figure></li>
 </ul>
 <h2 id="macOS-10-9和更早版本"><a href="#macOS-10-9和更早版本" class="headerlink" title="macOS 10.9和更早版本"></a>macOS 10.9和更早版本</h2><p>执行以下命令配置端口转发：</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo /sbin/ipfw add 102 fwd 127.0.0.1,9080 tcp from any to any 80 <span class="hljs-keyword">in</span><br>sudo /sbin/ipfw add 102 fwd 127.0.0.1,9443 tcp from any to any 443 <span class="hljs-keyword">in</span><br></code></pre></td></tr></table></figure>
@@ -917,7 +920,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#x69;&#107;&#101;&#x6a;&#105;&#97;&#110;&#122;&#104;&#97;&#x6e;&#103;&#64;&#x31;&#x36;&#x33;&#46;&#x63;&#111;&#109;">&#x6d;&#x69;&#107;&#101;&#x6a;&#105;&#97;&#110;&#122;&#104;&#97;&#x6e;&#103;&#64;&#x31;&#x36;&#x33;&#46;&#x63;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#x69;&#x6b;&#101;&#106;&#x69;&#x61;&#x6e;&#122;&#x68;&#x61;&#x6e;&#x67;&#x40;&#x31;&#54;&#51;&#x2e;&#x63;&#x6f;&#109;">&#x6d;&#x69;&#x6b;&#101;&#106;&#x69;&#x61;&#x6e;&#122;&#x68;&#x61;&#x6e;&#x67;&#x40;&#x31;&#54;&#51;&#x2e;&#x63;&#x6f;&#109;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
