@@ -274,6 +274,100 @@
       </tags>
   </entry>
   <entry>
+    <title>创建自签名TLS/SSL证书和私钥</title>
+    <url>/2018/12/30/create-self-signed-ssl/</url>
+    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS&#x2F;SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
+<span id="more"></span>
+
+<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
+<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
+</blockquote>
+<p>使用openssl命令生成自签名证书和私钥对：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
+
+<ul>
+<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
+<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
+<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
+<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
+<li>-days 365: 设置证书的有效期为1年（365天）。</li>
+<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
+<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
+<li>-out: 告诉openssl生成的自签名证书和路径。</li>
+</ul>
+<p>命令会提示以下的一些输入：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">Country Name (2 letter code) [AU]:CN<br>State or Province Name (full name) [Some-State]:Shanghai<br>Locality Name (eg, city) []:Shanghai<br>Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;<br>Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;<br>Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;<br>Email Address []:&lt;xxxx@xxx.xxx&gt;<br></code></pre></td></tr></table></figure>
+
+<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
+<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”&#x2F;etc&#x2F;nginx&#x2F;ssl-certs”；</p>
+</li>
+<li><p>编辑”&#x2F;etc&#x2F;nginx&#x2F;sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;<br>ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>重新加载配置文件：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">nginx -s reload<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>重启Nginx服务：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">systemctl restart nginx<br></code></pre></td></tr></table></figure></li>
+</ol>
+<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
+<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
+</blockquote>
+<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-certificates<br></code></pre></td></tr></table></figure></li>
+</ol>
+<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”中删除证书：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-certificates --fresh<br></code></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-trust<br></code></pre></td></tr></table></figure></li>
+</ol>
+<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”中删除证书：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-trust<br></code></pre></td></tr></table></figure></li>
+</ol>
+<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
+
+<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo security delete-certificate -c <span class="hljs-string">&quot;&lt;Common Name of existing certificate&gt;&quot;</span><br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
+</blockquote>
+<p>或者通过证书的SHA-1码来删除：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="hljs-string">&quot;</span><br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
+</blockquote>
+<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><code class="hljs batch">certutil -addstore -f &quot;Root&quot; selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
+
+<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><code class="hljs batch">certutil -delstore &quot;Root&quot; &lt;Cert Serial Number&gt;<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
+</blockquote>
+]]></content>
+      <tags>
+        <tag>System Management</tag>
+        <tag>TLS/SSL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Minikube创建本地Kubernetes集群</title>
     <url>/2021/10/06/create-kubernetes-minikube/</url>
     <content><![CDATA[<p>在学习和使用Kubernetes的过程中，都希望能够快速创建一个本地的Kubernetes集群用作测试之用。之前一直使用docker公司的docker for mac创建的Kubernetes集群，但是经常出现启动不起来的问题，也没有详细的日志来定位问题，另外docker for mac创建的集群不支持改变系统组件的配置，比如修改API Server或Kubelet的参数，开启某些Alpaha版本的特性等。虽然Minikube已经存在很久，而且早于docker for mac，但是由于种种原因没能尝试，后经同事推荐，尝试了一下，确实蛮强大。本文将简单介绍下Minikube，以及在Mac主机上用Minikube创建和配置一个本地集群。</p>
@@ -453,100 +547,6 @@
         <tag>Kubernetes</tag>
         <tag>K8s</tag>
         <tag>Minikube</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>创建自签名TLS/SSL证书和私钥</title>
-    <url>/2018/12/30/create-self-signed-ssl/</url>
-    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS&#x2F;SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
-<span id="more"></span>
-
-<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
-<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
-</blockquote>
-<p>使用openssl命令生成自签名证书和私钥对：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
-
-<ul>
-<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
-<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
-<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
-<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
-<li>-days 365: 设置证书的有效期为1年（365天）。</li>
-<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
-<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
-<li>-out: 告诉openssl生成的自签名证书和路径。</li>
-</ul>
-<p>命令会提示以下的一些输入：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">Country Name (2 letter code) [AU]:CN<br>State or Province Name (full name) [Some-State]:Shanghai<br>Locality Name (eg, city) []:Shanghai<br>Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;<br>Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;<br>Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;<br>Email Address []:&lt;xxxx@xxx.xxx&gt;<br></code></pre></td></tr></table></figure>
-
-<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
-<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”&#x2F;etc&#x2F;nginx&#x2F;ssl-certs”；</p>
-</li>
-<li><p>编辑”&#x2F;etc&#x2F;nginx&#x2F;sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;<br>ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>重新加载配置文件：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">nginx -s reload<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>重启Nginx服务：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">systemctl restart nginx<br></code></pre></td></tr></table></figure></li>
-</ol>
-<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
-<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
-</blockquote>
-<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-certificates<br></code></pre></td></tr></table></figure></li>
-</ol>
-<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”中删除证书：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-certificates --fresh<br></code></pre></td></tr></table></figure></li>
-</ol>
-<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-trust<br></code></pre></td></tr></table></figure></li>
-</ol>
-<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”中删除证书：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo <span class="hljs-built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo update-ca-trust<br></code></pre></td></tr></table></figure></li>
-</ol>
-<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
-
-<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo security delete-certificate -c <span class="hljs-string">&quot;&lt;Common Name of existing certificate&gt;&quot;</span><br></code></pre></td></tr></table></figure>
-
-<blockquote>
-<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
-</blockquote>
-<p>或者通过证书的SHA-1码来删除：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="hljs-string">&quot;</span><br></code></pre></td></tr></table></figure>
-
-<blockquote>
-<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
-</blockquote>
-<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><code class="hljs batch">certutil -addstore -f &quot;Root&quot; selfsigned-certificate.crt<br></code></pre></td></tr></table></figure>
-
-<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><code class="hljs batch">certutil -delstore &quot;Root&quot; &lt;Cert Serial Number&gt;<br></code></pre></td></tr></table></figure>
-
-<blockquote>
-<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
-</blockquote>
-]]></content>
-      <tags>
-        <tag>System Management</tag>
-        <tag>TLS/SSL</tag>
       </tags>
   </entry>
   <entry>
@@ -746,6 +746,174 @@
       </tags>
   </entry>
   <entry>
+    <title>Git加密存储文件</title>
+    <url>/2020/12/16/git-encrypt-file-in-repository/</url>
+    <content><![CDATA[<p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
+<span id="more"></span>
+
+<h1 id="私有仓库是否安全"><a href="#私有仓库是否安全" class="headerlink" title="私有仓库是否安全"></a>私有仓库是否安全</h1><p>也许有人会说：”我把代码仓库设成私有的不就安全了？“，然而情况并非如此，因为即使是私有仓库，也同样面临着不同类型的风险。当你集成某个第三方服务到你的私有仓库（比如集成第三方的持续集成服务）时，你的私有仓库就开放给了第三方服务，这些第三方服务就有可能读取你存储在代码仓库中的敏感信息。如果第三方服务遭受了黑客攻击，那么黑客就可以通过这个第三方服务获取你的Git仓库中的敏感信息。</p>
+<h1 id="为什么还要将敏感信息放在Git代码仓库中"><a href="#为什么还要将敏感信息放在Git代码仓库中" class="headerlink" title="为什么还要将敏感信息放在Git代码仓库中"></a>为什么还要将敏感信息放在Git代码仓库中</h1><p>正如文初谈到的”不要将敏感信息放在Git代码仓库中已是共识“，那为什么还用谈将敏感信息放在Git代码仓库中？正所谓无风不起浪，存在即合理。抛开敏感信息这个特征不谈，包含这些信息的文件其实和我们的代码文件没什么区别，如果不放在Git仓库中，就不能对它们做版本管理，比如对文件名和路径的变更，密码等敏感信息的变更，新信息的添加等都没法追踪它们的变更记录，尤其在构建一个自动部署系统时，你就不得不维护一个额外的安全服务来加密存储这些包含敏感信息的配置文件，而自动部署系统也需要设计额外的方法和步骤来读取这些配置文件，更为麻烦的是自动部署系统无法通过Git变更记录来指定使用的配置文件的版本。</p>
+<h1 id="git-secret的原理"><a href="#git-secret的原理" class="headerlink" title="git-secret的原理"></a>git-secret的原理</h1><p>既要将包含敏感信息的配置文件保存在Git代码仓库中（能带来很多便利），又要保证安全，那么最直接的做法就是将这些文件加密后再保存到Git仓库中，而git-secret则满足了这一需求，同时git-secret也能保证多人协同工作。以下是git-secret提供的一些功能：</p>
+<ul>
+<li><p>利用<a href="http://www.gnupg.org/">GnuPG</a>的多密钥加密功能：多个公钥加密文件，不同的私钥解密文件。这样，工作在Git仓库中的开发人员只需要将自己的公钥保存在代码仓库中用来加密文件，同时在自己的工作机器上保存自己的私钥来解密文件。</p>
+</li>
+<li><p>通过git-secret将包含敏感信息的文件放入.gitignore文件中避免误提交，同时生成一个新的加密文件（在原有文件名上添加了一个额外的后缀.secret）并保存在Git仓库中。</p>
+</li>
+<li><p>当把代码仓库克隆到本地（只包含带有后缀.secret的加密文件）后，可以通过git-secret解密后生成解密文件（不包含.secret后缀），这样就可以在本地使用包含这些敏感信息的文件了。</p>
+</li>
+</ul>
+<h1 id="git-secret的安装和使用"><a href="#git-secret的安装和使用" class="headerlink" title="git-secret的安装和使用"></a>git-secret的安装和使用</h1><p>git-secret的使用依赖于git和<a href="http://www.gnupg.org/">GnuPG</a>。Git的安装可以参考相关文档，不在这里赘述。git-secret使用的密钥以及加解密的功能都是通过GnuPG来完成的。</p>
+<h2 id="安装GnuPG"><a href="#安装GnuPG" class="headerlink" title="安装GnuPG"></a>安装GnuPG</h2><p>GnuPG，也称为GPG，是OpenPGP标准RFC4880（也称为PGP）的免费实现。GnuPG允许你对数据和通信进行加密和签名，它具有通用的密钥管理系统，以及用于各种公钥目录的访问模块。GnuPG是一种命令行工具，具有易于与其他应用程序集成的功能。GnuPG也提供了大量的前端应用程序和库，GnuPG还提供对S&#x2F;MIME和Secure Shell（ssh）的支持。</p>
+<ul>
+<li><p>Mac OSX中的安装</p>
+<p>目前最新版本的GnuPG是2.2.25。可以从<a href="https://sourceforge.net/p/gpgosx/docu/Download/">https://sourceforge.net/p/gpgosx/docu/Download/</a> 下载dmg文件并安装，也可以通过下面的brew命令安装：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">brew install gpg2<br></code></pre></td></tr></table></figure>
+
+<p>推荐使用brew的安装方式，以后可以方便升级。</p>
+</li>
+<li><p>Windows中的安装</p>
+<p>Gpg4win是Windows版本的GnuPG完整实现。可以从<a href="https://gpg4win.org/download.html">https://gpg4win.org/download.html</a> 下载安装文件并安装。</p>
+</li>
+<li><p>Linux中的安装 </p>
+<p>大部分Linux系统已经自带GnuPG了，所以不需要再额外安装，只是有可能不是最新版本的，但是不影响使用。如果GnuPG不存在，也可以通过以下的命令来安装：</p>
+<p>Debian或Ubuntu</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo apt-get install gnupg<br></code></pre></td></tr></table></figure>
+
+<p>RedHat或CentOS</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo yum install gnupg<br></code></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="安装git-secret"><a href="#安装git-secret" class="headerlink" title="安装git-secret"></a>安装git-secret</h2><p>在Max OSX和Linux中的安装可以参考git-secret的<a href="https://git-secret.io/installation">安装文档</a>。</p>
+<ul>
+<li><p>Mac OSX中的安装</p>
+<p>通过brew安装：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">brew install git-secret<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>Linux中的安装</p>
+<p>Ubuntu或者Debian</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;deb https://dl.bintray.com/sobolevn/deb git-secret main&quot;</span> | sudo <span class="hljs-built_in">tee</span> -a /etc/apt/sources.list<br>wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | sudo apt-key add -<br>sudo apt-get update &amp;&amp; sudo apt-get install git-secret<br></code></pre></td></tr></table></figure>
+
+<p>RedHat或者CentOS:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">wget https://bintray.com/sobolevn/rpm/rpm -O bintray-sobolevn-rpm.repo<br>sudo <span class="hljs-built_in">mv</span> bintray-sobolevn-rpm.repo /etc/yum.repos.d/<br>sudo yum install git-secret<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>Windows中的安装</p>
+<p>git-secret官方并没有宣称支持Windows系统，但是从源代码来看已经支持CYGWIN或MINGW环境了。经过试验，以下方法可用：</p>
+<p>(1) 首先，在Windows系统中国安装Git时，选择”在命令提示符下使用Git和可选的Unix工具“，这样可以安装和使用很多可用的Linux命令</p>
+<p><img src="/2020/12/16/git-encrypt-file-in-repository/1.png"></p>
+<p>(2) 将Mac OSX下通过brew安装的git secret打包</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">zip -r -9 git-secret.zip /usr/local/Cellar/git-secret/<br></code></pre></td></tr></table></figure>
+
+<p>(3) 将git-secret.zip拷贝到Windows系统某个目录下并解压，例如解压后的路径如下：</p>
+<figure class="highlight bat"><table><tr><td class="code"><pre><code class="hljs bat"><span class="hljs-function">C:\<span class="hljs-title">Users</span>\<span class="hljs-title">Administrator</span>\<span class="hljs-title">Documents</span>\<span class="hljs-title">Tools</span>\<span class="hljs-title">git</span>-<span class="hljs-title">secret</span>\0.3.3</span><br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>0.3.3是git-secret的版本，可能会有变化。</p>
+</blockquote>
+<p>(4) 将git-secret目录下的bin目录加到Windows的Path环境变量中</p>
+<p><img src="/2020/12/16/git-encrypt-file-in-repository/2.png"></p>
+<p>(5) 重新启动一个命令行控制台执行以下命令检查git secret命令可用</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret --version<br></code></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="使用git-secret"><a href="#使用git-secret" class="headerlink" title="使用git-secret"></a>使用git-secret</h2><h3 id="初次添加对git-secret支持"><a href="#初次添加对git-secret支持" class="headerlink" title="初次添加对git-secret支持"></a>初次添加对git-secret支持</h3><ul>
+<li><p>执行下面的命令创建GPG公钥和私钥</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#105;&#107;&#x65;&#x6a;&#x69;&#97;&#x6e;&#x7a;&#x68;&#x61;&#110;&#x67;&#x40;&#49;&#54;&#51;&#46;&#x63;&#111;&#x6d;">&#109;&#105;&#107;&#x65;&#x6a;&#x69;&#97;&#x6e;&#x7a;&#x68;&#x61;&#110;&#x67;&#x40;&#49;&#54;&#51;&#46;&#x63;&#111;&#x6d;</a>。</p>
+</blockquote>
+</li>
+<li><p>导出GPG公钥和私钥</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --armor --<span class="hljs-built_in">export</span> mikejianzhang@163.com &gt; mikejianzhang.public-key.gpg<br>gpg --armor --export-secret-key  mikejianzhang@163.com &gt; mikejianzhang.private-key.gpg<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>如果还有第二个开发电脑，则需要在电脑里安装Git和GnuPG，并执行下面命令导入自己的私钥：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --import mikejianzhang.private-key.gpg<br></code></pre></td></tr></table></figure>
+</blockquote>
+</li>
+<li><p>初始化一个新的Git仓库或者克隆一个已经存在的代码仓库</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">mkdir</span> test-git-secret<br><span class="hljs-built_in">cd</span> test-git-secret<br>git init<br></code></pre></td></tr></table></figure>
+
+<p>或者</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git <span class="hljs-built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>初始化Git仓库支持git-secret</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">cd</span> test-git-secret<br>git secret init<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>类似于.git目录，git secret init命令会在根目录下创建一个.gitsecret目录用来存储GPG公钥。</p>
+</blockquote>
+</li>
+<li><p>将自己的公钥导入进git secret的密钥串中（保存在.gitsecret目录）</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret tell mikejianzhang@163.com<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>执行下面命令添加需要加密的文件</p>
+<p>执行命令之前，你需要创建一个包含敏感信息的文件，而且还没有提交到Git仓库中，例如test。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret add <span class="hljs-built_in">test</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>文件“test”会被加入到.gitignore文件中，这样Git命令就会忽略这个文件</p>
+</blockquote>
+</li>
+<li><p>执行下面命令加密所有通过git secret add添加的待加密文件</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret hide <br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>这个命令会产生一个加密文件，例如”test.secret”。</p>
+</blockquote>
+</li>
+<li><p>将所有本地文件和文件夹提交到Git仓库中</p>
+</li>
+</ul>
+<h3 id="编辑已加密后的文件"><a href="#编辑已加密后的文件" class="headerlink" title="编辑已加密后的文件"></a>编辑已加密后的文件</h3><ul>
+<li><p>克隆Git代码仓库</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git <span class="hljs-built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>解密所有的加密文件</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret reveal -f<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>“-f”选项将解密后的文件强制覆盖本地的明文文件。</p>
+</blockquote>
+</li>
+<li><p>编辑本地的明文文件并执行下面命令重新加密</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret hide<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>将所有的本地改动提交的Git仓库中</p>
+<blockquote>
+<p>当每次有改动时，可以通过下面命令检查是否有加密文件的改动，以决定是否需要执行git secret hide命令去重新加密</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret changes<br></code></pre></td></tr></table></figure></blockquote>
+</li>
+</ul>
+<h3 id="添加第二个用户"><a href="#添加第二个用户" class="headerlink" title="添加第二个用户"></a>添加第二个用户</h3><ul>
+<li><p>拿到第二个用户的公钥文件，例如user2.public-key.gpg, 并执行以下的操作将第二个用户的公钥导入git仓库的密钥串中<br>执行以下命令先将用户的公钥导入gpg的密钥串中：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --import user2.public-key.gpg<br></code></pre></td></tr></table></figure>
+<p>在当前代码仓库下执行以下命令将用户的公钥从gpg的密钥串中导入git仓库的密钥串中：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git tell &lt;user2&gt;@xxx.com<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>执行下面命令解密出所有最新的加密文件</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret reveal -f<br></code></pre></td></tr></table></figure>
+</li>
+<li><p>用目前密钥串中的所有公钥（包含第二个用户的公钥）重新加密所有的文件并提交</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret hide<br></code></pre></td></tr></table></figure></li>
+</ul>
+<p>当做完以上所有的操作后，第二个用户就可以执行git secret命令进行正常的加解密操作了。</p>
+<h1 id="git-secret对CI-x2F-CD流程的支持"><a href="#git-secret对CI-x2F-CD流程的支持" class="headerlink" title="git-secret对CI&#x2F;CD流程的支持"></a>git-secret对CI&#x2F;CD流程的支持</h1><p>申请一个服务账号（一般企业都会支持这样的操作）包含邮箱地址，利用这个邮箱地址创建一个GnuPG的公钥和私钥，将公钥导入Git仓库的密钥环中，将私钥导入所有的构建机器中，最后在CI&#x2F;CD脚本执行构建，测试和部署前用git secret命令来解密所有的加密的文件。</p>
+<h1 id="git-secret的缺点"><a href="#git-secret的缺点" class="headerlink" title="git-secret的缺点"></a>git-secret的缺点</h1><ul>
+<li><p>无法在Web界面上浏览加密文件内容或做差异化比较，只有把代码仓库克隆到本地解密后才能浏览文件内容或做差异化比较。如果git-secret能够提供加密部分文件内容的功能，那么就比较完美了。例如，在一个配置文件里用正则表达式或Glob语法来定义需要加密的文本，git-secret的hide命令可以读取这个配置文件去加密文件内容而非整个文件。</p>
+</li>
+<li><p>操作变得复杂了。个人觉得这也不能算什么缺点，有得必有失，获得了高安全性，而在操作上就必定要花费一些代价，但这也是我们愿意花费代价去做这件事的。</p>
+</li>
+<li><p>用户还是需要一个安全的工具来妥善保存自己的私钥，开源和商业领域都有相关的工具选择，所以问题也不是很大。</p>
+</li>
+</ul>
+<h1 id="其它的同类工具"><a href="#其它的同类工具" class="headerlink" title="其它的同类工具"></a>其它的同类工具</h1><p>除了git-secret, 还有很多其它类似的工具可供选择，它们的原理基本上都是相似的。下面列出一些仅供参考。</p>
+<ul>
+<li><p><a href="https://www.agwa.name/projects/git-crypt/">git-crypt</a><br>另一个和git-secret相似的方案是git-crypt，但是git-crypt是二进制可执行文件而不是shell脚本。</p>
+</li>
+<li><p><a href="https://github.com/StackExchange/blackbox">BlackBox</a><br>BlackBox既支持Git也支持其它的版本管理系统，例如Mercurial和Subversion。BlackBox支持加密某个文本串而不是整个文件，这正好可以弥补git-secret只能加密整个文件的缺点。可以抽空做个深入研究看BlackBox是否支持git-secret其它的一些操作。</p>
+</li>
+</ul>
+]]></content>
+      <tags>
+        <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>从Git仓库中永久清理脏数据</title>
     <url>/2020/09/26/git-clean-bad-data-from-history/</url>
     <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
@@ -843,174 +1011,6 @@
 <blockquote>
 <p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
 </blockquote>
-]]></content>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Git加密存储文件</title>
-    <url>/2020/12/16/git-encrypt-file-in-repository/</url>
-    <content><![CDATA[<p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
-<span id="more"></span>
-
-<h1 id="私有仓库是否安全"><a href="#私有仓库是否安全" class="headerlink" title="私有仓库是否安全"></a>私有仓库是否安全</h1><p>也许有人会说：”我把代码仓库设成私有的不就安全了？“，然而情况并非如此，因为即使是私有仓库，也同样面临着不同类型的风险。当你集成某个第三方服务到你的私有仓库（比如集成第三方的持续集成服务）时，你的私有仓库就开放给了第三方服务，这些第三方服务就有可能读取你存储在代码仓库中的敏感信息。如果第三方服务遭受了黑客攻击，那么黑客就可以通过这个第三方服务获取你的Git仓库中的敏感信息。</p>
-<h1 id="为什么还要将敏感信息放在Git代码仓库中"><a href="#为什么还要将敏感信息放在Git代码仓库中" class="headerlink" title="为什么还要将敏感信息放在Git代码仓库中"></a>为什么还要将敏感信息放在Git代码仓库中</h1><p>正如文初谈到的”不要将敏感信息放在Git代码仓库中已是共识“，那为什么还用谈将敏感信息放在Git代码仓库中？正所谓无风不起浪，存在即合理。抛开敏感信息这个特征不谈，包含这些信息的文件其实和我们的代码文件没什么区别，如果不放在Git仓库中，就不能对它们做版本管理，比如对文件名和路径的变更，密码等敏感信息的变更，新信息的添加等都没法追踪它们的变更记录，尤其在构建一个自动部署系统时，你就不得不维护一个额外的安全服务来加密存储这些包含敏感信息的配置文件，而自动部署系统也需要设计额外的方法和步骤来读取这些配置文件，更为麻烦的是自动部署系统无法通过Git变更记录来指定使用的配置文件的版本。</p>
-<h1 id="git-secret的原理"><a href="#git-secret的原理" class="headerlink" title="git-secret的原理"></a>git-secret的原理</h1><p>既要将包含敏感信息的配置文件保存在Git代码仓库中（能带来很多便利），又要保证安全，那么最直接的做法就是将这些文件加密后再保存到Git仓库中，而git-secret则满足了这一需求，同时git-secret也能保证多人协同工作。以下是git-secret提供的一些功能：</p>
-<ul>
-<li><p>利用<a href="http://www.gnupg.org/">GnuPG</a>的多密钥加密功能：多个公钥加密文件，不同的私钥解密文件。这样，工作在Git仓库中的开发人员只需要将自己的公钥保存在代码仓库中用来加密文件，同时在自己的工作机器上保存自己的私钥来解密文件。</p>
-</li>
-<li><p>通过git-secret将包含敏感信息的文件放入.gitignore文件中避免误提交，同时生成一个新的加密文件（在原有文件名上添加了一个额外的后缀.secret）并保存在Git仓库中。</p>
-</li>
-<li><p>当把代码仓库克隆到本地（只包含带有后缀.secret的加密文件）后，可以通过git-secret解密后生成解密文件（不包含.secret后缀），这样就可以在本地使用包含这些敏感信息的文件了。</p>
-</li>
-</ul>
-<h1 id="git-secret的安装和使用"><a href="#git-secret的安装和使用" class="headerlink" title="git-secret的安装和使用"></a>git-secret的安装和使用</h1><p>git-secret的使用依赖于git和<a href="http://www.gnupg.org/">GnuPG</a>。Git的安装可以参考相关文档，不在这里赘述。git-secret使用的密钥以及加解密的功能都是通过GnuPG来完成的。</p>
-<h2 id="安装GnuPG"><a href="#安装GnuPG" class="headerlink" title="安装GnuPG"></a>安装GnuPG</h2><p>GnuPG，也称为GPG，是OpenPGP标准RFC4880（也称为PGP）的免费实现。GnuPG允许你对数据和通信进行加密和签名，它具有通用的密钥管理系统，以及用于各种公钥目录的访问模块。GnuPG是一种命令行工具，具有易于与其他应用程序集成的功能。GnuPG也提供了大量的前端应用程序和库，GnuPG还提供对S&#x2F;MIME和Secure Shell（ssh）的支持。</p>
-<ul>
-<li><p>Mac OSX中的安装</p>
-<p>目前最新版本的GnuPG是2.2.25。可以从<a href="https://sourceforge.net/p/gpgosx/docu/Download/">https://sourceforge.net/p/gpgosx/docu/Download/</a> 下载dmg文件并安装，也可以通过下面的brew命令安装：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">brew install gpg2<br></code></pre></td></tr></table></figure>
-
-<p>推荐使用brew的安装方式，以后可以方便升级。</p>
-</li>
-<li><p>Windows中的安装</p>
-<p>Gpg4win是Windows版本的GnuPG完整实现。可以从<a href="https://gpg4win.org/download.html">https://gpg4win.org/download.html</a> 下载安装文件并安装。</p>
-</li>
-<li><p>Linux中的安装 </p>
-<p>大部分Linux系统已经自带GnuPG了，所以不需要再额外安装，只是有可能不是最新版本的，但是不影响使用。如果GnuPG不存在，也可以通过以下的命令来安装：</p>
-<p>Debian或Ubuntu</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo apt-get install gnupg<br></code></pre></td></tr></table></figure>
-
-<p>RedHat或CentOS</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">sudo yum install gnupg<br></code></pre></td></tr></table></figure></li>
-</ul>
-<h2 id="安装git-secret"><a href="#安装git-secret" class="headerlink" title="安装git-secret"></a>安装git-secret</h2><p>在Max OSX和Linux中的安装可以参考git-secret的<a href="https://git-secret.io/installation">安装文档</a>。</p>
-<ul>
-<li><p>Mac OSX中的安装</p>
-<p>通过brew安装：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">brew install git-secret<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>Linux中的安装</p>
-<p>Ubuntu或者Debian</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;deb https://dl.bintray.com/sobolevn/deb git-secret main&quot;</span> | sudo <span class="hljs-built_in">tee</span> -a /etc/apt/sources.list<br>wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | sudo apt-key add -<br>sudo apt-get update &amp;&amp; sudo apt-get install git-secret<br></code></pre></td></tr></table></figure>
-
-<p>RedHat或者CentOS:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">wget https://bintray.com/sobolevn/rpm/rpm -O bintray-sobolevn-rpm.repo<br>sudo <span class="hljs-built_in">mv</span> bintray-sobolevn-rpm.repo /etc/yum.repos.d/<br>sudo yum install git-secret<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>Windows中的安装</p>
-<p>git-secret官方并没有宣称支持Windows系统，但是从源代码来看已经支持CYGWIN或MINGW环境了。经过试验，以下方法可用：</p>
-<p>(1) 首先，在Windows系统中国安装Git时，选择”在命令提示符下使用Git和可选的Unix工具“，这样可以安装和使用很多可用的Linux命令</p>
-<p><img src="/2020/12/16/git-encrypt-file-in-repository/1.png"></p>
-<p>(2) 将Mac OSX下通过brew安装的git secret打包</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">zip -r -9 git-secret.zip /usr/local/Cellar/git-secret/<br></code></pre></td></tr></table></figure>
-
-<p>(3) 将git-secret.zip拷贝到Windows系统某个目录下并解压，例如解压后的路径如下：</p>
-<figure class="highlight bat"><table><tr><td class="code"><pre><code class="hljs bat"><span class="hljs-function">C:\<span class="hljs-title">Users</span>\<span class="hljs-title">Administrator</span>\<span class="hljs-title">Documents</span>\<span class="hljs-title">Tools</span>\<span class="hljs-title">git</span>-<span class="hljs-title">secret</span>\0.3.3</span><br></code></pre></td></tr></table></figure>
-
-<blockquote>
-<p>0.3.3是git-secret的版本，可能会有变化。</p>
-</blockquote>
-<p>(4) 将git-secret目录下的bin目录加到Windows的Path环境变量中</p>
-<p><img src="/2020/12/16/git-encrypt-file-in-repository/2.png"></p>
-<p>(5) 重新启动一个命令行控制台执行以下命令检查git secret命令可用</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret --version<br></code></pre></td></tr></table></figure></li>
-</ul>
-<h2 id="使用git-secret"><a href="#使用git-secret" class="headerlink" title="使用git-secret"></a>使用git-secret</h2><h3 id="初次添加对git-secret支持"><a href="#初次添加对git-secret支持" class="headerlink" title="初次添加对git-secret支持"></a>初次添加对git-secret支持</h3><ul>
-<li><p>执行下面的命令创建GPG公钥和私钥</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
-<blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#107;&#x65;&#x6a;&#x69;&#97;&#x6e;&#122;&#x68;&#97;&#x6e;&#x67;&#64;&#x31;&#x36;&#51;&#x2e;&#x63;&#111;&#x6d;">&#x6d;&#105;&#107;&#x65;&#x6a;&#x69;&#97;&#x6e;&#122;&#x68;&#97;&#x6e;&#x67;&#64;&#x31;&#x36;&#51;&#x2e;&#x63;&#111;&#x6d;</a>。</p>
-</blockquote>
-</li>
-<li><p>导出GPG公钥和私钥</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --armor --<span class="hljs-built_in">export</span> mikejianzhang@163.com &gt; mikejianzhang.public-key.gpg<br>gpg --armor --export-secret-key  mikejianzhang@163.com &gt; mikejianzhang.private-key.gpg<br></code></pre></td></tr></table></figure>
-
-<blockquote>
-<p>如果还有第二个开发电脑，则需要在电脑里安装Git和GnuPG，并执行下面命令导入自己的私钥：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --import mikejianzhang.private-key.gpg<br></code></pre></td></tr></table></figure>
-</blockquote>
-</li>
-<li><p>初始化一个新的Git仓库或者克隆一个已经存在的代码仓库</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">mkdir</span> test-git-secret<br><span class="hljs-built_in">cd</span> test-git-secret<br>git init<br></code></pre></td></tr></table></figure>
-
-<p>或者</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git <span class="hljs-built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>初始化Git仓库支持git-secret</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">cd</span> test-git-secret<br>git secret init<br></code></pre></td></tr></table></figure>
-
-<blockquote>
-<p>类似于.git目录，git secret init命令会在根目录下创建一个.gitsecret目录用来存储GPG公钥。</p>
-</blockquote>
-</li>
-<li><p>将自己的公钥导入进git secret的密钥串中（保存在.gitsecret目录）</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret tell mikejianzhang@163.com<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>执行下面命令添加需要加密的文件</p>
-<p>执行命令之前，你需要创建一个包含敏感信息的文件，而且还没有提交到Git仓库中，例如test。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret add <span class="hljs-built_in">test</span><br></code></pre></td></tr></table></figure>
-<blockquote>
-<p>文件“test”会被加入到.gitignore文件中，这样Git命令就会忽略这个文件</p>
-</blockquote>
-</li>
-<li><p>执行下面命令加密所有通过git secret add添加的待加密文件</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret hide <br></code></pre></td></tr></table></figure>
-<blockquote>
-<p>这个命令会产生一个加密文件，例如”test.secret”。</p>
-</blockquote>
-</li>
-<li><p>将所有本地文件和文件夹提交到Git仓库中</p>
-</li>
-</ul>
-<h3 id="编辑已加密后的文件"><a href="#编辑已加密后的文件" class="headerlink" title="编辑已加密后的文件"></a>编辑已加密后的文件</h3><ul>
-<li><p>克隆Git代码仓库</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git <span class="hljs-built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>解密所有的加密文件</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret reveal -f<br></code></pre></td></tr></table></figure>
-<blockquote>
-<p>“-f”选项将解密后的文件强制覆盖本地的明文文件。</p>
-</blockquote>
-</li>
-<li><p>编辑本地的明文文件并执行下面命令重新加密</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret hide<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>将所有的本地改动提交的Git仓库中</p>
-<blockquote>
-<p>当每次有改动时，可以通过下面命令检查是否有加密文件的改动，以决定是否需要执行git secret hide命令去重新加密</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret changes<br></code></pre></td></tr></table></figure></blockquote>
-</li>
-</ul>
-<h3 id="添加第二个用户"><a href="#添加第二个用户" class="headerlink" title="添加第二个用户"></a>添加第二个用户</h3><ul>
-<li><p>拿到第二个用户的公钥文件，例如user2.public-key.gpg, 并执行以下的操作将第二个用户的公钥导入git仓库的密钥串中<br>执行以下命令先将用户的公钥导入gpg的密钥串中：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --import user2.public-key.gpg<br></code></pre></td></tr></table></figure>
-<p>在当前代码仓库下执行以下命令将用户的公钥从gpg的密钥串中导入git仓库的密钥串中：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git tell &lt;user2&gt;@xxx.com<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>执行下面命令解密出所有最新的加密文件</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret reveal -f<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>用目前密钥串中的所有公钥（包含第二个用户的公钥）重新加密所有的文件并提交</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">git secret hide<br></code></pre></td></tr></table></figure></li>
-</ul>
-<p>当做完以上所有的操作后，第二个用户就可以执行git secret命令进行正常的加解密操作了。</p>
-<h1 id="git-secret对CI-x2F-CD流程的支持"><a href="#git-secret对CI-x2F-CD流程的支持" class="headerlink" title="git-secret对CI&#x2F;CD流程的支持"></a>git-secret对CI&#x2F;CD流程的支持</h1><p>申请一个服务账号（一般企业都会支持这样的操作）包含邮箱地址，利用这个邮箱地址创建一个GnuPG的公钥和私钥，将公钥导入Git仓库的密钥环中，将私钥导入所有的构建机器中，最后在CI&#x2F;CD脚本执行构建，测试和部署前用git secret命令来解密所有的加密的文件。</p>
-<h1 id="git-secret的缺点"><a href="#git-secret的缺点" class="headerlink" title="git-secret的缺点"></a>git-secret的缺点</h1><ul>
-<li><p>无法在Web界面上浏览加密文件内容或做差异化比较，只有把代码仓库克隆到本地解密后才能浏览文件内容或做差异化比较。如果git-secret能够提供加密部分文件内容的功能，那么就比较完美了。例如，在一个配置文件里用正则表达式或Glob语法来定义需要加密的文本，git-secret的hide命令可以读取这个配置文件去加密文件内容而非整个文件。</p>
-</li>
-<li><p>操作变得复杂了。个人觉得这也不能算什么缺点，有得必有失，获得了高安全性，而在操作上就必定要花费一些代价，但这也是我们愿意花费代价去做这件事的。</p>
-</li>
-<li><p>用户还是需要一个安全的工具来妥善保存自己的私钥，开源和商业领域都有相关的工具选择，所以问题也不是很大。</p>
-</li>
-</ul>
-<h1 id="其它的同类工具"><a href="#其它的同类工具" class="headerlink" title="其它的同类工具"></a>其它的同类工具</h1><p>除了git-secret, 还有很多其它类似的工具可供选择，它们的原理基本上都是相似的。下面列出一些仅供参考。</p>
-<ul>
-<li><p><a href="https://www.agwa.name/projects/git-crypt/">git-crypt</a><br>另一个和git-secret相似的方案是git-crypt，但是git-crypt是二进制可执行文件而不是shell脚本。</p>
-</li>
-<li><p><a href="https://github.com/StackExchange/blackbox">BlackBox</a><br>BlackBox既支持Git也支持其它的版本管理系统，例如Mercurial和Subversion。BlackBox支持加密某个文本串而不是整个文件，这正好可以弥补git-secret只能加密整个文件的缺点。可以抽空做个深入研究看BlackBox是否支持git-secret其它的一些操作。</p>
-</li>
-</ul>
 ]]></content>
       <tags>
         <tag>Git</tag>
@@ -1617,6 +1617,140 @@
       </tags>
   </entry>
   <entry>
+    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
+    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
+    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
+<span id="more"></span>
+
+<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
+<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
+<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
+</li>
+<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
+</li>
+<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
+</li>
+</ol>
+<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
+</li>
+<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
+</li>
+<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
+<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        gitlab(<br>            <span class="hljs-symbol">triggerOnPush:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">triggerOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">triggerOpenMergeRequestOnPush:</span> <span class="hljs-string">&quot;source&quot;</span>,<br>            <span class="hljs-symbol">triggerOnNoteRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">noteRegex:</span> <span class="hljs-string">&quot;.*\\[run\\W+ci\\].*&quot;</span>,<br>            <span class="hljs-symbol">skipWorkInProgressMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">ciSkip:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">setBuildDescription:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addNoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addCiMessage:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addVoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">acceptMergeRequestOnSuccess:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">branchFilterType:</span> <span class="hljs-string">&quot;NameBasedFilter&quot;</span>,<br>            <span class="hljs-symbol">includeBranchesSpec:</span> <span class="hljs-string">&quot;master&quot;</span>,<br>            <span class="hljs-symbol">excludeBranchesSpec:</span> <span class="hljs-string">&quot;&quot;</span><br>        )<br>    &#125;<br>    environment &#123;<br>        GITLAB_URL = <span class="hljs-string">&quot;http://mygitlab.philips.com&quot;</span><br>        GITLAB_ORG = <span class="hljs-string">&quot;mikesay&quot;</span><br>        GITLAB_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>        gitLabConnection <span class="hljs-string">&#x27;mygitlab&#x27;</span><br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;gitlab_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>    post &#123;<br>      failure &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;failed&#x27;</span><br>      &#125;<br>      success &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;success&#x27;</span><br>      &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<ol>
+<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>triggerOnPush</td>
+<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnMergeRequest</td>
+<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOpenMergeRequestOnPush</td>
+<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnNoteRequest</td>
+<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
+</tr>
+<tr>
+<td>ciSkip</td>
+<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
+</tr>
+<tr>
+<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
+<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
+ <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy"><span class="hljs-attr">refspec:</span> <span class="hljs-string">&#x27;+refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span><br></code></pre></td></tr></table></figure>
+</li>
+<li><p>39行: branches选择”origin&#x2F;mr&#x2F;${gitlabMergeRequestId}&#x2F;head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
+ <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">[<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]]<br></code></pre></td></tr></table></figure></li>
+</ol>
+<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
+<figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">gitlabBranch<br>gitlabSourceBranch<br>gitlabActionType<br>gitlabUserName<br>gitlabUserUsername<br>gitlabUserEmail<br>gitlabSourceRepoHomepage<br>gitlabSourceRepoName<br>gitlabSourceNamespace<br>gitlabSourceRepoURL<br>gitlabSourceRepoSshUrl<br>gitlabSourceRepoHttpUrl<br>gitlabMergeRequestTitle<br>gitlabMergeRequestDescription<br>gitlabMergeRequestId<br>gitlabMergeRequestIid<br>gitlabMergeRequestState<br>gitlabMergedByUser<br>gitlabMergeRequestAssignee<br>gitlabMergeRequestLastCommit<br>gitlabMergeRequestTargetProjectId<br>gitlabTargetBranch<br>gitlabTargetRepoName<br>gitlabTargetNamespace<br>gitlabTargetRepoSshUrl<br>gitlabTargetRepoHttpUrl<br>gitlabBefore<br>gitlabAfter<br>gitlabTriggerPhrase<br></code></pre></td></tr></table></figure>
+
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
+<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
+</li>
+<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
+</li>
+<li><p>点击Save按钮保存</p>
+</li>
+</ol>
+<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
+<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
+</li>
+<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
+</li>
+</ol>
+<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user&#39;s api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
+<ol start="3">
+<li>点击Add webhook按钮添加Web hook</li>
+</ol>
+<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
+<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
+</li>
+</ol>
+<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
+]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Git</tag>
+        <tag>Jenkins</tag>
+        <tag>GitLab</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Jenkins构建GitHub合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull&#x2F;merge request)的本质”</a>中已经说明了合并请求(pull&#x2F;merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull&#x2F;merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull&#x2F;merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
@@ -1759,140 +1893,6 @@
         <tag>Git</tag>
         <tag>Github</tag>
         <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
-    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
-    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
-<span id="more"></span>
-
-<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
-<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
-<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
-</li>
-<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
-</li>
-<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
-</li>
-</ol>
-<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
-</li>
-<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
-</li>
-<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
-</li>
-<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
-<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        gitlab(<br>            <span class="hljs-symbol">triggerOnPush:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">triggerOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">triggerOpenMergeRequestOnPush:</span> <span class="hljs-string">&quot;source&quot;</span>,<br>            <span class="hljs-symbol">triggerOnNoteRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">noteRegex:</span> <span class="hljs-string">&quot;.*\\[run\\W+ci\\].*&quot;</span>,<br>            <span class="hljs-symbol">skipWorkInProgressMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">ciSkip:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">setBuildDescription:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addNoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addCiMessage:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">addVoteOnMergeRequest:</span> <span class="hljs-literal">true</span>,<br>            <span class="hljs-symbol">acceptMergeRequestOnSuccess:</span> <span class="hljs-literal">false</span>,<br>            <span class="hljs-symbol">branchFilterType:</span> <span class="hljs-string">&quot;NameBasedFilter&quot;</span>,<br>            <span class="hljs-symbol">includeBranchesSpec:</span> <span class="hljs-string">&quot;master&quot;</span>,<br>            <span class="hljs-symbol">excludeBranchesSpec:</span> <span class="hljs-string">&quot;&quot;</span><br>        )<br>    &#125;<br>    environment &#123;<br>        GITLAB_URL = <span class="hljs-string">&quot;http://mygitlab.philips.com&quot;</span><br>        GITLAB_ORG = <span class="hljs-string">&quot;mikesay&quot;</span><br>        GITLAB_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>        gitLabConnection <span class="hljs-string">&#x27;mygitlab&#x27;</span><br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;gitlab_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>    post &#123;<br>      failure &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;failed&#x27;</span><br>      &#125;<br>      success &#123;<br>        updateGitlabCommitStatus <span class="hljs-attr">name:</span> <span class="hljs-string">&#x27;build&#x27;</span>, <span class="hljs-attr">state:</span> <span class="hljs-string">&#x27;success&#x27;</span><br>      &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
-
-<ol>
-<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>triggerOnPush</td>
-<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnMergeRequest</td>
-<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOpenMergeRequestOnPush</td>
-<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnNoteRequest</td>
-<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
-</tr>
-<tr>
-<td>ciSkip</td>
-<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
-</tr>
-<tr>
-<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
-<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
- <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy"><span class="hljs-attr">refspec:</span> <span class="hljs-string">&#x27;+refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span><br></code></pre></td></tr></table></figure>
-</li>
-<li><p>39行: branches选择”origin&#x2F;mr&#x2F;${gitlabMergeRequestId}&#x2F;head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
- <figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">[<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]]<br></code></pre></td></tr></table></figure></li>
-</ol>
-<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
-<figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">gitlabBranch<br>gitlabSourceBranch<br>gitlabActionType<br>gitlabUserName<br>gitlabUserUsername<br>gitlabUserEmail<br>gitlabSourceRepoHomepage<br>gitlabSourceRepoName<br>gitlabSourceNamespace<br>gitlabSourceRepoURL<br>gitlabSourceRepoSshUrl<br>gitlabSourceRepoHttpUrl<br>gitlabMergeRequestTitle<br>gitlabMergeRequestDescription<br>gitlabMergeRequestId<br>gitlabMergeRequestIid<br>gitlabMergeRequestState<br>gitlabMergedByUser<br>gitlabMergeRequestAssignee<br>gitlabMergeRequestLastCommit<br>gitlabMergeRequestTargetProjectId<br>gitlabTargetBranch<br>gitlabTargetRepoName<br>gitlabTargetNamespace<br>gitlabTargetRepoSshUrl<br>gitlabTargetRepoHttpUrl<br>gitlabBefore<br>gitlabAfter<br>gitlabTriggerPhrase<br></code></pre></td></tr></table></figure>
-
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
-</li>
-</ol>
-<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
-<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
-</li>
-<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
-</li>
-<li><p>点击Save按钮保存</p>
-</li>
-</ol>
-<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
-<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
-</li>
-<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
-</li>
-</ol>
-<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user&#39;s api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
-<ol start="3">
-<li>点击Add webhook按钮添加Web hook</li>
-</ol>
-<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
-<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
-</li>
-</ol>
-<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
-]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>GitLab</tag>
       </tags>
   </entry>
   <entry>
