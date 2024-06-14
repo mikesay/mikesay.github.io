@@ -920,7 +920,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#101;&#x6a;&#105;&#97;&#x6e;&#x7a;&#x68;&#97;&#x6e;&#x67;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#111;&#x6d;">&#x6d;&#105;&#x6b;&#101;&#x6a;&#105;&#97;&#x6e;&#x7a;&#x68;&#97;&#x6e;&#x67;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#111;&#x6d;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#x6b;&#x65;&#106;&#105;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#x67;&#x40;&#x31;&#54;&#x33;&#46;&#x63;&#111;&#x6d;">&#109;&#x69;&#x6b;&#x65;&#106;&#105;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#x67;&#x40;&#x31;&#54;&#x33;&#46;&#x63;&#111;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -1255,6 +1255,86 @@
       </tags>
   </entry>
   <entry>
+    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
+    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
+    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
+<span id="more"></span>
+<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
+<ol>
+<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
+<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
+</ol>
+<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
+<ul>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
+</ul>
+<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
+<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
+<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
+</li>
+<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
+</li>
+</ol>
+<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
+<ul>
+<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
+<li>Pull request事件: 选择”Opened”和”Modified”</li>
+<li>Repository事件: 选择”Push”<blockquote>
+<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
+</blockquote>
+</li>
+</ul>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        bitBucketTrigger(<br>            [<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>,<br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerCreatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ], <br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerUpdatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ],<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRRepositoryTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<br>                                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRServerRepositoryPushActionFilter&#x27;</span>, <br>                                    <span class="hljs-symbol">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfNothingChanged:</span> <span class="hljs-literal">true</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfTagPush:</span> <span class="hljs-literal">false</span><br>                                ]<br>                ]<br>            ]<br>        )<br>    &#125;<br>    environment &#123;<br>        BITBUCKET_URL = <span class="hljs-string">&quot;http://130.147.249.221:7990&quot;</span><br>        BITBUCKET_ORG = <span class="hljs-string">&quot;miks&quot;</span><br>        BITBUCKET_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/pr/*/merge&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;ghe_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/pull-requests/*:refs/remotes/origin/pr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;BITBUCKET_URL&#125;/scm/$&#123;BITBUCKET_ORG&#125;/$&#123;BITBUCKET_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
+<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull&#x2F;merge request)的本质”</a>。</p>
+<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/$&#123;BITBUCKET_PULL_REQUEST_ID&#125;/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
+<blockquote>
+<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
+</blockquote>
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
+</li>
+</ol>
+<h1 id="创建合并请求-pull-x2F-merge-request-触发构建"><a href="#创建合并请求-pull-x2F-merge-request-触发构建" class="headerlink" title="创建合并请求(pull&#x2F;merge request)触发构建"></a>创建合并请求(pull&#x2F;merge request)触发构建</h1><ol>
+<li><p>Bitbucket的合并请求(pull&#x2F;merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
+</li>
+</ol>
+<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
+]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Git</tag>
+        <tag>Jenkins</tag>
+        <tag>Bitbucket</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>安装Python并搭建Python的虚拟开发环境</title>
     <url>/2020/01/31/install-python/</url>
     <content><![CDATA[<p>虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。</p>
@@ -1333,86 +1413,6 @@
 ]]></content>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
-    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
-    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
-<span id="more"></span>
-<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
-<ol>
-<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
-<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
-</ol>
-<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
-<ul>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
-</ul>
-<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
-<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
-<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
-</li>
-<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
-</li>
-</ol>
-<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
-<ul>
-<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
-<li>Pull request事件: 选择”Opened”和”Modified”</li>
-<li>Repository事件: 选择”Push”<blockquote>
-<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
-</blockquote>
-</li>
-</ul>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><code class="hljs groovy">pipeline &#123;<br>    agent &#123;<br>        label <span class="hljs-string">&#x27;common&#x27;</span><br>    &#125;<br>    triggers &#123;<br>        bitBucketTrigger(<br>            [<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>,<br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerCreatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ], <br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRPullRequestServerUpdatedActionFilter&#x27;</span>, <span class="hljs-attr">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>]<br>                ],<br>                [<br>                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRRepositoryTriggerFilter&#x27;</span>, <br>                    <span class="hljs-symbol">actionFilter:</span> [<br>                                    <span class="hljs-symbol">$class:</span> <span class="hljs-string">&#x27;BitBucketPPRServerRepositoryPushActionFilter&#x27;</span>, <br>                                    <span class="hljs-symbol">allowedBranches:</span> <span class="hljs-string">&#x27;&#x27;</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfNothingChanged:</span> <span class="hljs-literal">true</span>, <br>                                    <span class="hljs-symbol">triggerAlsoIfTagPush:</span> <span class="hljs-literal">false</span><br>                                ]<br>                ]<br>            ]<br>        )<br>    &#125;<br>    environment &#123;<br>        BITBUCKET_URL = <span class="hljs-string">&quot;http://130.147.249.221:7990&quot;</span><br>        BITBUCKET_ORG = <span class="hljs-string">&quot;miks&quot;</span><br>        BITBUCKET_REPO = <span class="hljs-string">&quot;mikesay-test-1&quot;</span><br>    &#125;<br>    options &#123;<br>        skipDefaultCheckout()<br>        ansiColor(<span class="hljs-string">&#x27;xterm&#x27;</span>)<br>    &#125;<br>    stages &#123;<br>        stage(<span class="hljs-string">&#x27;Checkout&#x27;</span>) &#123;<br>            steps &#123;<br>                script&#123;<br>                    <span class="hljs-keyword">def</span> scmVars =   checkout(<br>                                        [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;GitSCM&#x27;</span>, <span class="hljs-attr">branches:</span> [[<span class="hljs-attr">name:</span> <span class="hljs-string">&quot;origin/pr/*/merge&quot;</span>]], <br>                                        <span class="hljs-symbol">doGenerateSubmoduleConfigurations:</span> <span class="hljs-literal">false</span>,<br>                                        <span class="hljs-symbol">submoduleCfg:</span> [], <br>                                        <span class="hljs-symbol">extensions:</span> [<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="hljs-attr">relativeTargetDir:</span> <span class="hljs-string">&#x27;codes&#x27;</span>],<br>                                            [<span class="hljs-attr">$class:</span> <span class="hljs-string">&#x27;CleanBeforeCheckout&#x27;</span>]<br>                                        ],<br>                                        <span class="hljs-symbol">userRemoteConfigs:</span> [<br>                                                [<br>                                                    <span class="hljs-symbol">credentialsId:</span> <span class="hljs-string">&#x27;ghe_account&#x27;</span>, <br>                                                    <span class="hljs-symbol">name:</span> <span class="hljs-string">&#x27;origin&#x27;</span>, <br>                                                    <span class="hljs-symbol">refspec:</span> <span class="hljs-string">&#x27;+refs/pull-requests/*:refs/remotes/origin/pr/*&#x27;</span>, <br>                                                    <span class="hljs-symbol">url:</span> <span class="hljs-string">&quot;$&#123;BITBUCKET_URL&#125;/scm/$&#123;BITBUCKET_ORG&#125;/$&#123;BITBUCKET_REPO&#125;.git&quot;</span><br>                                                ]<br>                                            ]<br>                                        ]<br>                                    )<br>                    env.GIT_BRANCH = <span class="hljs-string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span><br>                    env.GIT_COMMIT = <span class="hljs-string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>        stage(<span class="hljs-string">&#x27;Build&#x27;</span>) &#123;<br>            steps &#123;<br>                dir(<span class="hljs-string">&#x27;codes&#x27;</span>) &#123;<br>                    sh <span class="hljs-string">&#x27;&#x27;&#x27;#!/bin/bash -l</span><br><span class="hljs-string">                        echo &quot;Start building!&quot;</span><br><span class="hljs-string">                    &#x27;&#x27;&#x27;</span><br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
-
-<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
-<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull&#x2F;merge request)的本质”</a>。</p>
-<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/$&#123;BITBUCKET_PULL_REQUEST_ID&#125;/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
-<blockquote>
-<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
-</blockquote>
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
-</li>
-</ol>
-<h1 id="创建合并请求-pull-x2F-merge-request-触发构建"><a href="#创建合并请求-pull-x2F-merge-request-触发构建" class="headerlink" title="创建合并请求(pull&#x2F;merge request)触发构建"></a>创建合并请求(pull&#x2F;merge request)触发构建</h1><ol>
-<li><p>Bitbucket的合并请求(pull&#x2F;merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
-</li>
-</ol>
-<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
-]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>Bitbucket</tag>
       </tags>
   </entry>
   <entry>
@@ -1896,6 +1896,47 @@
       </tags>
   </entry>
   <entry>
+    <title>Podman介绍和使用</title>
+    <url>/2021/10/10/podman-introduction-and-usage/</url>
+    <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022&#x2F;1&#x2F;31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
+<span id="more"></span>
+
+<h1 id="Podman"><a href="#Podman" class="headerlink" title="Podman"></a>Podman</h1><p><a href="https://podman.io/">Podman</a>是一个无守护进程的开源Linux 原生工具，旨在使用开放容器协议 (OCI) 容器和容器镜像轻松查找、运行、构建、共享和部署应用程序。对于无守护进程这一说法，主要是针对运行在Linux系统中的Podman，因为Podman原生是支持Linux系统的，而在Mac和Windows系统中，仍然需要启动一个Linux虚拟机来管理和运行容器。Podman的架构如下：<br><img src="/2021/10/10/podman-introduction-and-usage/1.jpg"></p>
+<p>Podman是从CRI-O独立出来的一个项目，目的是让CRI-O和Podman能够独立发展。Podman主要包含一个兼容Docker命令的CLI模块和libpod，libpod通过runc创建和执行容器进程。由于Podman底层使用的runc运行时，所以Podman能够使用任何符合OCI标准的镜像包括Docker镜像。</p>
+<h1 id="在Mac上安装Podman"><a href="#在Mac上安装Podman" class="headerlink" title="在Mac上安装Podman"></a>在Mac上安装Podman</h1><p>通过brew命令来安装Podman：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">brew install podman<br></code></pre></td></tr></table></figure>
+
+<p>通过以下命令在Mac主机上启动一个Podman管理的虚拟机：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman machine init<br>podman machine start<br></code></pre></td></tr></table></figure>
+
+<p>可以通过一下命令列出Podman管理的虚拟机：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman machine list<br></code></pre></td></tr></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/2.jpg"></p>
+<h1 id="拉取和执行Docker镜像"><a href="#拉取和执行Docker镜像" class="headerlink" title="拉取和执行Docker镜像"></a>拉取和执行Docker镜像</h1><p>通过以下命令拉取Docker镜像：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman pull nginx<br></code></pre></td></tr></table></figure>
+
+<p>通过以下命令检查所有Podman管理的镜像：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman images<br></code></pre></td></tr></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/3.jpg"></p>
+<p>通过以下命令启动镜像：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman run --name nginx -d -p 8000:80 nginx:latest<br></code></pre></td></tr></table></figure>
+<p>通过以下命令列出运行的容器：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman ps<br></code></pre></td></tr></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/4.jpg"></p>
+<p>停止，删除运行的容器：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman stop nginx<br>podman <span class="hljs-built_in">rm</span> nginx<br></code></pre></td></tr></table></figure>
+
+<h1 id="设置docker别名"><a href="#设置docker别名" class="headerlink" title="设置docker别名"></a>设置docker别名</h1><p>由于podman与Docker CLI命令具有一对多映射，因此建议按如下所示设置docker别名。这样也可以确保继续使用之前的Docker命令经验。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">alias</span> docker=podman<br></code></pre></td></tr></table></figure>
+
+]]></content>
+      <tags>
+        <tag>Docker</tag>
+        <tag>Container</tag>
+        <tag>Podman</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Git合并请求(Pull/Merge request)的本质</title>
     <url>/2020/01/29/pullrequest-essential/</url>
     <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull&#x2F;merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull&#x2F;merge request)合并到主分支上。合并请求(pull&#x2F;merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull&#x2F;merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull&#x2F;merget request)的实现来阐明合并请求(pull&#x2F;merge request)的本质。<span id="more"></span></p>
@@ -1954,47 +1995,6 @@
         <tag>Bitbucket</tag>
         <tag>Gitlab</tag>
         <tag>TFS Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Podman介绍和使用</title>
-    <url>/2021/10/10/podman-introduction-and-usage/</url>
-    <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022&#x2F;1&#x2F;31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
-<span id="more"></span>
-
-<h1 id="Podman"><a href="#Podman" class="headerlink" title="Podman"></a>Podman</h1><p><a href="https://podman.io/">Podman</a>是一个无守护进程的开源Linux 原生工具，旨在使用开放容器协议 (OCI) 容器和容器镜像轻松查找、运行、构建、共享和部署应用程序。对于无守护进程这一说法，主要是针对运行在Linux系统中的Podman，因为Podman原生是支持Linux系统的，而在Mac和Windows系统中，仍然需要启动一个Linux虚拟机来管理和运行容器。Podman的架构如下：<br><img src="/2021/10/10/podman-introduction-and-usage/1.jpg"></p>
-<p>Podman是从CRI-O独立出来的一个项目，目的是让CRI-O和Podman能够独立发展。Podman主要包含一个兼容Docker命令的CLI模块和libpod，libpod通过runc创建和执行容器进程。由于Podman底层使用的runc运行时，所以Podman能够使用任何符合OCI标准的镜像包括Docker镜像。</p>
-<h1 id="在Mac上安装Podman"><a href="#在Mac上安装Podman" class="headerlink" title="在Mac上安装Podman"></a>在Mac上安装Podman</h1><p>通过brew命令来安装Podman：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">brew install podman<br></code></pre></td></tr></table></figure>
-
-<p>通过以下命令在Mac主机上启动一个Podman管理的虚拟机：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman machine init<br>podman machine start<br></code></pre></td></tr></table></figure>
-
-<p>可以通过一下命令列出Podman管理的虚拟机：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman machine list<br></code></pre></td></tr></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/2.jpg"></p>
-<h1 id="拉取和执行Docker镜像"><a href="#拉取和执行Docker镜像" class="headerlink" title="拉取和执行Docker镜像"></a>拉取和执行Docker镜像</h1><p>通过以下命令拉取Docker镜像：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman pull nginx<br></code></pre></td></tr></table></figure>
-
-<p>通过以下命令检查所有Podman管理的镜像：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman images<br></code></pre></td></tr></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/3.jpg"></p>
-<p>通过以下命令启动镜像：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman run --name nginx -d -p 8000:80 nginx:latest<br></code></pre></td></tr></table></figure>
-<p>通过以下命令列出运行的容器：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman ps<br></code></pre></td></tr></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/4.jpg"></p>
-<p>停止，删除运行的容器：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">podman stop nginx<br>podman <span class="hljs-built_in">rm</span> nginx<br></code></pre></td></tr></table></figure>
-
-<h1 id="设置docker别名"><a href="#设置docker别名" class="headerlink" title="设置docker别名"></a>设置docker别名</h1><p>由于podman与Docker CLI命令具有一对多映射，因此建议按如下所示设置docker别名。这样也可以确保继续使用之前的Docker命令经验。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">alias</span> docker=podman<br></code></pre></td></tr></table></figure>
-
-]]></content>
-      <tags>
-        <tag>Docker</tag>
-        <tag>Container</tag>
-        <tag>Podman</tag>
       </tags>
   </entry>
   <entry>
