@@ -920,7 +920,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#107;&#101;&#x6a;&#x69;&#97;&#x6e;&#122;&#x68;&#x61;&#x6e;&#x67;&#x40;&#x31;&#x36;&#51;&#x2e;&#99;&#111;&#109;">&#x6d;&#105;&#107;&#101;&#x6a;&#x69;&#97;&#x6e;&#122;&#x68;&#x61;&#x6e;&#x67;&#x40;&#x31;&#x36;&#51;&#x2e;&#99;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#105;&#x6b;&#x65;&#x6a;&#x69;&#97;&#110;&#122;&#104;&#x61;&#110;&#103;&#x40;&#x31;&#x36;&#x33;&#x2e;&#99;&#111;&#x6d;">&#109;&#105;&#x6b;&#x65;&#x6a;&#x69;&#97;&#110;&#122;&#104;&#x61;&#110;&#103;&#x40;&#x31;&#x36;&#x33;&#x2e;&#99;&#111;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
