@@ -920,7 +920,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><code class="hljs bash">gpg --full-generate-key<br></code></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#x6b;&#x65;&#106;&#105;&#97;&#110;&#x7a;&#104;&#97;&#110;&#103;&#x40;&#49;&#54;&#x33;&#x2e;&#99;&#111;&#x6d;">&#109;&#x69;&#x6b;&#x65;&#106;&#105;&#97;&#110;&#x7a;&#104;&#97;&#110;&#103;&#x40;&#49;&#54;&#x33;&#x2e;&#99;&#111;&#x6d;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#x69;&#107;&#x65;&#x6a;&#x69;&#x61;&#110;&#122;&#x68;&#97;&#110;&#103;&#x40;&#x31;&#54;&#51;&#46;&#x63;&#111;&#x6d;">&#109;&#x69;&#107;&#x65;&#x6a;&#x69;&#x61;&#110;&#122;&#x68;&#97;&#110;&#103;&#x40;&#x31;&#54;&#51;&#46;&#x63;&#111;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -1505,118 +1505,6 @@
       </tags>
   </entry>
   <entry>
-    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
-    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
-    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI&#x2F;CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI&#x2F;CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI&#x2F;CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI&#x2F;CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
-<span id="more"></span>
-
-<h1 id="一个典型的CI-x2F-CD流水线"><a href="#一个典型的CI-x2F-CD流水线" class="headerlink" title="一个典型的CI&#x2F;CD流水线"></a>一个典型的CI&#x2F;CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
-<p>上图是个典型的CI&#x2F;CD流水线，由5个阶段（Phase）组成：Build&#x2F;UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
-<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
-<ul>
-<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
-</li>
-<li><p>调试CI&#x2F;CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
-</li>
-</ul>
-<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
-<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
-<ul>
-<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
-</li>
-<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
-</li>
-</ul>
-<blockquote>
-<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
-</blockquote>
-<p>下图是状态存储与恢复的过程。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
-<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
-<h1 id="在Jenkins上实现这个CI-x2F-CD流水线"><a href="#在Jenkins上实现这个CI-x2F-CD流水线" class="headerlink" title="在Jenkins上实现这个CI&#x2F;CD流水线"></a>在Jenkins上实现这个CI&#x2F;CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
-<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
-</li>
-<li><p>必要的插件</p>
-<ul>
-<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
-<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
-</li>
-<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
-<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI&#x2F;CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI&#x2F;CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
-</li>
-<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
-<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI&#x2F;CD流水线建设的要求。</p>
-</li>
-<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
-<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI&#x2F;CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
-</li>
-<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
-<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
-<blockquote>
-<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI&#x2F;CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
-</blockquote>
-</li>
-<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
-<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI&#x2F;CD流水线中能显示更多的信息。</p>
-</li>
-<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
-<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
-</li>
-<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
-<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI&#x2F;CD流水线必要的特征。</p>
-</li>
-<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
-<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
-</li>
-</ul>
-</li>
-</ol>
-<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI&#x2F;CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build&#x2F;UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
-<p>步骤的一些说明：</p>
-<ol>
-<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
-</li>
-<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
-</li>
-<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
-</li>
-<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
-</li>
-</ol>
-<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
-<p>步骤的一些说明：</p>
-<ol>
-<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
-</li>
-<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
-</li>
-<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
-</li>
-<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
-</li>
-<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
-</li>
-</ol>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
-<ol>
-<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
-</li>
-<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
-</li>
-</ol>
-<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
-]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins构建GitHub合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull&#x2F;merge request)的本质”</a>中已经说明了合并请求(pull&#x2F;merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull&#x2F;merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull&#x2F;merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
@@ -1758,6 +1646,118 @@
         <tag>CI/CD</tag>
         <tag>Git</tag>
         <tag>Github</tag>
+        <tag>Jenkins</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
+    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
+    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI&#x2F;CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI&#x2F;CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI&#x2F;CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI&#x2F;CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
+<span id="more"></span>
+
+<h1 id="一个典型的CI-x2F-CD流水线"><a href="#一个典型的CI-x2F-CD流水线" class="headerlink" title="一个典型的CI&#x2F;CD流水线"></a>一个典型的CI&#x2F;CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
+<p>上图是个典型的CI&#x2F;CD流水线，由5个阶段（Phase）组成：Build&#x2F;UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
+<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
+<ul>
+<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
+</li>
+<li><p>调试CI&#x2F;CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
+</li>
+</ul>
+<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
+<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
+<ul>
+<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
+</li>
+<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
+</li>
+</ul>
+<blockquote>
+<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
+</blockquote>
+<p>下图是状态存储与恢复的过程。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
+<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
+<h1 id="在Jenkins上实现这个CI-x2F-CD流水线"><a href="#在Jenkins上实现这个CI-x2F-CD流水线" class="headerlink" title="在Jenkins上实现这个CI&#x2F;CD流水线"></a>在Jenkins上实现这个CI&#x2F;CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
+<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
+</li>
+<li><p>必要的插件</p>
+<ul>
+<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
+<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
+</li>
+<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
+<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI&#x2F;CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI&#x2F;CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
+</li>
+<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
+<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI&#x2F;CD流水线建设的要求。</p>
+</li>
+<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
+<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI&#x2F;CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
+</li>
+<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
+<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
+<blockquote>
+<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI&#x2F;CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
+</blockquote>
+</li>
+<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
+<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI&#x2F;CD流水线中能显示更多的信息。</p>
+</li>
+<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
+<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
+</li>
+<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
+<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI&#x2F;CD流水线必要的特征。</p>
+</li>
+<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
+<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI&#x2F;CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build&#x2F;UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
+</li>
+<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
+</li>
+<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
+</li>
+<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
+</li>
+</ol>
+<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
+</li>
+<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
+</li>
+<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
+</li>
+<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
+</li>
+<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
+</li>
+</ol>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
+<ol>
+<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
+</li>
+<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
+</li>
+</ol>
+<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
+]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
         <tag>Jenkins</tag>
       </tags>
   </entry>
