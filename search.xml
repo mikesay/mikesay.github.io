@@ -173,10 +173,7 @@
 <li><p>云团队在自己的云账号里为RAM用户授予角色扮演权限”AliyunSTSAssumeRoleAccess”。</p>
 </li>
 <li><p>云团队的某个RAM用户首先登录云团队的账号，然后通过切换角色并输入业务部门云账号或者别名，以及对应的角色”CloudAdmin”就能切换进业务部门云账号里。</p>
-<div class="justified-gallery">
-
-<p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/4.png"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/5.png" alt="输入业务部门云账号ID或别名"></p>
-</div>
+<p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/4.png"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/5.png"></p>
 </li>
 <li><p>完成管理任务后点击“返回登录身份”退回到自己的账号。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/8.png"></p>
 </li>
@@ -544,79 +541,6 @@
       </tags>
   </entry>
   <entry>
-    <title>创建容器化的Azure DevOps Agent</title>
-    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
-    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
-<span id="more"></span>
-
-<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
-<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
-</blockquote>
-<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
-<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
-</li>
-<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
-</li>
-</ol>
-<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></table></figure>
-
-<p>环境变量说明：</p>
-<table>
-<thead>
-<tr>
-<th>变量名</th>
-<th>必需</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>AZP_URL</td>
-<td>是</td>
-<td>你的 Azure DevOps server url. i.e. https:&#x2F;&#x2F;<host>&#x2F;tfs</td>
-</tr>
-<tr>
-<td>AZP_TOKEN</td>
-<td>是</td>
-<td>前面申请的有足够权限的Personal Access Token</td>
-</tr>
-<tr>
-<td>AZP_AGENT_NAME</td>
-<td>是</td>
-<td>显示在Agent Pool中的Agent名字</td>
-</tr>
-<tr>
-<td>AZP_POOL</td>
-<td>是</td>
-<td>Agent pool的名字</td>
-</tr>
-<tr>
-<td>AZP_AGENTPACKAGE_URL</td>
-<td>否</td>
-<td>显式指定Azure Agent包的下载地址</td>
-</tr>
-</tbody></table>
-<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
-<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">&#x27;Accept:application/json;api-version=3.0-preview&#x27;</span> \</span><br><span class="line">  <span class="string">&quot;&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
-<p>getaddrinfo ENOTFOUND …</p>
-<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到&#x2F;etc&#x2F;hosts中。具体如下：</p>
-<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></table></figure>
-
-]]></content>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Azure DevOps</tag>
-        <tag>Docker</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>在Kubernetes中创建自托管GitHub Actions Runner</title>
     <url>/2022/04/10/creating-self-hosted-actions-runner-k8s/</url>
     <content><![CDATA[<p>GitHub Actions 是一个持续集成和交付 (CI&#x2F;CD) 平台，利用工作流（Workflow）可以创建自动化构建、测试和部署管道。GitHub Actions不仅限于构建CI&#x2F;CD工作流，它可以定义任意的工作流完成某个自动化的功能， 例如，定义一个工作流，当代码仓库中有新的问题创建时自动添加适当的标签。GitHub Action Runner是执行工作流的组件。本文介绍了利用开源项目<a href="https://github.com/actions/actions-runner-controller">Actions Runner Controller</a>在Kubernetes中部署和管理自托管的容器版本的GitHub Action Runner。</p>
@@ -715,6 +639,79 @@
         <tag>Git</tag>
         <tag>Github</tag>
         <tag>K8s</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建容器化的Azure DevOps Agent</title>
+    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
+    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
+<span id="more"></span>
+
+<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
+<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
+</blockquote>
+<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
+<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
+</li>
+<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
+</li>
+</ol>
+<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></table></figure>
+
+<p>环境变量说明：</p>
+<table>
+<thead>
+<tr>
+<th>变量名</th>
+<th>必需</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AZP_URL</td>
+<td>是</td>
+<td>你的 Azure DevOps server url. i.e. https:&#x2F;&#x2F;<host>&#x2F;tfs</td>
+</tr>
+<tr>
+<td>AZP_TOKEN</td>
+<td>是</td>
+<td>前面申请的有足够权限的Personal Access Token</td>
+</tr>
+<tr>
+<td>AZP_AGENT_NAME</td>
+<td>是</td>
+<td>显示在Agent Pool中的Agent名字</td>
+</tr>
+<tr>
+<td>AZP_POOL</td>
+<td>是</td>
+<td>Agent pool的名字</td>
+</tr>
+<tr>
+<td>AZP_AGENTPACKAGE_URL</td>
+<td>否</td>
+<td>显式指定Azure Agent包的下载地址</td>
+</tr>
+</tbody></table>
+<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
+<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">&#x27;Accept:application/json;api-version=3.0-preview&#x27;</span> \</span><br><span class="line">  <span class="string">&quot;&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
+<p>getaddrinfo ENOTFOUND …</p>
+<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到&#x2F;etc&#x2F;hosts中。具体如下：</p>
+<figure class="highlight sh"><table><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Azure DevOps</tag>
+        <tag>Docker</tag>
       </tags>
   </entry>
   <entry>
@@ -890,7 +887,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#101;&#x6a;&#105;&#97;&#110;&#x7a;&#104;&#97;&#x6e;&#103;&#x40;&#x31;&#x36;&#x33;&#46;&#x63;&#x6f;&#x6d;">&#x6d;&#105;&#x6b;&#101;&#x6a;&#105;&#97;&#110;&#x7a;&#104;&#97;&#x6e;&#103;&#x40;&#x31;&#x36;&#x33;&#46;&#x63;&#x6f;&#x6d;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#101;&#106;&#x69;&#97;&#110;&#122;&#x68;&#97;&#x6e;&#103;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#x6f;&#109;">&#x6d;&#105;&#x6b;&#101;&#106;&#x69;&#97;&#110;&#122;&#x68;&#97;&#x6e;&#103;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#x6f;&#109;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -2154,6 +2151,71 @@
       </tags>
   </entry>
   <entry>
+    <title>浅析SonarQube插件的运行原理</title>
+    <url>/2021/01/17/sonar-plugin-principle/</url>
+    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
+<span id="more"></span>
+
+<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar</span><br><span class="line">(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.</span><br><span class="line">[ERROR] Re-run Maven using the -X switch to enable full debug logging.</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] For more information about the errors and possible solutions, please read the following articles:</span><br><span class="line">[ERROR] [Help 1]</span><br></pre></td></tr></table></figure>
+
+<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[INFO] Load metrics repository</span><br><span class="line">[INFO] Load metrics repository (done) | time=268ms</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java]</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms</span><br><span class="line">[INFO] Sensor PmdSensor [pmd]</span><br><span class="line">[INFO] Execute PMD 6.10.0</span><br><span class="line">[INFO] Execute PMD 6.10.0 (done) | time=15ms</span><br></pre></td></tr></table></figure>
+
+<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="tag">&lt;/<span class="name">pmd.plugin.version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.version</span>&gt;</span>6.29.0<span class="tag">&lt;/<span class="name">pmd.version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.plugin.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-java<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-javascript<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-jsp<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">failOnViolation</span>&gt;</span>true<span class="tag">&lt;/<span class="name">failOnViolation</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">printFailingErrors</span>&gt;</span>true<span class="tag">&lt;/<span class="name">printFailingErrors</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">targetJdk</span>&gt;</span>14<span class="tag">&lt;/<span class="name">targetJdk</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">executions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">execution</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">goals</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">goal</span>&gt;</span>check<span class="tag">&lt;/<span class="name">goal</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">goals</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">execution</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">executions</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---</span><br><span class="line">[INFO] PMD version: 6.29.0</span><br><span class="line">[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml</span><br></pre></td></tr></table></figure>
+<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] SonarQube version: 7.9.4</span><br><span class="line">[INFO] Default locale: &quot;en_CN&quot;, source code encoding: &quot;UTF-8&quot;</span><br><span class="line">[INFO] Load global settings</span><br><span class="line">[INFO] Load global settings (done) | time=1676ms</span><br><span class="line">[INFO] Server id: 9C01C42E-1505da3410fc976</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] Load/download plugins</span><br><span class="line">[INFO] Load plugins index</span><br><span class="line">[INFO] Load plugins index (done) | time=295ms</span><br><span class="line">[INFO] Load/download plugins (done) | time=501ms</span><br></pre></td></tr></table></figure>
+
+<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa</span><br><span class="line"></span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar</span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar_unzip</span><br></pre></td></tr></table></figure>
+
+<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
+<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib</span><br><span class="line"></span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar</span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar</span><br></pre></td></tr></table></figure>
+<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
+<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
+<ul>
+<li><p>SonarQube服务包含了三个进程：</p>
+<ul>
+<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
+<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
+<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
+</ul>
+</li>
+<li><p>SonarQube数据库用来存储：</p>
+<ul>
+<li>SonarQube实例的配置（安全，插件配置等）</li>
+<li>项目或视图的质量快照</li>
+</ul>
+</li>
+<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
+</li>
+<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
+</li>
+<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
+</li>
+</ul>
+<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
+<ul>
+<li>扫描器(Scanner)，执行源代码分析</li>
+<li>计算引擎，整合扫描器的结果</li>
+<li>Web应用</li>
+<li>SonarLint</li>
+</ul>
+<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
+<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@ScannerSide</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PmdConfiguration</span> &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PROPERTY_GENERATE_XML</span> <span class="operator">=</span> <span class="string">&quot;sonar.pmd.generateXml&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PMD_RESULT_XML</span> <span class="operator">=</span> <span class="string">&quot;pmd-result.xml&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Logger</span> <span class="variable">LOG</span> <span class="operator">=</span> Loggers.get(PmdConfiguration.class);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> FileSystem fileSystem;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Configuration settings;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PmdConfiguration</span><span class="params">(FileSystem fileSystem, Configuration settings)</span> &#123;</span><br><span class="line">        <span class="built_in">this</span>.fileSystem = fileSystem;</span><br><span class="line">        <span class="built_in">this</span>.settings = settings;</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
+]]></content>
+      <tags>
+        <tag>SonarQube</tag>
+        <tag>Code Quality</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Terraform如何调用Ansible配置虚拟机资源</title>
     <url>/2018/11/14/terraform-call-ansible/</url>
     <content><![CDATA[<p>Terraform（<a href="https://www.terraform.io/">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
@@ -2275,71 +2337,6 @@
 ]]></content>
       <tags>
         <tag>Windows</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>浅析SonarQube插件的运行原理</title>
-    <url>/2021/01/17/sonar-plugin-principle/</url>
-    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
-<span id="more"></span>
-
-<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar</span><br><span class="line">(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.</span><br><span class="line">[ERROR] Re-run Maven using the -X switch to enable full debug logging.</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] For more information about the errors and possible solutions, please read the following articles:</span><br><span class="line">[ERROR] [Help 1]</span><br></pre></td></tr></table></figure>
-
-<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[INFO] Load metrics repository</span><br><span class="line">[INFO] Load metrics repository (done) | time=268ms</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java]</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms</span><br><span class="line">[INFO] Sensor PmdSensor [pmd]</span><br><span class="line">[INFO] Execute PMD 6.10.0</span><br><span class="line">[INFO] Execute PMD 6.10.0 (done) | time=15ms</span><br></pre></td></tr></table></figure>
-
-<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="tag">&lt;/<span class="name">pmd.plugin.version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.version</span>&gt;</span>6.29.0<span class="tag">&lt;/<span class="name">pmd.version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.plugin.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-java<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-javascript<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-jsp<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;pmd.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">failOnViolation</span>&gt;</span>true<span class="tag">&lt;/<span class="name">failOnViolation</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">printFailingErrors</span>&gt;</span>true<span class="tag">&lt;/<span class="name">printFailingErrors</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">targetJdk</span>&gt;</span>14<span class="tag">&lt;/<span class="name">targetJdk</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">executions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">execution</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">goals</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">goal</span>&gt;</span>check<span class="tag">&lt;/<span class="name">goal</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">goals</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">execution</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">executions</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></table></figure>
-<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---</span><br><span class="line">[INFO] PMD version: 6.29.0</span><br><span class="line">[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml</span><br></pre></td></tr></table></figure>
-<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] SonarQube version: 7.9.4</span><br><span class="line">[INFO] Default locale: &quot;en_CN&quot;, source code encoding: &quot;UTF-8&quot;</span><br><span class="line">[INFO] Load global settings</span><br><span class="line">[INFO] Load global settings (done) | time=1676ms</span><br><span class="line">[INFO] Server id: 9C01C42E-1505da3410fc976</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] Load/download plugins</span><br><span class="line">[INFO] Load plugins index</span><br><span class="line">[INFO] Load plugins index (done) | time=295ms</span><br><span class="line">[INFO] Load/download plugins (done) | time=501ms</span><br></pre></td></tr></table></figure>
-
-<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa</span><br><span class="line"></span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar</span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar_unzip</span><br></pre></td></tr></table></figure>
-
-<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
-<figure class="highlight txt"><table><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib</span><br><span class="line"></span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar</span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar</span><br></pre></td></tr></table></figure>
-<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
-<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
-<ul>
-<li><p>SonarQube服务包含了三个进程：</p>
-<ul>
-<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
-<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
-<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
-</ul>
-</li>
-<li><p>SonarQube数据库用来存储：</p>
-<ul>
-<li>SonarQube实例的配置（安全，插件配置等）</li>
-<li>项目或视图的质量快照</li>
-</ul>
-</li>
-<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
-</li>
-<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
-</li>
-<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
-</li>
-</ul>
-<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
-<ul>
-<li>扫描器(Scanner)，执行源代码分析</li>
-<li>计算引擎，整合扫描器的结果</li>
-<li>Web应用</li>
-<li>SonarLint</li>
-</ul>
-<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
-<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@ScannerSide</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PmdConfiguration</span> &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PROPERTY_GENERATE_XML</span> <span class="operator">=</span> <span class="string">&quot;sonar.pmd.generateXml&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PMD_RESULT_XML</span> <span class="operator">=</span> <span class="string">&quot;pmd-result.xml&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Logger</span> <span class="variable">LOG</span> <span class="operator">=</span> Loggers.get(PmdConfiguration.class);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> FileSystem fileSystem;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Configuration settings;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PmdConfiguration</span><span class="params">(FileSystem fileSystem, Configuration settings)</span> &#123;</span><br><span class="line">        <span class="built_in">this</span>.fileSystem = fileSystem;</span><br><span class="line">        <span class="built_in">this</span>.settings = settings;</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-
-<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
-]]></content>
-      <tags>
-        <tag>SonarQube</tag>
-        <tag>Code Quality</tag>
       </tags>
   </entry>
 </search>
