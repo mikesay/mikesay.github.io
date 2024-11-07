@@ -266,100 +266,6 @@
       </tags>
   </entry>
   <entry>
-    <title>创建自签名TLS/SSL证书和私钥</title>
-    <url>/2018/12/30/create-self-signed-ssl/</url>
-    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS&#x2F;SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
-<span id="more"></span>
-
-<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
-<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
-</blockquote>
-<p>使用openssl命令生成自签名证书和私钥对：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
-<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
-<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
-<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
-<li>-days 365: 设置证书的有效期为1年（365天）。</li>
-<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
-<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
-<li>-out: 告诉openssl生成的自签名证书和路径。</li>
-</ul>
-<p>命令会提示以下的一些输入：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></table></figure>
-
-<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
-<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”&#x2F;etc&#x2F;nginx&#x2F;ssl-certs”；</p>
-</li>
-<li><p>编辑”&#x2F;etc&#x2F;nginx&#x2F;sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>重新加载配置文件：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>重启Nginx服务：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></table></figure></li>
-</ol>
-<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
-<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
-</blockquote>
-<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-certificates</span><br></pre></td></tr></table></figure></li>
-</ol>
-<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”中删除证书：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-certificates --fresh</span><br></pre></td></tr></table></figure></li>
-</ol>
-<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”:</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-trust</span><br></pre></td></tr></table></figure></li>
-</ol>
-<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”中删除证书：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-trust</span><br></pre></td></tr></table></figure></li>
-</ol>
-<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-
-<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo security delete-certificate -c <span class="string">&quot;&lt;Common Name of existing certificate&gt;&quot;</span></span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
-</blockquote>
-<p>或者通过证书的SHA-1码来删除：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">&quot;</span></span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
-</blockquote>
-<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">certutil -addstore -f &quot;Root&quot; selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
-
-<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">certutil -delstore &quot;Root&quot; &lt;Cert Serial Number&gt;</span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
-</blockquote>
-]]></content>
-      <tags>
-        <tag>System Management</tag>
-        <tag>TLS/SSL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Minikube创建本地Kubernetes集群</title>
     <url>/2021/10/06/create-kubernetes-minikube/</url>
     <content><![CDATA[<p>在学习和使用Kubernetes的过程中，都希望能够快速创建一个本地的Kubernetes集群用作测试之用。之前一直使用docker公司的docker for mac创建的Kubernetes集群，但是经常出现启动不起来的问题，也没有详细的日志来定位问题，另外docker for mac创建的集群不支持改变系统组件的配置，比如修改API Server或Kubelet的参数，开启某些Alpaha版本的特性等。虽然Minikube已经存在很久，而且早于docker for mac，但是由于种种原因没能尝试，后经同事推荐，尝试了一下，确实蛮强大。本文将简单介绍下Minikube，以及在Mac主机上用Minikube创建和配置一个本地集群。</p>
@@ -538,6 +444,100 @@
       <tags>
         <tag>Kubernetes</tag>
         <tag>Minikube</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建自签名TLS/SSL证书和私钥</title>
+    <url>/2018/12/30/create-self-signed-ssl/</url>
+    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS&#x2F;SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
+<span id="more"></span>
+
+<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
+<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
+</blockquote>
+<p>使用openssl命令生成自签名证书和私钥对：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
+<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
+<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
+<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
+<li>-days 365: 设置证书的有效期为1年（365天）。</li>
+<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
+<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
+<li>-out: 告诉openssl生成的自签名证书和路径。</li>
+</ul>
+<p>命令会提示以下的一些输入：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></table></figure>
+
+<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
+<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”&#x2F;etc&#x2F;nginx&#x2F;ssl-certs”；</p>
+</li>
+<li><p>编辑”&#x2F;etc&#x2F;nginx&#x2F;sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>重新加载配置文件：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>重启Nginx服务：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
+<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
+</blockquote>
+<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-certificates</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“&#x2F;usr&#x2F;local&#x2F;share&#x2F;ca-certificates”中删除证书：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-certificates --fresh</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-trust</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors”中删除证书：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo update-ca-trust</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
+
+<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo security delete-certificate -c <span class="string">&quot;&lt;Common Name of existing certificate&gt;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
+</blockquote>
+<p>或者通过证书的SHA-1码来删除：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">&quot;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
+</blockquote>
+<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">certutil -addstore -f &quot;Root&quot; selfsigned-certificate.crt</span><br></pre></td></tr></table></figure>
+
+<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">certutil -delstore &quot;Root&quot; &lt;Cert Serial Number&gt;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
+</blockquote>
+]]></content>
+      <tags>
+        <tag>System Management</tag>
+        <tag>TLS/SSL</tag>
       </tags>
   </entry>
   <entry>
@@ -887,7 +887,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#101;&#x6a;&#x69;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#64;&#49;&#x36;&#51;&#x2e;&#99;&#x6f;&#109;">&#x6d;&#105;&#x6b;&#101;&#x6a;&#x69;&#x61;&#x6e;&#122;&#104;&#x61;&#x6e;&#103;&#64;&#49;&#x36;&#51;&#x2e;&#99;&#x6f;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#x65;&#106;&#x69;&#97;&#x6e;&#x7a;&#104;&#x61;&#x6e;&#103;&#x40;&#x31;&#x36;&#x33;&#46;&#x63;&#111;&#x6d;">&#x6d;&#105;&#x6b;&#x65;&#106;&#x69;&#97;&#x6e;&#x7a;&#104;&#x61;&#x6e;&#103;&#x40;&#x31;&#x36;&#x33;&#46;&#x63;&#111;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
