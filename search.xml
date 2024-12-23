@@ -887,7 +887,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#105;&#x6b;&#101;&#106;&#105;&#97;&#x6e;&#122;&#x68;&#x61;&#110;&#x67;&#64;&#x31;&#54;&#51;&#x2e;&#99;&#111;&#109;">&#x6d;&#105;&#x6b;&#101;&#106;&#105;&#97;&#x6e;&#122;&#x68;&#x61;&#110;&#x67;&#64;&#x31;&#54;&#51;&#x2e;&#99;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#105;&#107;&#101;&#106;&#105;&#x61;&#110;&#122;&#x68;&#97;&#x6e;&#103;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#x6f;&#x6d;">&#109;&#105;&#107;&#101;&#106;&#105;&#x61;&#110;&#122;&#x68;&#97;&#x6e;&#103;&#64;&#x31;&#54;&#51;&#x2e;&#x63;&#x6f;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -1576,140 +1576,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
-    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
-    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
-<span id="more"></span>
-
-<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
-<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
-<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
-</li>
-<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
-</li>
-<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
-</li>
-</ol>
-<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
-</li>
-<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
-</li>
-<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
-</li>
-<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
-<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">pipeline &#123;</span><br><span class="line">    agent &#123;</span><br><span class="line">        label <span class="string">&#x27;common&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    triggers &#123;</span><br><span class="line">        gitlab(</span><br><span class="line">            <span class="symbol">triggerOnPush:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">triggerOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">triggerOpenMergeRequestOnPush:</span> <span class="string">&quot;source&quot;</span>,</span><br><span class="line">            <span class="symbol">triggerOnNoteRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">noteRegex:</span> <span class="string">&quot;.*\\[run\\W+ci\\].*&quot;</span>,</span><br><span class="line">            <span class="symbol">skipWorkInProgressMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">ciSkip:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">setBuildDescription:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addNoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addCiMessage:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addVoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">acceptMergeRequestOnSuccess:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">branchFilterType:</span> <span class="string">&quot;NameBasedFilter&quot;</span>,</span><br><span class="line">            <span class="symbol">includeBranchesSpec:</span> <span class="string">&quot;master&quot;</span>,</span><br><span class="line">            <span class="symbol">excludeBranchesSpec:</span> <span class="string">&quot;&quot;</span></span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">    environment &#123;</span><br><span class="line">        GITLAB_URL = <span class="string">&quot;http://mygitlab.philips.com&quot;</span></span><br><span class="line">        GITLAB_ORG = <span class="string">&quot;mikesay&quot;</span></span><br><span class="line">        GITLAB_REPO = <span class="string">&quot;mikesay-test-1&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    options &#123;</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">&#x27;xterm&#x27;</span>)</span><br><span class="line">        gitLabConnection <span class="string">&#x27;mygitlab&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    stages &#123;</span><br><span class="line">        stage(<span class="string">&#x27;Checkout&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                script&#123;</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="attr">relativeTargetDir:</span> <span class="string">&#x27;codes&#x27;</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;CleanBeforeCheckout&#x27;</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">&#x27;gitlab_account&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">&#x27;origin&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">&#x27;+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">&quot;$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git&quot;</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        stage(<span class="string">&#x27;Build&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                dir(<span class="string">&#x27;codes&#x27;</span>) &#123;</span><br><span class="line">                    sh <span class="string">&#x27;&#x27;&#x27;#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo &quot;Start building!&quot;</span></span><br><span class="line"><span class="string">                    &#x27;&#x27;&#x27;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    post &#123;</span><br><span class="line">      failure &#123;</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">&#x27;build&#x27;</span>, <span class="attr">state:</span> <span class="string">&#x27;failed&#x27;</span></span><br><span class="line">      &#125;</span><br><span class="line">      success &#123;</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">&#x27;build&#x27;</span>, <span class="attr">state:</span> <span class="string">&#x27;success&#x27;</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ol>
-<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>triggerOnPush</td>
-<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnMergeRequest</td>
-<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOpenMergeRequestOnPush</td>
-<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnNoteRequest</td>
-<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
-</tr>
-<tr>
-<td>ciSkip</td>
-<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
-</tr>
-<tr>
-<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
-<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
- <figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">&#x27;+refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>39行: branches选择”origin&#x2F;mr&#x2F;${gitlabMergeRequestId}&#x2F;head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
- <figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]]</span><br></pre></td></tr></table></figure></li>
-</ol>
-<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
-<figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">gitlabBranch</span><br><span class="line">gitlabSourceBranch</span><br><span class="line">gitlabActionType</span><br><span class="line">gitlabUserName</span><br><span class="line">gitlabUserUsername</span><br><span class="line">gitlabUserEmail</span><br><span class="line">gitlabSourceRepoHomepage</span><br><span class="line">gitlabSourceRepoName</span><br><span class="line">gitlabSourceNamespace</span><br><span class="line">gitlabSourceRepoURL</span><br><span class="line">gitlabSourceRepoSshUrl</span><br><span class="line">gitlabSourceRepoHttpUrl</span><br><span class="line">gitlabMergeRequestTitle</span><br><span class="line">gitlabMergeRequestDescription</span><br><span class="line">gitlabMergeRequestId</span><br><span class="line">gitlabMergeRequestIid</span><br><span class="line">gitlabMergeRequestState</span><br><span class="line">gitlabMergedByUser</span><br><span class="line">gitlabMergeRequestAssignee</span><br><span class="line">gitlabMergeRequestLastCommit</span><br><span class="line">gitlabMergeRequestTargetProjectId</span><br><span class="line">gitlabTargetBranch</span><br><span class="line">gitlabTargetRepoName</span><br><span class="line">gitlabTargetNamespace</span><br><span class="line">gitlabTargetRepoSshUrl</span><br><span class="line">gitlabTargetRepoHttpUrl</span><br><span class="line">gitlabBefore</span><br><span class="line">gitlabAfter</span><br><span class="line">gitlabTriggerPhrase</span><br></pre></td></tr></table></figure>
-
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
-</li>
-</ol>
-<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
-<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
-</li>
-<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
-</li>
-<li><p>点击Save按钮保存</p>
-</li>
-</ol>
-<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
-<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
-</li>
-<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
-</li>
-</ol>
-<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user&#39;s api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
-<ol start="3">
-<li>点击Add webhook按钮添加Web hook</li>
-</ol>
-<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
-<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
-</li>
-</ol>
-<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
-]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>GitLab</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins构建GitHub合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull&#x2F;merge request)的本质”</a>中已经说明了合并请求(pull&#x2F;merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull&#x2F;merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull&#x2F;merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
@@ -1852,6 +1718,140 @@
         <tag>Git</tag>
         <tag>Github</tag>
         <tag>Jenkins</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
+    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
+    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
+<span id="more"></span>
+
+<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
+<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
+<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
+</li>
+<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
+</li>
+<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
+</li>
+</ol>
+<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
+</li>
+<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
+</li>
+<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
+<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">pipeline &#123;</span><br><span class="line">    agent &#123;</span><br><span class="line">        label <span class="string">&#x27;common&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    triggers &#123;</span><br><span class="line">        gitlab(</span><br><span class="line">            <span class="symbol">triggerOnPush:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">triggerOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">triggerOpenMergeRequestOnPush:</span> <span class="string">&quot;source&quot;</span>,</span><br><span class="line">            <span class="symbol">triggerOnNoteRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">noteRegex:</span> <span class="string">&quot;.*\\[run\\W+ci\\].*&quot;</span>,</span><br><span class="line">            <span class="symbol">skipWorkInProgressMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">ciSkip:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">setBuildDescription:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addNoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addCiMessage:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addVoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">acceptMergeRequestOnSuccess:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">branchFilterType:</span> <span class="string">&quot;NameBasedFilter&quot;</span>,</span><br><span class="line">            <span class="symbol">includeBranchesSpec:</span> <span class="string">&quot;master&quot;</span>,</span><br><span class="line">            <span class="symbol">excludeBranchesSpec:</span> <span class="string">&quot;&quot;</span></span><br><span class="line">        )</span><br><span class="line">    &#125;</span><br><span class="line">    environment &#123;</span><br><span class="line">        GITLAB_URL = <span class="string">&quot;http://mygitlab.philips.com&quot;</span></span><br><span class="line">        GITLAB_ORG = <span class="string">&quot;mikesay&quot;</span></span><br><span class="line">        GITLAB_REPO = <span class="string">&quot;mikesay-test-1&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    options &#123;</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">&#x27;xterm&#x27;</span>)</span><br><span class="line">        gitLabConnection <span class="string">&#x27;mygitlab&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    stages &#123;</span><br><span class="line">        stage(<span class="string">&#x27;Checkout&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                script&#123;</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="attr">relativeTargetDir:</span> <span class="string">&#x27;codes&#x27;</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;CleanBeforeCheckout&#x27;</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">&#x27;gitlab_account&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">&#x27;origin&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">&#x27;+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">&quot;$&#123;GITLAB_URL&#125;/$&#123;GITLAB_ORG&#125;/$&#123;GITLAB_REPO&#125;.git&quot;</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        stage(<span class="string">&#x27;Build&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                dir(<span class="string">&#x27;codes&#x27;</span>) &#123;</span><br><span class="line">                    sh <span class="string">&#x27;&#x27;&#x27;#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo &quot;Start building!&quot;</span></span><br><span class="line"><span class="string">                    &#x27;&#x27;&#x27;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    post &#123;</span><br><span class="line">      failure &#123;</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">&#x27;build&#x27;</span>, <span class="attr">state:</span> <span class="string">&#x27;failed&#x27;</span></span><br><span class="line">      &#125;</span><br><span class="line">      success &#123;</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">&#x27;build&#x27;</span>, <span class="attr">state:</span> <span class="string">&#x27;success&#x27;</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>triggerOnPush</td>
+<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnMergeRequest</td>
+<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOpenMergeRequestOnPush</td>
+<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnNoteRequest</td>
+<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
+</tr>
+<tr>
+<td>ciSkip</td>
+<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
+</tr>
+<tr>
+<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
+<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
+ <figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">&#x27;+refs/merge-requests/*:refs/remotes/origin/mr/*&#x27;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>39行: branches选择”origin&#x2F;mr&#x2F;${gitlabMergeRequestId}&#x2F;head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
+ <figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;origin/mr/$&#123;gitlabMergeRequestId&#125;/head&quot;</span>]]</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
+<figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">gitlabBranch</span><br><span class="line">gitlabSourceBranch</span><br><span class="line">gitlabActionType</span><br><span class="line">gitlabUserName</span><br><span class="line">gitlabUserUsername</span><br><span class="line">gitlabUserEmail</span><br><span class="line">gitlabSourceRepoHomepage</span><br><span class="line">gitlabSourceRepoName</span><br><span class="line">gitlabSourceNamespace</span><br><span class="line">gitlabSourceRepoURL</span><br><span class="line">gitlabSourceRepoSshUrl</span><br><span class="line">gitlabSourceRepoHttpUrl</span><br><span class="line">gitlabMergeRequestTitle</span><br><span class="line">gitlabMergeRequestDescription</span><br><span class="line">gitlabMergeRequestId</span><br><span class="line">gitlabMergeRequestIid</span><br><span class="line">gitlabMergeRequestState</span><br><span class="line">gitlabMergedByUser</span><br><span class="line">gitlabMergeRequestAssignee</span><br><span class="line">gitlabMergeRequestLastCommit</span><br><span class="line">gitlabMergeRequestTargetProjectId</span><br><span class="line">gitlabTargetBranch</span><br><span class="line">gitlabTargetRepoName</span><br><span class="line">gitlabTargetNamespace</span><br><span class="line">gitlabTargetRepoSshUrl</span><br><span class="line">gitlabTargetRepoHttpUrl</span><br><span class="line">gitlabBefore</span><br><span class="line">gitlabAfter</span><br><span class="line">gitlabTriggerPhrase</span><br></pre></td></tr></table></figure>
+
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
+<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
+</li>
+<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
+</li>
+<li><p>点击Save按钮保存</p>
+</li>
+</ol>
+<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
+<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
+</li>
+<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
+</li>
+</ol>
+<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user&#39;s api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
+<ol start="3">
+<li>点击Add webhook按钮添加Web hook</li>
+</ol>
+<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
+<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
+</li>
+</ol>
+<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
+]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Git</tag>
+        <tag>Jenkins</tag>
+        <tag>GitLab</tag>
       </tags>
   </entry>
   <entry>
