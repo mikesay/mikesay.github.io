@@ -887,7 +887,7 @@
 <li><p>执行下面的命令创建GPG公钥和私钥</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></table></figure>
 <blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#109;&#105;&#107;&#x65;&#x6a;&#x69;&#97;&#x6e;&#x7a;&#x68;&#x61;&#x6e;&#103;&#x40;&#49;&#x36;&#51;&#46;&#x63;&#111;&#109;">&#109;&#105;&#107;&#x65;&#x6a;&#x69;&#97;&#x6e;&#x7a;&#x68;&#x61;&#x6e;&#103;&#x40;&#49;&#x36;&#51;&#46;&#x63;&#111;&#109;</a>。</p>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:&#x6d;&#x69;&#x6b;&#x65;&#x6a;&#105;&#x61;&#110;&#x7a;&#x68;&#97;&#x6e;&#x67;&#64;&#49;&#x36;&#51;&#x2e;&#x63;&#111;&#x6d;">&#x6d;&#x69;&#x6b;&#x65;&#x6a;&#105;&#x61;&#110;&#x7a;&#x68;&#97;&#x6e;&#x67;&#64;&#49;&#x36;&#51;&#x2e;&#x63;&#111;&#x6d;</a>。</p>
 </blockquote>
 </li>
 <li><p>导出GPG公钥和私钥</p>
@@ -1576,151 +1576,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建GitHub合并请求(Pull Request)</title>
-    <url>/2020/01/30/jenkins-github-pullrequest/</url>
-    <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull&#x2F;merge request)的本质”</a>中已经说明了合并请求(pull&#x2F;merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull&#x2F;merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull&#x2F;merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
-<span id="more"></span>
-
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Github-Pull-Request-Builder插件"><a href="#安装Github-Pull-Request-Builder插件" class="headerlink" title="安装Github Pull Request Builder插件"></a>安装Github Pull Request Builder插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<h2 id="配置Github-Pull-Request-Builder插件"><a href="#配置Github-Pull-Request-Builder插件" class="headerlink" title="配置Github Pull Request Builder插件"></a>配置Github Pull Request Builder插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
-</li>
-<li><p>定位到”Github Pull Request Builder“插件，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/01/30/jenkins-github-pullrequest/2.png"></p>
-</li>
-<li><p>创建”Username with password”类型的凭证，用户名和密码是有足够权限的Github账号和密码<br><img src="/2020/01/30/jenkins-github-pullrequest/3.png"></p>
-</li>
-<li><p>配置GitHub Server API URL，选择步骤3创建的凭证，可以点击”Connect to API”按钮测试基本连接<br><img src="/2020/01/30/jenkins-github-pullrequest/4.png"></p>
-<p>对于GitHub Server API URL的值，GitHub和GitHub Enterprise是有区别的：</p>
-<table>
-<thead>
-<tr>
-<th>GitHub Server</th>
-<th>API Endpoint</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>GitHub Enterprise</td>
-<td>http(s):&#x2F;&#x2F;[hostname]&#x2F;api&#x2F;v3</td>
-<td></td>
-</tr>
-<tr>
-<td>GitHub</td>
-<td><a href="https://api.github.com/">https://api.github.com</a></td>
-<td>Receive the v3 version of the REST API.</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="配置Github代码仓库"><a href="#配置Github代码仓库" class="headerlink" title="配置Github代码仓库"></a>配置Github代码仓库</h1><ol>
-<li><p>打开Git仓库设置页面，点击Hooks -&gt; Add webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/5.png"></p>
-</li>
-<li><p>输入Palyload URL(<code>http://jenkins-url/github-webhook/</code>)，选择Content Type为application&#x2F;json<br><img src="/2020/01/30/jenkins-github-pullrequest/6.png"></p>
-</li>
-<li><p>选择”Let me select individual envents”自定义webhook触发事件<br><img src="/2020/01/30/jenkins-github-pullrequest/7.png"></p>
-</li>
-<li><p>只选择”Pull requests”事件，并点击”Add webhook”保存Webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/8.png"></p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">pipeline &#123;</span><br><span class="line">    agent &#123;</span><br><span class="line">        label <span class="string">&#x27;common&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    environment &#123;</span><br><span class="line">        GITHUB_URL = <span class="string">&quot;http://xxx.github.xxxx.com&quot;</span></span><br><span class="line">        GITHUB_ORG = <span class="string">&quot;MikeSay&quot;</span></span><br><span class="line">        GITHUB_REPO = <span class="string">&quot;mikesay-test-1&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    options &#123;</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">&#x27;xterm&#x27;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    stages &#123;</span><br><span class="line">        stage(<span class="string">&#x27;Checkout&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                script&#123;</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;$&#123;ghprbActualCommit&#125;&quot;</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="attr">relativeTargetDir:</span> <span class="string">&#x27;codes&#x27;</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;CleanBeforeCheckout&#x27;</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">&#x27;ghe_account&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">&#x27;origin&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">&#x27;+refs/pull/*:refs/remotes/origin/pr/*&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">&quot;$&#123;GITHUB_URL&#125;/$&#123;GITHUB_ORG&#125;/$&#123;GITHUB_REPO&#125;.git&quot;</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        stage(<span class="string">&#x27;Build&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                dir(<span class="string">&#x27;codes&#x27;</span>) &#123;</span><br><span class="line">                    sh <span class="string">&#x27;&#x27;&#x27;#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo &quot;Start building!&quot;</span></span><br><span class="line"><span class="string">                        cat README.md</span></span><br><span class="line"><span class="string">                    &#x27;&#x27;&#x27;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    post &#123;</span><br><span class="line">        always &#123;</span><br><span class="line">            junit <span class="attr">allowEmptyResults:</span> <span class="literal">true</span>, <span class="attr">testResults:</span> <span class="string">&#x27;codes/build/test-results/test/**/*.xml&#x27;</span></span><br><span class="line">            <span class="comment">// send to email</span></span><br><span class="line">            emailext(</span><br><span class="line">                <span class="symbol">subject:</span> <span class="string">&#x27;$DEFAULT_SUBJECT&#x27;</span>,</span><br><span class="line">                <span class="symbol">body:</span> <span class="string">&#x27;$DEFAULT_CONTENT&#x27;</span>,</span><br><span class="line">                <span class="symbol">recipientProviders:</span> [</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">&#x27;CulpritsRecipientProvider&#x27;</span>],</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">&#x27;RequesterRecipientProvider&#x27;</span>],</span><br><span class="line">                [<span class="attr">$class :</span> <span class="string">&#x27;DevelopersRecipientProvider&#x27;</span>]</span><br><span class="line">                ],</span><br><span class="line">                <span class="symbol">replyTo:</span> <span class="string">&#x27;$DEFAULT_REPLYTO&#x27;</span>,</span><br><span class="line">                <span class="symbol">to:</span> <span class="string">&#x27;$DEFAULT_RECIPIENTS&#x27;</span></span><br><span class="line">            )</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>30行: 添加refspec获取合并请求(pull&#x2F;merge request)的分支信息</p>
-<figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">&#x27;+refs/pull/*:refs/remotes/origin/pr/*&#x27;</span></span><br></pre></td></tr></table></figure>
-<p>19行: branches选择环境变量”ghprbActualCommit”，它是合并请求(pull&#x2F;merge request)分支对应的提交号</p>
-<figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;$&#123;ghprbActualCommit&#125;&quot;</span>]]</span><br></pre></td></tr></table></figure>
-<p>除了”ghprbActualCommit”外，github pull request builder插件还往当前构建中注入了许多变量供构建Job使用，如下表：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>sha1</td>
-<td>origin&#x2F;pr&#x2F;6&#x2F;merge</td>
-<td>合并请求(pull&#x2F;merge request)分支。在构建Job中也可以用${sha1}来代替${ghprbActualCommit}</td>
-</tr>
-<tr>
-<td>ghprbAuthorRepoGitUrl</td>
-<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git</a></td>
-<td>合并请求(pull&#x2F;merge request)所在仓库的http地址</td>
-</tr>
-<tr>
-<td>ghprbPullId</td>
-<td>6</td>
-<td>合并请求(pull&#x2F;merge request)的ID号</td>
-</tr>
-<tr>
-<td>ghprbTargetBranch</td>
-<td>master</td>
-<td>合并请求(pull&#x2F;merge request)的主分支</td>
-</tr>
-<tr>
-<td>ghprbSourceBranch</td>
-<td>test9</td>
-<td>合并请求(pull&#x2F;merge request)的私有分支</td>
-</tr>
-<tr>
-<td>ghprbPullTitle</td>
-<td>Test9.</td>
-<td>合并请求(pull&#x2F;merge request)的标题</td>
-</tr>
-<tr>
-<td>ghprbPullLink</td>
-<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6</a></td>
-<td>合并请求(pull&#x2F;merge request)的http地址</td>
-</tr>
-</tbody></table>
-<p>可以从当前合并请求(pull&#x2F;merge request)的构建参数中获得所有变量名和当前值：<br><img src="/2020/01/30/jenkins-github-pullrequest/16.png"></p>
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字”github-preflight”，点击”Ok”按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/9.png"></p>
-</li>
-<li><p>在”GitHub Project”段，输入”Project url”。注，”Project url”是Git仓库的http地址去除”.git”后缀<br><img src="/2020/01/30/jenkins-github-pullrequest/10.png"></p>
-</li>
-<li><p>在”Build Triggers”段，选择”GitHub Pull Request Builder”<br><img src="/2020/01/30/jenkins-github-pullrequest/11.png"></p>
-<ul>
-<li>GitHub API credentials: 之前配置的GitHub API</li>
-<li>Trigger phrase: 在合并请求(pull&#x2F;merge request)的注释或标题里加入trigger phrase内容会自动触发新的构建</li>
-<li>Skip build phrase: 在合并请求(pull&#x2F;merge request)的注释或标题里加入skip build phrase内容则不会触发构建</li>
-</ul>
-</li>
-<li><p>如果需要构建每个合并请求(pull&#x2F;merge request)，勾选”Build every pull request automatically without asking (Dangerous)”，在”Whitelist Target Branches”输入主分支”master”<br><img src="/2020/01/30/jenkins-github-pullrequest/12.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile<br><img src="/2020/01/30/jenkins-github-pullrequest/13.png"></p>
-</li>
-</ol>
-<h1 id="创建合并请求-pull-x2F-merge-request-触发构建"><a href="#创建合并请求-pull-x2F-merge-request-触发构建" class="headerlink" title="创建合并请求(pull&#x2F;merge request)触发构建"></a>创建合并请求(pull&#x2F;merge request)触发构建</h1><ol>
-<li><p>Github的合并请求(pull&#x2F;merge request)<br><img src="/2020/01/30/jenkins-github-pullrequest/14.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/01/30/jenkins-github-pullrequest/15.png"></p>
-</li>
-</ol>
-]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Github</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins构建GitLab合并请求(Merge Request)</title>
     <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
     <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
@@ -2149,6 +2004,151 @@
       <tags>
         <tag>Hexo</tag>
         <tag>Gitee</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Jenkins构建GitHub合并请求(Pull Request)</title>
+    <url>/2020/01/30/jenkins-github-pullrequest/</url>
+    <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull&#x2F;merge request)的本质”</a>中已经说明了合并请求(pull&#x2F;merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull&#x2F;merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull&#x2F;merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
+<span id="more"></span>
+
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Github-Pull-Request-Builder插件"><a href="#安装Github-Pull-Request-Builder插件" class="headerlink" title="安装Github Pull Request Builder插件"></a>安装Github Pull Request Builder插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<h2 id="配置Github-Pull-Request-Builder插件"><a href="#配置Github-Pull-Request-Builder插件" class="headerlink" title="配置Github Pull Request Builder插件"></a>配置Github Pull Request Builder插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”Github Pull Request Builder“插件，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/01/30/jenkins-github-pullrequest/2.png"></p>
+</li>
+<li><p>创建”Username with password”类型的凭证，用户名和密码是有足够权限的Github账号和密码<br><img src="/2020/01/30/jenkins-github-pullrequest/3.png"></p>
+</li>
+<li><p>配置GitHub Server API URL，选择步骤3创建的凭证，可以点击”Connect to API”按钮测试基本连接<br><img src="/2020/01/30/jenkins-github-pullrequest/4.png"></p>
+<p>对于GitHub Server API URL的值，GitHub和GitHub Enterprise是有区别的：</p>
+<table>
+<thead>
+<tr>
+<th>GitHub Server</th>
+<th>API Endpoint</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GitHub Enterprise</td>
+<td>http(s):&#x2F;&#x2F;[hostname]&#x2F;api&#x2F;v3</td>
+<td></td>
+</tr>
+<tr>
+<td>GitHub</td>
+<td><a href="https://api.github.com/">https://api.github.com</a></td>
+<td>Receive the v3 version of the REST API.</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="配置Github代码仓库"><a href="#配置Github代码仓库" class="headerlink" title="配置Github代码仓库"></a>配置Github代码仓库</h1><ol>
+<li><p>打开Git仓库设置页面，点击Hooks -&gt; Add webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/5.png"></p>
+</li>
+<li><p>输入Palyload URL(<code>http://jenkins-url/github-webhook/</code>)，选择Content Type为application&#x2F;json<br><img src="/2020/01/30/jenkins-github-pullrequest/6.png"></p>
+</li>
+<li><p>选择”Let me select individual envents”自定义webhook触发事件<br><img src="/2020/01/30/jenkins-github-pullrequest/7.png"></p>
+</li>
+<li><p>只选择”Pull requests”事件，并点击”Add webhook”保存Webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-x2F-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull&#x2F;merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">pipeline &#123;</span><br><span class="line">    agent &#123;</span><br><span class="line">        label <span class="string">&#x27;common&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">    environment &#123;</span><br><span class="line">        GITHUB_URL = <span class="string">&quot;http://xxx.github.xxxx.com&quot;</span></span><br><span class="line">        GITHUB_ORG = <span class="string">&quot;MikeSay&quot;</span></span><br><span class="line">        GITHUB_REPO = <span class="string">&quot;mikesay-test-1&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    options &#123;</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">&#x27;xterm&#x27;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    stages &#123;</span><br><span class="line">        stage(<span class="string">&#x27;Checkout&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                script&#123;</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;$&#123;ghprbActualCommit&#125;&quot;</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;RelativeTargetDirectory&#x27;</span>, <span class="attr">relativeTargetDir:</span> <span class="string">&#x27;codes&#x27;</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">&#x27;CleanBeforeCheckout&#x27;</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">&#x27;ghe_account&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">&#x27;origin&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">&#x27;+refs/pull/*:refs/remotes/origin/pr/*&#x27;</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">&quot;$&#123;GITHUB_URL&#125;/$&#123;GITHUB_ORG&#125;/$&#123;GITHUB_REPO&#125;.git&quot;</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">&quot;$&#123;scmVars.GIT_BRANCH&#125;&quot;</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">&quot;$&#123;scmVars.GIT_COMMIT&#125;&quot;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        stage(<span class="string">&#x27;Build&#x27;</span>) &#123;</span><br><span class="line">            steps &#123;</span><br><span class="line">                dir(<span class="string">&#x27;codes&#x27;</span>) &#123;</span><br><span class="line">                    sh <span class="string">&#x27;&#x27;&#x27;#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo &quot;Start building!&quot;</span></span><br><span class="line"><span class="string">                        cat README.md</span></span><br><span class="line"><span class="string">                    &#x27;&#x27;&#x27;</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">    post &#123;</span><br><span class="line">        always &#123;</span><br><span class="line">            junit <span class="attr">allowEmptyResults:</span> <span class="literal">true</span>, <span class="attr">testResults:</span> <span class="string">&#x27;codes/build/test-results/test/**/*.xml&#x27;</span></span><br><span class="line">            <span class="comment">// send to email</span></span><br><span class="line">            emailext(</span><br><span class="line">                <span class="symbol">subject:</span> <span class="string">&#x27;$DEFAULT_SUBJECT&#x27;</span>,</span><br><span class="line">                <span class="symbol">body:</span> <span class="string">&#x27;$DEFAULT_CONTENT&#x27;</span>,</span><br><span class="line">                <span class="symbol">recipientProviders:</span> [</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">&#x27;CulpritsRecipientProvider&#x27;</span>],</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">&#x27;RequesterRecipientProvider&#x27;</span>],</span><br><span class="line">                [<span class="attr">$class :</span> <span class="string">&#x27;DevelopersRecipientProvider&#x27;</span>]</span><br><span class="line">                ],</span><br><span class="line">                <span class="symbol">replyTo:</span> <span class="string">&#x27;$DEFAULT_REPLYTO&#x27;</span>,</span><br><span class="line">                <span class="symbol">to:</span> <span class="string">&#x27;$DEFAULT_RECIPIENTS&#x27;</span></span><br><span class="line">            )</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>30行: 添加refspec获取合并请求(pull&#x2F;merge request)的分支信息</p>
+<figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">&#x27;+refs/pull/*:refs/remotes/origin/pr/*&#x27;</span></span><br></pre></td></tr></table></figure>
+<p>19行: branches选择环境变量”ghprbActualCommit”，它是合并请求(pull&#x2F;merge request)分支对应的提交号</p>
+<figure class="highlight groovy"><table><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">&#x27;GitSCM&#x27;</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">&quot;$&#123;ghprbActualCommit&#125;&quot;</span>]]</span><br></pre></td></tr></table></figure>
+<p>除了”ghprbActualCommit”外，github pull request builder插件还往当前构建中注入了许多变量供构建Job使用，如下表：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>sha1</td>
+<td>origin&#x2F;pr&#x2F;6&#x2F;merge</td>
+<td>合并请求(pull&#x2F;merge request)分支。在构建Job中也可以用${sha1}来代替${ghprbActualCommit}</td>
+</tr>
+<tr>
+<td>ghprbAuthorRepoGitUrl</td>
+<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git</a></td>
+<td>合并请求(pull&#x2F;merge request)所在仓库的http地址</td>
+</tr>
+<tr>
+<td>ghprbPullId</td>
+<td>6</td>
+<td>合并请求(pull&#x2F;merge request)的ID号</td>
+</tr>
+<tr>
+<td>ghprbTargetBranch</td>
+<td>master</td>
+<td>合并请求(pull&#x2F;merge request)的主分支</td>
+</tr>
+<tr>
+<td>ghprbSourceBranch</td>
+<td>test9</td>
+<td>合并请求(pull&#x2F;merge request)的私有分支</td>
+</tr>
+<tr>
+<td>ghprbPullTitle</td>
+<td>Test9.</td>
+<td>合并请求(pull&#x2F;merge request)的标题</td>
+</tr>
+<tr>
+<td>ghprbPullLink</td>
+<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6</a></td>
+<td>合并请求(pull&#x2F;merge request)的http地址</td>
+</tr>
+</tbody></table>
+<p>可以从当前合并请求(pull&#x2F;merge request)的构建参数中获得所有变量名和当前值：<br><img src="/2020/01/30/jenkins-github-pullrequest/16.png"></p>
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字”github-preflight”，点击”Ok”按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/9.png"></p>
+</li>
+<li><p>在”GitHub Project”段，输入”Project url”。注，”Project url”是Git仓库的http地址去除”.git”后缀<br><img src="/2020/01/30/jenkins-github-pullrequest/10.png"></p>
+</li>
+<li><p>在”Build Triggers”段，选择”GitHub Pull Request Builder”<br><img src="/2020/01/30/jenkins-github-pullrequest/11.png"></p>
+<ul>
+<li>GitHub API credentials: 之前配置的GitHub API</li>
+<li>Trigger phrase: 在合并请求(pull&#x2F;merge request)的注释或标题里加入trigger phrase内容会自动触发新的构建</li>
+<li>Skip build phrase: 在合并请求(pull&#x2F;merge request)的注释或标题里加入skip build phrase内容则不会触发构建</li>
+</ul>
+</li>
+<li><p>如果需要构建每个合并请求(pull&#x2F;merge request)，勾选”Build every pull request automatically without asking (Dangerous)”，在”Whitelist Target Branches”输入主分支”master”<br><img src="/2020/01/30/jenkins-github-pullrequest/12.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile<br><img src="/2020/01/30/jenkins-github-pullrequest/13.png"></p>
+</li>
+</ol>
+<h1 id="创建合并请求-pull-x2F-merge-request-触发构建"><a href="#创建合并请求-pull-x2F-merge-request-触发构建" class="headerlink" title="创建合并请求(pull&#x2F;merge request)触发构建"></a>创建合并请求(pull&#x2F;merge request)触发构建</h1><ol>
+<li><p>Github的合并请求(pull&#x2F;merge request)<br><img src="/2020/01/30/jenkins-github-pullrequest/14.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/01/30/jenkins-github-pullrequest/15.png"></p>
+</li>
+</ol>
+]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Git</tag>
+        <tag>Github</tag>
+        <tag>Jenkins</tag>
       </tags>
   </entry>
   <entry>
