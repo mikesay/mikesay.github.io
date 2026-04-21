@@ -231,6 +231,118 @@
       </tags>
   </entry>
   <entry>
+    <title>创建自签名TLS/SSL证书和私钥</title>
+    <url>/2018/12/30/create-self-signed-ssl/</url>
+    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
+<span id="more"></span>
+
+<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
+<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
+</blockquote>
+<p>使用openssl命令生成自签名证书和私钥对：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
+<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
+<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
+<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
+<li>-days 365: 设置证书的有效期为1年（365天）。</li>
+<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
+<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
+<li>-out: 告诉openssl生成的自签名证书和路径。</li>
+</ul>
+<p>命令会提示以下的一些输入：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
+<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”/etc/nginx/ssl-certs”；</p>
+</li>
+<li><p>编辑”/etc/nginx/sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>重新加载配置文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>重启Nginx服务：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
+<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
+</blockquote>
+<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“/usr/local/share/ca-certificates”:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“/usr/local/share/ca-certificates”中删除证书：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates --fresh</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -c <span class="string">"&lt;Common Name of existing certificate&gt;"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
+</blockquote>
+<p>或者通过证书的SHA-1码来删除：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
+</blockquote>
+<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -addstore -f "Root" selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -delstore "Root" &lt;Cert Serial Number&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
+</blockquote>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <tags>
+        <tag>System Management</tag>
+        <tag>TLS/SSL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Kind创建本地Kubernetes集群</title>
     <url>/2021/10/10/create-kubernetes-kind/</url>
     <content><![CDATA[<p>在<a href="https://www.mikesay.com/2021/10/06/create-kubernetes-minikube/">Minikube创建本地Kubernetes集群</a>一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用，而通过Hypervisor驱动创建的Kubernetes集群也需要一些额外的配置(端口转发)才能在VPN的情况下使用。Kind是另一款在Docker容器中创建并运行本地Kubernetes集群的工具，比Minikube的Docker驱动更全面，同时也无需额外的配置就可以在VPN的情况下使用。本文将简单介绍下Kind，并在Mac主机上用Kind创建一个本地Kubernetes集群。</p>
@@ -526,6 +638,216 @@
       </tags>
   </entry>
   <entry>
+    <title>从Git仓库中永久清理脏数据</title>
+    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
+    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
+<span id="more"></span>
+<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
+<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
+<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
+</li>
+<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
+<ul>
+<li>替换文件中的敏感信息</li>
+<li>删除文件或文件夹</li>
+</ul>
+<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
+<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
+<li><p>通过mirror的方式克隆代码仓库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+
+<p>比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
+</blockquote>
+<ul>
+<li><p>替换所有文件中的指定的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>需要打开强制推送到Git仓库的功能</p>
+</blockquote>
+</li>
+<li><p>替换指定文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
+<blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
+</blockquote>
+<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
+<ul>
+<li>获取指定文件在所有变更历史中对应的blob id号</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>从变更历史中删除指定的文件(Blob)</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
+</blockquote>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <tags>
+        <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建容器化的Azure DevOps Agent</title>
+    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
+    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
+<span id="more"></span>
+
+<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
+<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
+</blockquote>
+<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
+<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
+</li>
+<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
+</li>
+</ol>
+<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>环境变量说明：</p>
+<table>
+<thead>
+<tr>
+<th>变量名</th>
+<th>必需</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AZP_URL</td>
+<td>是</td>
+<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
+</tr>
+<tr>
+<td>AZP_TOKEN</td>
+<td>是</td>
+<td>前面申请的有足够权限的Personal Access Token</td>
+</tr>
+<tr>
+<td>AZP_AGENT_NAME</td>
+<td>是</td>
+<td>显示在Agent Pool中的Agent名字</td>
+</tr>
+<tr>
+<td>AZP_POOL</td>
+<td>是</td>
+<td>Agent pool的名字</td>
+</tr>
+<tr>
+<td>AZP_AGENTPACKAGE_URL</td>
+<td>否</td>
+<td>显式指定Azure Agent包的下载地址</td>
+</tr>
+</tbody></table>
+<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
+<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
+<p>getaddrinfo ENOTFOUND …</p>
+<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Azure DevOps</tag>
+        <tag>Docker</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在Kubernetes中创建自托管GitHub Actions Runner</title>
     <url>/2022/04/10/creating-self-hosted-actions-runner-k8s/</url>
     <content><![CDATA[<p>GitHub Actions 是一个持续集成和交付 (CI/CD) 平台，利用工作流（Workflow）可以创建自动化构建、测试和部署管道。GitHub Actions不仅限于构建CI/CD工作流，它可以定义任意的工作流完成某个自动化的功能， 例如，定义一个工作流，当代码仓库中有新的问题创建时自动添加适当的标签。GitHub Action Runner是执行工作流的组件。本文介绍了利用开源项目<a href="https://github.com/actions/actions-runner-controller">Actions Runner Controller</a>在Kubernetes中部署和管理自托管的容器版本的GitHub Action Runner。</p>
@@ -645,214 +967,11 @@
       </script>]]></content>
       <tags>
         <tag>Kubernetes</tag>
+        <tag>Git</tag>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
-        <tag>Git</tag>
         <tag>Github</tag>
         <tag>K8s</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>创建自签名TLS/SSL证书和私钥</title>
-    <url>/2018/12/30/create-self-signed-ssl/</url>
-    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
-<span id="more"></span>
-
-<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
-<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
-</blockquote>
-<p>使用openssl命令生成自签名证书和私钥对：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
-<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
-<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
-<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
-<li>-days 365: 设置证书的有效期为1年（365天）。</li>
-<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
-<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
-<li>-out: 告诉openssl生成的自签名证书和路径。</li>
-</ul>
-<p>命令会提示以下的一些输入：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
-<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”/etc/nginx/ssl-certs”；</p>
-</li>
-<li><p>编辑”/etc/nginx/sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>重新加载配置文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>重启Nginx服务：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
-<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
-</blockquote>
-<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/usr/local/share/ca-certificates”:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/usr/local/share/ca-certificates”中删除证书：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates --fresh</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-
-<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -c <span class="string">"&lt;Common Name of existing certificate&gt;"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
-</blockquote>
-<p>或者通过证书的SHA-1码来删除：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
-</blockquote>
-<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -addstore -f "Root" selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-
-<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -delstore "Root" &lt;Cert Serial Number&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
-</blockquote>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <tags>
-        <tag>System Management</tag>
-        <tag>TLS/SSL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>创建容器化的Azure DevOps Agent</title>
-    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
-    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
-<span id="more"></span>
-
-<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
-<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
-</blockquote>
-<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
-<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
-</li>
-<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
-</li>
-</ol>
-<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>环境变量说明：</p>
-<table>
-<thead>
-<tr>
-<th>变量名</th>
-<th>必需</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>AZP_URL</td>
-<td>是</td>
-<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
-</tr>
-<tr>
-<td>AZP_TOKEN</td>
-<td>是</td>
-<td>前面申请的有足够权限的Personal Access Token</td>
-</tr>
-<tr>
-<td>AZP_AGENT_NAME</td>
-<td>是</td>
-<td>显示在Agent Pool中的Agent名字</td>
-</tr>
-<tr>
-<td>AZP_POOL</td>
-<td>是</td>
-<td>Agent pool的名字</td>
-</tr>
-<tr>
-<td>AZP_AGENTPACKAGE_URL</td>
-<td>否</td>
-<td>显式指定Azure Agent包的下载地址</td>
-</tr>
-</tbody></table>
-<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
-<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
-<p>getaddrinfo ENOTFOUND …</p>
-<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Azure DevOps</tag>
-        <tag>Docker</tag>
       </tags>
   </entry>
   <entry>
@@ -1017,125 +1136,6 @@
 <li><p><a href="https://github.com/StackExchange/blackbox">BlackBox</a><br>BlackBox既支持Git也支持其它的版本管理系统，例如Mercurial和Subversion。BlackBox支持加密某个文本串而不是整个文件，这正好可以弥补git-secret只能加密整个文件的缺点。可以抽空做个深入研究看BlackBox是否支持git-secret其它的一些操作。</p>
 </li>
 </ul>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>从Git仓库中永久清理脏数据</title>
-    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
-    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
-<span id="more"></span>
-<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
-<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
-<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
-</li>
-<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
-<ul>
-<li>替换文件中的敏感信息</li>
-<li>删除文件或文件夹</li>
-</ul>
-<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
-<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
-<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
-<li><p>通过mirror的方式克隆代码仓库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-
-<p>比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
-</blockquote>
-</li>
-</ul>
-<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
-</blockquote>
-<ul>
-<li><p>替换所有文件中的指定的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>需要打开强制推送到Git仓库的功能</p>
-</blockquote>
-</li>
-<li><p>替换指定文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
-<blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
-</blockquote>
-<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
-<ul>
-<li>获取指定文件在所有变更历史中对应的blob id号</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>从变更历史中删除指定的文件(Blob)</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
-</blockquote>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -1403,6 +1403,104 @@
       </tags>
   </entry>
   <entry>
+    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
+    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
+    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
+<span id="more"></span>
+<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
+<ol>
+<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
+<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
+</ol>
+<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
+<ul>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
+</ul>
+<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
+<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
+<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
+</li>
+<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
+</li>
+</ol>
+<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
+<ul>
+<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
+<li>Pull request事件: 选择”Opened”和”Modified”</li>
+<li>Repository事件: 选择”Push”<blockquote>
+<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
+</blockquote>
+</li>
+</ul>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        bitBucketTrigger(</span><br><span class="line">            [</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>,</span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerCreatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ], </span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerUpdatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ],</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRRepositoryTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [</span><br><span class="line">                                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRServerRepositoryPushActionFilter'</span>, </span><br><span class="line">                                    <span class="symbol">allowedBranches:</span> <span class="string">''</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfNothingChanged:</span> <span class="literal">true</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfTagPush:</span> <span class="literal">false</span></span><br><span class="line">                                ]</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        BITBUCKET_URL = <span class="string">"http://130.147.249.221:7990"</span></span><br><span class="line">        BITBUCKET_ORG = <span class="string">"miks"</span></span><br><span class="line">        BITBUCKET_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/pr/*/merge"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull-requests/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${BITBUCKET_URL}/scm/${BITBUCKET_ORG}/${BITBUCKET_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
+<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull/merge request)的本质”</a>。</p>
+<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/${BITBUCKET_PULL_REQUEST_ID}/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
+<blockquote>
+<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
+</blockquote>
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
+</li>
+</ol>
+<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
+<li><p>Bitbucket的合并请求(pull/merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
+</li>
+</ol>
+<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+        <tag>Bitbucket</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Jenkins Job的并发执行</title>
     <url>/2019/07/08/jenkins-concurrent-builds/</url>
     <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
@@ -1633,234 +1731,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
-    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
-    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
-<span id="more"></span>
-<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
-<ol>
-<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
-<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
-</ol>
-<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
-<ul>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
-</ul>
-<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
-<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
-<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
-</li>
-<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
-</li>
-</ol>
-<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
-<ul>
-<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
-<li>Pull request事件: 选择”Opened”和”Modified”</li>
-<li>Repository事件: 选择”Push”<blockquote>
-<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
-</blockquote>
-</li>
-</ul>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        bitBucketTrigger(</span><br><span class="line">            [</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>,</span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerCreatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ], </span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerUpdatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ],</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRRepositoryTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [</span><br><span class="line">                                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRServerRepositoryPushActionFilter'</span>, </span><br><span class="line">                                    <span class="symbol">allowedBranches:</span> <span class="string">''</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfNothingChanged:</span> <span class="literal">true</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfTagPush:</span> <span class="literal">false</span></span><br><span class="line">                                ]</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        BITBUCKET_URL = <span class="string">"http://130.147.249.221:7990"</span></span><br><span class="line">        BITBUCKET_ORG = <span class="string">"miks"</span></span><br><span class="line">        BITBUCKET_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/pr/*/merge"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull-requests/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${BITBUCKET_URL}/scm/${BITBUCKET_ORG}/${BITBUCKET_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
-<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull/merge request)的本质”</a>。</p>
-<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/${BITBUCKET_PULL_REQUEST_ID}/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
-<blockquote>
-<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
-</blockquote>
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
-</li>
-</ol>
-<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
-<li><p>Bitbucket的合并请求(pull/merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
-</li>
-</ol>
-<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>Bitbucket</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
-    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
-    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
-<span id="more"></span>
-
-<h1 id="一个典型的CI-CD流水线"><a href="#一个典型的CI-CD流水线" class="headerlink" title="一个典型的CI/CD流水线"></a>一个典型的CI/CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
-<p>上图是个典型的CI/CD流水线，由5个阶段（Phase）组成：Build/UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
-<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
-<ul>
-<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
-</li>
-<li><p>调试CI/CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
-</li>
-</ul>
-<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
-<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
-<ul>
-<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
-</li>
-<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
-</li>
-</ul>
-<blockquote>
-<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
-</blockquote>
-<p>下图是状态存储与恢复的过程。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
-<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
-<h1 id="在Jenkins上实现这个CI-CD流水线"><a href="#在Jenkins上实现这个CI-CD流水线" class="headerlink" title="在Jenkins上实现这个CI/CD流水线"></a>在Jenkins上实现这个CI/CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
-<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
-</li>
-<li><p>必要的插件</p>
-<ul>
-<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
-<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
-</li>
-<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
-<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI/CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI/CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
-</li>
-<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
-<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI/CD流水线建设的要求。</p>
-</li>
-<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
-<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI/CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
-</li>
-<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
-<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
-<blockquote>
-<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI/CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
-</blockquote>
-</li>
-<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
-<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI/CD流水线中能显示更多的信息。</p>
-</li>
-<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
-<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
-</li>
-<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
-<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI/CD流水线必要的特征。</p>
-</li>
-<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
-<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
-</li>
-</ul>
-</li>
-</ol>
-<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI/CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build/UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
-<p>步骤的一些说明：</p>
-<ol>
-<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
-</li>
-<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
-</li>
-<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
-</li>
-<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
-</li>
-</ol>
-<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
-<p>步骤的一些说明：</p>
-<ol>
-<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
-</li>
-<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
-</li>
-<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
-</li>
-<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
-</li>
-<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
-</li>
-</ol>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
-<ol>
-<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
-</li>
-<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
-</li>
-</ol>
-<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins构建GitHub合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
@@ -2016,10 +1886,292 @@
         <category>Jenkins</category>
       </categories>
       <tags>
+        <tag>Git</tag>
         <tag>DevOps</tag>
         <tag>CI/CD</tag>
-        <tag>Git</tag>
         <tag>Github</tag>
+        <tag>Jenkins</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
+    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
+    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
+<span id="more"></span>
+
+<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
+<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
+<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
+</li>
+<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
+</li>
+<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
+</li>
+</ol>
+<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
+</li>
+<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
+</li>
+<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
+<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        gitlab(</span><br><span class="line">            <span class="symbol">triggerOnPush:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">triggerOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">triggerOpenMergeRequestOnPush:</span> <span class="string">"source"</span>,</span><br><span class="line">            <span class="symbol">triggerOnNoteRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">noteRegex:</span> <span class="string">".*\\[run\\W+ci\\].*"</span>,</span><br><span class="line">            <span class="symbol">skipWorkInProgressMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">ciSkip:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">setBuildDescription:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addNoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addCiMessage:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addVoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">acceptMergeRequestOnSuccess:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">branchFilterType:</span> <span class="string">"NameBasedFilter"</span>,</span><br><span class="line">            <span class="symbol">includeBranchesSpec:</span> <span class="string">"master"</span>,</span><br><span class="line">            <span class="symbol">excludeBranchesSpec:</span> <span class="string">""</span></span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITLAB_URL = <span class="string">"http://mygitlab.philips.com"</span></span><br><span class="line">        GITLAB_ORG = <span class="string">"mikesay"</span></span><br><span class="line">        GITLAB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">        gitLabConnection <span class="string">'mygitlab'</span></span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'gitlab_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITLAB_URL}/${GITLAB_ORG}/${GITLAB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">      failure {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'failed'</span></span><br><span class="line">      }</span><br><span class="line">      success {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'success'</span></span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<ol>
+<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>triggerOnPush</td>
+<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnMergeRequest</td>
+<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOpenMergeRequestOnPush</td>
+<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnNoteRequest</td>
+<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
+</tr>
+<tr>
+<td>ciSkip</td>
+<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
+</tr>
+<tr>
+<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
+<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
+ <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/merge-requests/*:refs/remotes/origin/mr/*'</span></span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>39行: branches选择”origin/mr/${gitlabMergeRequestId}/head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
+ <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]]</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">gitlabBranch</span><br><span class="line">gitlabSourceBranch</span><br><span class="line">gitlabActionType</span><br><span class="line">gitlabUserName</span><br><span class="line">gitlabUserUsername</span><br><span class="line">gitlabUserEmail</span><br><span class="line">gitlabSourceRepoHomepage</span><br><span class="line">gitlabSourceRepoName</span><br><span class="line">gitlabSourceNamespace</span><br><span class="line">gitlabSourceRepoURL</span><br><span class="line">gitlabSourceRepoSshUrl</span><br><span class="line">gitlabSourceRepoHttpUrl</span><br><span class="line">gitlabMergeRequestTitle</span><br><span class="line">gitlabMergeRequestDescription</span><br><span class="line">gitlabMergeRequestId</span><br><span class="line">gitlabMergeRequestIid</span><br><span class="line">gitlabMergeRequestState</span><br><span class="line">gitlabMergedByUser</span><br><span class="line">gitlabMergeRequestAssignee</span><br><span class="line">gitlabMergeRequestLastCommit</span><br><span class="line">gitlabMergeRequestTargetProjectId</span><br><span class="line">gitlabTargetBranch</span><br><span class="line">gitlabTargetRepoName</span><br><span class="line">gitlabTargetNamespace</span><br><span class="line">gitlabTargetRepoSshUrl</span><br><span class="line">gitlabTargetRepoHttpUrl</span><br><span class="line">gitlabBefore</span><br><span class="line">gitlabAfter</span><br><span class="line">gitlabTriggerPhrase</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
+<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
+</li>
+<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
+</li>
+<li><p>点击Save按钮保存</p>
+</li>
+</ol>
+<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
+<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
+</li>
+<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
+</li>
+</ol>
+<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user's api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
+<ol start="3">
+<li>点击Add webhook按钮添加Web hook</li>
+</ol>
+<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
+<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
+</li>
+</ol>
+<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+        <tag>GitLab</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
+    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
+    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
+<span id="more"></span>
+
+<h1 id="一个典型的CI-CD流水线"><a href="#一个典型的CI-CD流水线" class="headerlink" title="一个典型的CI/CD流水线"></a>一个典型的CI/CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
+<p>上图是个典型的CI/CD流水线，由5个阶段（Phase）组成：Build/UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
+<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
+<ul>
+<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
+</li>
+<li><p>调试CI/CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
+</li>
+</ul>
+<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
+<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
+<ul>
+<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
+</li>
+<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
+</li>
+</ul>
+<blockquote>
+<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
+</blockquote>
+<p>下图是状态存储与恢复的过程。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
+<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
+<h1 id="在Jenkins上实现这个CI-CD流水线"><a href="#在Jenkins上实现这个CI-CD流水线" class="headerlink" title="在Jenkins上实现这个CI/CD流水线"></a>在Jenkins上实现这个CI/CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
+<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
+</li>
+<li><p>必要的插件</p>
+<ul>
+<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
+<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
+</li>
+<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
+<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI/CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI/CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
+</li>
+<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
+<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI/CD流水线建设的要求。</p>
+</li>
+<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
+<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI/CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
+</li>
+<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
+<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
+<blockquote>
+<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI/CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
+</blockquote>
+</li>
+<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
+<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI/CD流水线中能显示更多的信息。</p>
+</li>
+<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
+<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
+</li>
+<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
+<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI/CD流水线必要的特征。</p>
+</li>
+<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
+<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI/CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build/UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
+</li>
+<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
+</li>
+<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
+</li>
+<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
+</li>
+</ol>
+<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
+</li>
+<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
+</li>
+<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
+</li>
+<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
+</li>
+<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
+</li>
+</ol>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
+<ol>
+<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
+</li>
+<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
+</li>
+</ol>
+<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>Jenkins</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>CI/CD</tag>
         <tag>Jenkins</tag>
       </tags>
   </entry>
@@ -2255,158 +2407,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
-    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
-    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
-<span id="more"></span>
-
-<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
-<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
-<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
-</li>
-<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
-</li>
-<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
-</li>
-</ol>
-<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
-</li>
-<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
-</li>
-<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
-</li>
-<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
-<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        gitlab(</span><br><span class="line">            <span class="symbol">triggerOnPush:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">triggerOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">triggerOpenMergeRequestOnPush:</span> <span class="string">"source"</span>,</span><br><span class="line">            <span class="symbol">triggerOnNoteRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">noteRegex:</span> <span class="string">".*\\[run\\W+ci\\].*"</span>,</span><br><span class="line">            <span class="symbol">skipWorkInProgressMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">ciSkip:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">setBuildDescription:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addNoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addCiMessage:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addVoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">acceptMergeRequestOnSuccess:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">branchFilterType:</span> <span class="string">"NameBasedFilter"</span>,</span><br><span class="line">            <span class="symbol">includeBranchesSpec:</span> <span class="string">"master"</span>,</span><br><span class="line">            <span class="symbol">excludeBranchesSpec:</span> <span class="string">""</span></span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITLAB_URL = <span class="string">"http://mygitlab.philips.com"</span></span><br><span class="line">        GITLAB_ORG = <span class="string">"mikesay"</span></span><br><span class="line">        GITLAB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">        gitLabConnection <span class="string">'mygitlab'</span></span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'gitlab_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITLAB_URL}/${GITLAB_ORG}/${GITLAB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">      failure {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'failed'</span></span><br><span class="line">      }</span><br><span class="line">      success {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'success'</span></span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<ol>
-<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>triggerOnPush</td>
-<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnMergeRequest</td>
-<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOpenMergeRequestOnPush</td>
-<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnNoteRequest</td>
-<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
-</tr>
-<tr>
-<td>ciSkip</td>
-<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
-</tr>
-<tr>
-<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
-<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
- <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/merge-requests/*:refs/remotes/origin/mr/*'</span></span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>39行: branches选择”origin/mr/${gitlabMergeRequestId}/head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
- <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]]</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
-<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">gitlabBranch</span><br><span class="line">gitlabSourceBranch</span><br><span class="line">gitlabActionType</span><br><span class="line">gitlabUserName</span><br><span class="line">gitlabUserUsername</span><br><span class="line">gitlabUserEmail</span><br><span class="line">gitlabSourceRepoHomepage</span><br><span class="line">gitlabSourceRepoName</span><br><span class="line">gitlabSourceNamespace</span><br><span class="line">gitlabSourceRepoURL</span><br><span class="line">gitlabSourceRepoSshUrl</span><br><span class="line">gitlabSourceRepoHttpUrl</span><br><span class="line">gitlabMergeRequestTitle</span><br><span class="line">gitlabMergeRequestDescription</span><br><span class="line">gitlabMergeRequestId</span><br><span class="line">gitlabMergeRequestIid</span><br><span class="line">gitlabMergeRequestState</span><br><span class="line">gitlabMergedByUser</span><br><span class="line">gitlabMergeRequestAssignee</span><br><span class="line">gitlabMergeRequestLastCommit</span><br><span class="line">gitlabMergeRequestTargetProjectId</span><br><span class="line">gitlabTargetBranch</span><br><span class="line">gitlabTargetRepoName</span><br><span class="line">gitlabTargetNamespace</span><br><span class="line">gitlabTargetRepoSshUrl</span><br><span class="line">gitlabTargetRepoHttpUrl</span><br><span class="line">gitlabBefore</span><br><span class="line">gitlabAfter</span><br><span class="line">gitlabTriggerPhrase</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
-</li>
-</ol>
-<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
-<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
-</li>
-<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
-</li>
-<li><p>点击Save按钮保存</p>
-</li>
-</ol>
-<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
-<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
-</li>
-<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
-</li>
-</ol>
-<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user's api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
-<ol start="3">
-<li>点击Add webhook按钮添加Web hook</li>
-</ol>
-<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
-<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
-</li>
-</ol>
-<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>GitLab</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Git合并请求(Pull/Merge request)的本质</title>
     <url>/2020/01/29/pullrequest-essential/</url>
     <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull/merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull/merge request)合并到主分支上。合并请求(pull/merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull/merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull/merget request)的实现来阐明合并请求(pull/merge request)的本质。<span id="more"></span></p>
@@ -2479,8 +2479,8 @@
           });
       </script>]]></content>
       <tags>
-        <tag>DevOps</tag>
         <tag>Git</tag>
+        <tag>DevOps</tag>
         <tag>Github</tag>
         <tag>Bitbucket</tag>
         <tag>Gitlab</tag>
@@ -2870,80 +2870,6 @@
       </tags>
   </entry>
   <entry>
-    <title>命令方式设置Windows Server网络代理</title>
-    <url>/2020/02/03/windows-core-proxy/</url>
-    <content><![CDATA[<p>在公司里的服务器往往需要配置网络代理才能访问外网，不同的操作系统设置代理的方式也不同，同一个操作系统在图形化和非图形化下的设置方式也不同。本文将详细介绍如何用命令的方式来设置Windows Server的网络代理，这种方式非常适合于非图形化的Windows Server Core的网络代理的设置，对图形化的Windows Server也同样适用。</p>
-<span id="more"></span>
-
-<h1 id="Windows-Server网络代理说明"><a href="#Windows-Server网络代理说明" class="headerlink" title="Windows Server网络代理说明"></a>Windows Server网络代理说明</h1><p>在图形化的Windows Server中设置网络代理相对来说比较简单，通常在IE浏览器的”Internet Options”里面设置即可：<br><img src="/2020/02/03/windows-core-proxy/1.png"></p>
-<p>但是这个网络代理只对一部分应用起作用，比如IE浏览器等。仍旧有些应用不是使用这个网络代理。在Windows Server环境中，有以下四类网络使用方式：</p>
-<ul>
-<li><p>使用WinINET库<br>WinINTE是IE浏览器的核心，同时也能被别的应用程序使用。使用WinINET的应用同样会使用IE浏览器的网络代理设置。</p>
-</li>
-<li><p>使用WinHTTP库<br>WinHTTP主要是被Windows中非交互式的应用所使用，比如需要访问网络的Windows服务或后台任务等。WinHTTP缺省不使用WinINET的网络代理设置。</p>
-</li>
-<li><p>Linux风格的网络代理<br>许多Linux用户在使用Windows时仍然希望使用Linux相关的命令，他们往往通过安装<a href="https://www.cygwin.com/">Cygwin</a>，或者<a href="http://getgnuwin32.sourceforge.net/">GunWin32</a>来引入Linux命令，而涉及到网络操作的命令则是通过Linux风格的网络代理来访问网络。Linux系统一般是以非图形化的方式作为服务器，所以其网络代理设置通常只需要设置环境变量：https_proxy, http_proxy和no_proxy，而桌面版的Linux是带有图形化的，其网络设置除了三个环境变量外，还需要其它地方的设置，否则那些图形化的应用将无法访问网络。本文将只介绍非图形化的Linux网络代理设置。</p>
-</li>
-<li><p>应用级别的网络代理设置<br>有些应用本身支持设置自己的网络代理，而不依赖于系统设置的代理。这些应用本身会实现很多底层的操作，比如直接使用Winsock建立网络连接。</p>
-</li>
-</ul>
-<p>接下来将详细介绍WinINET，WinHTTP和Linux风格的网络代理设置。</p>
-<h1 id="设置WinINET类型的网络代理"><a href="#设置WinINET类型的网络代理" class="headerlink" title="设置WinINET类型的网络代理"></a>设置WinINET类型的网络代理</h1><h2 id="设置自动代理脚本"><a href="#设置自动代理脚本" class="headerlink" title="设置自动代理脚本"></a>设置自动代理脚本</h2><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$proxyScript</span> = <span class="string">"http://&lt;your url&gt;/proxy.pac"</span></span><br><span class="line"><span class="variable">$regs</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"</span>,<span class="string">"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$reg</span> <span class="keyword">in</span> <span class="variable">$regs</span>){</span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> AutoConfigURL <span class="literal">-Value</span> <span class="variable">$proxyScript</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyEnable <span class="literal">-Value</span> <span class="number">0</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="设置手动代理"><a href="#设置手动代理" class="headerlink" title="设置手动代理"></a>设置手动代理</h2><p>参考:<br><a href="https://config9.com/windows/powershell/using-powershell-to-programmatically-configure-internet-explorer-proxy-settings-to-work-before-it-has-been-opened/">https://config9.com/windows/powershell/using-powershell-to-programmatically-configure-internet-explorer-proxy-settings-to-work-before-it-has-been-opened/</a></p>
-<h3 id="系统级别的设置"><a href="#系统级别的设置" class="headerlink" title="系统级别的设置"></a>系统级别的设置</h3><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$proxy</span>=<span class="string">"http=&lt;server&gt;:&lt;port&gt;;https=&lt;server&gt;:&lt;port&gt;;ftp=&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$bypassList</span>=<span class="string">"&lt;local&gt;;*.xxxx.com;xxxx.com;192.168.56.*;10.0.0.*"</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$proxyString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$proxyString</span> = <span class="variable">$proxystring</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$bypassString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$bypassString</span> = <span class="variable">$bypassString</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$regString</span>=<span class="string">"46,00,00,00,00,00,00,00,0b,00,00,00,"</span>+(%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$proxy</span>.length,<span class="number">16</span>)})+<span class="string">",00,00,00,"</span> + <span class="variable">$proxystring</span> + (%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$bypassList</span>.length,<span class="number">16</span>)}) + <span class="string">",00,00,00,"</span> + <span class="variable">$bypassString</span> +  <span class="string">"00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00"</span></span><br><span class="line"><span class="variable">$regstringAsArray</span> = (<span class="string">"0x"</span>+<span class="variable">$regString</span>.replace(<span class="string">","</span>,<span class="string">",0x"</span>)).Split(<span class="string">","</span>)</span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxySettingsPerUser <span class="literal">-Value</span> <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$regs</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"</span>,<span class="string">"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$reg</span> <span class="keyword">in</span> <span class="variable">$regs</span>){</span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyServer <span class="literal">-Value</span> <span class="variable">$proxy</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyEnable <span class="literal">-Value</span> <span class="number">1</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyOverride <span class="literal">-Value</span> <span class="variable">$bypassList</span></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="variable">$regs</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"</span>,<span class="string">"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$reg</span> <span class="keyword">in</span> <span class="variable">$regs</span>){</span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> DefaultConnectionSettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> SavedLegacySettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="用户级别的设置"><a href="#用户级别的设置" class="headerlink" title="用户级别的设置"></a>用户级别的设置</h3><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$proxy</span>=<span class="string">"http=&lt;server&gt;:&lt;port&gt;;https=&lt;server&gt;:&lt;port&gt;;ftp=&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$bypassList</span>=<span class="string">"&lt;local&gt;;*.xxxx.com;xxxx.com;192.168.56.*;10.0.0.*"</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$proxyString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$proxyString</span> = <span class="variable">$proxystring</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$bypassString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$bypassString</span> = <span class="variable">$bypassString</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$regString</span>=<span class="string">"46,00,00,00,00,00,00,00,0b,00,00,00,"</span>+(%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$proxy</span>.length,<span class="number">16</span>)})+<span class="string">",00,00,00,"</span> + <span class="variable">$proxystring</span> + (%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$bypassList</span>.length,<span class="number">16</span>)}) + <span class="string">",00,00,00,"</span> + <span class="variable">$bypassString</span> +  <span class="string">"00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00"</span></span><br><span class="line"><span class="variable">$regstringAsArray</span> = (<span class="string">"0x"</span>+<span class="variable">$regString</span>.replace(<span class="string">","</span>,<span class="string">",0x"</span>)).Split(<span class="string">","</span>)</span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxySettingsPerUser <span class="literal">-Value</span> <span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyServer <span class="literal">-Value</span> <span class="variable">$proxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyEnable <span class="literal">-Value</span> <span class="number">1</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyOverride <span class="literal">-Value</span> <span class="variable">$bypassList</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> DefaultConnectionSettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> SavedLegacySettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>Windows代理的忽略列表支持通配符*</p>
-</blockquote>
-<h1 id="设置WinHTTP类型的网络代理"><a href="#设置WinHTTP类型的网络代理" class="headerlink" title="设置WinHTTP类型的网络代理"></a>设置WinHTTP类型的网络代理</h1><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line">netsh winhttp <span class="built_in">set</span> proxy proxy<span class="literal">-server</span>=<span class="string">"http=&lt;server&gt;:&lt;port&gt;;https=&lt;server&gt;:&lt;port&gt;;ftp=&lt;server&gt;:&lt;port&gt;"</span> bypass<span class="literal">-list</span>=<span class="string">"&lt;local&gt;;*.xxxx.com;xxxx.com;192.168.56.*;10.0.0.*"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果WinINET设置的是手动网络代理，也可以导入WinINET的网络代理：</p>
-<figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line">netsh winhttp import proxy ie</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="设置Linux风格的网络代理"><a href="#设置Linux风格的网络代理" class="headerlink" title="设置Linux风格的网络代理"></a>设置Linux风格的网络代理</h1><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$httpProxy</span> = <span class="string">"http://&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$httpsProxy</span> = <span class="string">"http://&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$noProxy</span> = <span class="string">"localhost,127.0.0.1,.xxxx.com,xxxx.com,192.168.0.5"</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\SYSTEM\ControlSet001\Control\Session Manager\Environment"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> https_proxy <span class="literal">-Value</span> <span class="variable">$httpProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> http_proxy <span class="literal">-Value</span> <span class="variable">$httpsProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> no_proxy <span class="literal">-Value</span> <span class="variable">$noProxy</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> HTTPS_PROXY <span class="literal">-Value</span> <span class="variable">$httpProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> HTTP_PROXY <span class="literal">-Value</span> <span class="variable">$httpsProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> NO_PROXY <span class="literal">-Value</span> <span class="variable">$noProxy</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>Linux代理的忽略列表不支持通配符，比如*，但可以只增加域名后缀来匹配一系列域名<br>大小写的环境变量都设置了一遍，因为在实际工作中发现存在着一些应用或命令只识别大写或小写</p>
-</blockquote>
-<h1 id="Ansible脚本设置网络代理"><a href="#Ansible脚本设置网络代理" class="headerlink" title="Ansible脚本设置网络代理"></a>Ansible脚本设置网络代理</h1><p>以上设置网络代理的方式其实就是我们所说的ad-hoc脚本的方式，但是ad-hoc脚本在不同的Windows系统中移植性比较差，往往需要一些改动才能运行。使用配置管理工具比如Ansible来设置网络代理往往会带来两个好处：</p>
-<ul>
-<li>可移植性</li>
-<li>更少的代码</li>
-</ul>
-<p>这也是我们所说的“现成的工具优先于专门脚本(tool over ad-hoc)”这一最佳实践。</p>
-<p>以下是Ansible脚本样本：</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Configure</span> <span class="string">IE</span> <span class="string">proxy</span> <span class="string">settings</span> <span class="string">to</span> <span class="string">apply</span> <span class="string">to</span> <span class="string">all</span> <span class="string">users</span></span><br><span class="line">  <span class="attr">win_regedit:</span></span><br><span class="line">    <span class="attr">path:</span> <span class="string">HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet</span> <span class="string">Settings</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">ProxySettingsPerUser</span></span><br><span class="line">    <span class="attr">data:</span> <span class="number">0</span></span><br><span class="line">    <span class="attr">type:</span> <span class="string">dword</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Configure</span> <span class="string">IE</span> <span class="string">to</span> <span class="string">use</span> <span class="string">a</span> <span class="string">specific</span> <span class="string">proxy</span> <span class="string">per</span> <span class="string">protocol</span> <span class="string">using</span> <span class="string">a</span> <span class="string">string</span></span><br><span class="line">  <span class="attr">win_inet_proxy:</span></span><br><span class="line">    <span class="attr">proxy:</span> <span class="string">http={{win_init_http_proxy}};https={{win_init_https_proxy}};ftp={{win_init_ftp_proxy}}</span></span><br><span class="line">    <span class="attr">bypass:</span> <span class="string">"<span class="template-variable">{{win_init_no_proxy}}</span>"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># This should be done after setting the IE proxy with win_inet_proxy</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Import</span> <span class="string">IE</span> <span class="string">proxy</span> <span class="string">configuration</span> <span class="string">to</span> <span class="string">WinHTTP</span></span><br><span class="line">  <span class="attr">win_http_proxy:</span></span><br><span class="line">    <span class="attr">source:</span> <span class="string">ie</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">http</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">http_proxy</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_http_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">https</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">https_proxy</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_https_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="literal">no</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">no_proxy</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_no_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">HTTP</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">HTTP_PROXY</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_http_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">HTTPS</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">HTTPS_PROXY</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_https_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="literal">NO</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">NO_PROXY</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_no_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>变量：</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">win_init_http_proxy:</span> <span class="string">"&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="attr">win_init_https_proxy:</span> <span class="string">"&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="attr">win_init_ftp_proxy:</span> <span class="string">"&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="attr">win_init_no_proxy:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&lt;local&gt;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"*.xxxx.com"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"192.168.56.*"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"10.0.0.*"</span></span><br><span class="line"></span><br><span class="line"><span class="attr">linux_style_init_http_proxy:</span> <span class="string">http://&lt;server&gt;:&lt;port&gt;</span></span><br><span class="line"><span class="attr">linux_style_init_https_proxy:</span> <span class="string">http://&lt;server&gt;:&lt;port&gt;</span></span><br><span class="line"><span class="attr">linux_style_init_ftp_proxy:</span> <span class="string">http://&lt;server&gt;:&lt;port&gt;</span></span><br><span class="line"><span class="attr">linux_style_init_no_proxy:</span> <span class="string">"localhost,127.0.0.1,.xxxx.com,xxxx.com,192.168.0.5"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <tags>
-        <tag>Windows</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>AI辅助编程：从“复制粘贴”到“氛围编程 (Vibe Coding)”</title>
     <url>/2026/04/08/vibe-coding/</url>
     <content><![CDATA[<p>大语言模型 (LLM) 的迅速崛起从根本上改变了软件工程的格局。随着这些模型变得越来越强大（特别是针对大规模代码库进行的微调），它们已从简单的聊天机器人转变为强大的<strong>编程助手</strong>。如今，AI 不再仅仅是一个参考工具，它已成为 IDE 中不可或缺的参与者。</p>
@@ -3057,6 +2983,80 @@
       <tags>
         <tag>LLM</tag>
         <tag>AI Coding Agent</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>命令方式设置Windows Server网络代理</title>
+    <url>/2020/02/03/windows-core-proxy/</url>
+    <content><![CDATA[<p>在公司里的服务器往往需要配置网络代理才能访问外网，不同的操作系统设置代理的方式也不同，同一个操作系统在图形化和非图形化下的设置方式也不同。本文将详细介绍如何用命令的方式来设置Windows Server的网络代理，这种方式非常适合于非图形化的Windows Server Core的网络代理的设置，对图形化的Windows Server也同样适用。</p>
+<span id="more"></span>
+
+<h1 id="Windows-Server网络代理说明"><a href="#Windows-Server网络代理说明" class="headerlink" title="Windows Server网络代理说明"></a>Windows Server网络代理说明</h1><p>在图形化的Windows Server中设置网络代理相对来说比较简单，通常在IE浏览器的”Internet Options”里面设置即可：<br><img src="/2020/02/03/windows-core-proxy/1.png"></p>
+<p>但是这个网络代理只对一部分应用起作用，比如IE浏览器等。仍旧有些应用不是使用这个网络代理。在Windows Server环境中，有以下四类网络使用方式：</p>
+<ul>
+<li><p>使用WinINET库<br>WinINTE是IE浏览器的核心，同时也能被别的应用程序使用。使用WinINET的应用同样会使用IE浏览器的网络代理设置。</p>
+</li>
+<li><p>使用WinHTTP库<br>WinHTTP主要是被Windows中非交互式的应用所使用，比如需要访问网络的Windows服务或后台任务等。WinHTTP缺省不使用WinINET的网络代理设置。</p>
+</li>
+<li><p>Linux风格的网络代理<br>许多Linux用户在使用Windows时仍然希望使用Linux相关的命令，他们往往通过安装<a href="https://www.cygwin.com/">Cygwin</a>，或者<a href="http://getgnuwin32.sourceforge.net/">GunWin32</a>来引入Linux命令，而涉及到网络操作的命令则是通过Linux风格的网络代理来访问网络。Linux系统一般是以非图形化的方式作为服务器，所以其网络代理设置通常只需要设置环境变量：https_proxy, http_proxy和no_proxy，而桌面版的Linux是带有图形化的，其网络设置除了三个环境变量外，还需要其它地方的设置，否则那些图形化的应用将无法访问网络。本文将只介绍非图形化的Linux网络代理设置。</p>
+</li>
+<li><p>应用级别的网络代理设置<br>有些应用本身支持设置自己的网络代理，而不依赖于系统设置的代理。这些应用本身会实现很多底层的操作，比如直接使用Winsock建立网络连接。</p>
+</li>
+</ul>
+<p>接下来将详细介绍WinINET，WinHTTP和Linux风格的网络代理设置。</p>
+<h1 id="设置WinINET类型的网络代理"><a href="#设置WinINET类型的网络代理" class="headerlink" title="设置WinINET类型的网络代理"></a>设置WinINET类型的网络代理</h1><h2 id="设置自动代理脚本"><a href="#设置自动代理脚本" class="headerlink" title="设置自动代理脚本"></a>设置自动代理脚本</h2><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$proxyScript</span> = <span class="string">"http://&lt;your url&gt;/proxy.pac"</span></span><br><span class="line"><span class="variable">$regs</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"</span>,<span class="string">"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$reg</span> <span class="keyword">in</span> <span class="variable">$regs</span>){</span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> AutoConfigURL <span class="literal">-Value</span> <span class="variable">$proxyScript</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyEnable <span class="literal">-Value</span> <span class="number">0</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="设置手动代理"><a href="#设置手动代理" class="headerlink" title="设置手动代理"></a>设置手动代理</h2><p>参考:<br><a href="https://config9.com/windows/powershell/using-powershell-to-programmatically-configure-internet-explorer-proxy-settings-to-work-before-it-has-been-opened/">https://config9.com/windows/powershell/using-powershell-to-programmatically-configure-internet-explorer-proxy-settings-to-work-before-it-has-been-opened/</a></p>
+<h3 id="系统级别的设置"><a href="#系统级别的设置" class="headerlink" title="系统级别的设置"></a>系统级别的设置</h3><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$proxy</span>=<span class="string">"http=&lt;server&gt;:&lt;port&gt;;https=&lt;server&gt;:&lt;port&gt;;ftp=&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$bypassList</span>=<span class="string">"&lt;local&gt;;*.xxxx.com;xxxx.com;192.168.56.*;10.0.0.*"</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$proxyString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$proxyString</span> = <span class="variable">$proxystring</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$bypassString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$bypassString</span> = <span class="variable">$bypassString</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$regString</span>=<span class="string">"46,00,00,00,00,00,00,00,0b,00,00,00,"</span>+(%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$proxy</span>.length,<span class="number">16</span>)})+<span class="string">",00,00,00,"</span> + <span class="variable">$proxystring</span> + (%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$bypassList</span>.length,<span class="number">16</span>)}) + <span class="string">",00,00,00,"</span> + <span class="variable">$bypassString</span> +  <span class="string">"00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00"</span></span><br><span class="line"><span class="variable">$regstringAsArray</span> = (<span class="string">"0x"</span>+<span class="variable">$regString</span>.replace(<span class="string">","</span>,<span class="string">",0x"</span>)).Split(<span class="string">","</span>)</span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxySettingsPerUser <span class="literal">-Value</span> <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$regs</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"</span>,<span class="string">"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$reg</span> <span class="keyword">in</span> <span class="variable">$regs</span>){</span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyServer <span class="literal">-Value</span> <span class="variable">$proxy</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyEnable <span class="literal">-Value</span> <span class="number">1</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyOverride <span class="literal">-Value</span> <span class="variable">$bypassList</span></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="variable">$regs</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"</span>,<span class="string">"HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$reg</span> <span class="keyword">in</span> <span class="variable">$regs</span>){</span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> DefaultConnectionSettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> SavedLegacySettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="用户级别的设置"><a href="#用户级别的设置" class="headerlink" title="用户级别的设置"></a>用户级别的设置</h3><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$proxy</span>=<span class="string">"http=&lt;server&gt;:&lt;port&gt;;https=&lt;server&gt;:&lt;port&gt;;ftp=&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$bypassList</span>=<span class="string">"&lt;local&gt;;*.xxxx.com;xxxx.com;192.168.56.*;10.0.0.*"</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$proxyString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$proxy</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$proxyString</span> = <span class="variable">$proxystring</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$bypassString</span> = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> (<span class="variable">$i</span> = <span class="number">0</span>;<span class="variable">$i</span> <span class="operator">-lt</span> (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>)).length); <span class="variable">$i</span>++) {</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$i</span> % <span class="number">2</span> <span class="operator">-eq</span> <span class="number">0</span>) {</span><br><span class="line">        <span class="variable">$byte</span> = (([<span class="type">System.Text.Encoding</span>]::Unicode.GetBytes(<span class="variable">$bypassList</span>))[<span class="variable">$i</span>])</span><br><span class="line">        <span class="variable">$convertedByte</span>=%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$byte</span>,<span class="number">16</span>)}</span><br><span class="line">        <span class="variable">$bypassString</span> = <span class="variable">$bypassString</span> + <span class="variable">$convertedByte</span>  + <span class="string">","</span></span><br><span class="line">    }</span><br><span class="line">}</span><br><span class="line"><span class="variable">$regString</span>=<span class="string">"46,00,00,00,00,00,00,00,0b,00,00,00,"</span>+(%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$proxy</span>.length,<span class="number">16</span>)})+<span class="string">",00,00,00,"</span> + <span class="variable">$proxystring</span> + (%{[<span class="type">System.Convert</span>]::ToString(<span class="variable">$bypassList</span>.length,<span class="number">16</span>)}) + <span class="string">",00,00,00,"</span> + <span class="variable">$bypassString</span> +  <span class="string">"00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00"</span></span><br><span class="line"><span class="variable">$regstringAsArray</span> = (<span class="string">"0x"</span>+<span class="variable">$regString</span>.replace(<span class="string">","</span>,<span class="string">",0x"</span>)).Split(<span class="string">","</span>)</span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxySettingsPerUser <span class="literal">-Value</span> <span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyServer <span class="literal">-Value</span> <span class="variable">$proxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyEnable <span class="literal">-Value</span> <span class="number">1</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> ProxyOverride <span class="literal">-Value</span> <span class="variable">$bypassList</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\Connections"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> DefaultConnectionSettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> SavedLegacySettings <span class="literal">-Type</span> Binary <span class="literal">-Value</span> <span class="variable">$regstringAsArray</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Windows代理的忽略列表支持通配符*</p>
+</blockquote>
+<h1 id="设置WinHTTP类型的网络代理"><a href="#设置WinHTTP类型的网络代理" class="headerlink" title="设置WinHTTP类型的网络代理"></a>设置WinHTTP类型的网络代理</h1><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line">netsh winhttp <span class="built_in">set</span> proxy proxy<span class="literal">-server</span>=<span class="string">"http=&lt;server&gt;:&lt;port&gt;;https=&lt;server&gt;:&lt;port&gt;;ftp=&lt;server&gt;:&lt;port&gt;"</span> bypass<span class="literal">-list</span>=<span class="string">"&lt;local&gt;;*.xxxx.com;xxxx.com;192.168.56.*;10.0.0.*"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果WinINET设置的是手动网络代理，也可以导入WinINET的网络代理：</p>
+<figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line">netsh winhttp import proxy ie</span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="设置Linux风格的网络代理"><a href="#设置Linux风格的网络代理" class="headerlink" title="设置Linux风格的网络代理"></a>设置Linux风格的网络代理</h1><figure class="highlight ps"><table><tbody><tr><td class="code"><pre><span class="line"><span class="variable">$httpProxy</span> = <span class="string">"http://&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$httpsProxy</span> = <span class="string">"http://&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="variable">$noProxy</span> = <span class="string">"localhost,127.0.0.1,.xxxx.com,xxxx.com,192.168.0.5"</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$reg</span> = <span class="string">"HKLM:\SYSTEM\ControlSet001\Control\Session Manager\Environment"</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> https_proxy <span class="literal">-Value</span> <span class="variable">$httpProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> http_proxy <span class="literal">-Value</span> <span class="variable">$httpsProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> no_proxy <span class="literal">-Value</span> <span class="variable">$noProxy</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> HTTPS_PROXY <span class="literal">-Value</span> <span class="variable">$httpProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> HTTP_PROXY <span class="literal">-Value</span> <span class="variable">$httpsProxy</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$reg</span> <span class="literal">-Name</span> NO_PROXY <span class="literal">-Value</span> <span class="variable">$noProxy</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Linux代理的忽略列表不支持通配符，比如*，但可以只增加域名后缀来匹配一系列域名<br>大小写的环境变量都设置了一遍，因为在实际工作中发现存在着一些应用或命令只识别大写或小写</p>
+</blockquote>
+<h1 id="Ansible脚本设置网络代理"><a href="#Ansible脚本设置网络代理" class="headerlink" title="Ansible脚本设置网络代理"></a>Ansible脚本设置网络代理</h1><p>以上设置网络代理的方式其实就是我们所说的ad-hoc脚本的方式，但是ad-hoc脚本在不同的Windows系统中移植性比较差，往往需要一些改动才能运行。使用配置管理工具比如Ansible来设置网络代理往往会带来两个好处：</p>
+<ul>
+<li>可移植性</li>
+<li>更少的代码</li>
+</ul>
+<p>这也是我们所说的“现成的工具优先于专门脚本(tool over ad-hoc)”这一最佳实践。</p>
+<p>以下是Ansible脚本样本：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Configure</span> <span class="string">IE</span> <span class="string">proxy</span> <span class="string">settings</span> <span class="string">to</span> <span class="string">apply</span> <span class="string">to</span> <span class="string">all</span> <span class="string">users</span></span><br><span class="line">  <span class="attr">win_regedit:</span></span><br><span class="line">    <span class="attr">path:</span> <span class="string">HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet</span> <span class="string">Settings</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">ProxySettingsPerUser</span></span><br><span class="line">    <span class="attr">data:</span> <span class="number">0</span></span><br><span class="line">    <span class="attr">type:</span> <span class="string">dword</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Configure</span> <span class="string">IE</span> <span class="string">to</span> <span class="string">use</span> <span class="string">a</span> <span class="string">specific</span> <span class="string">proxy</span> <span class="string">per</span> <span class="string">protocol</span> <span class="string">using</span> <span class="string">a</span> <span class="string">string</span></span><br><span class="line">  <span class="attr">win_inet_proxy:</span></span><br><span class="line">    <span class="attr">proxy:</span> <span class="string">http={{win_init_http_proxy}};https={{win_init_https_proxy}};ftp={{win_init_ftp_proxy}}</span></span><br><span class="line">    <span class="attr">bypass:</span> <span class="string">"<span class="template-variable">{{win_init_no_proxy}}</span>"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># This should be done after setting the IE proxy with win_inet_proxy</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Import</span> <span class="string">IE</span> <span class="string">proxy</span> <span class="string">configuration</span> <span class="string">to</span> <span class="string">WinHTTP</span></span><br><span class="line">  <span class="attr">win_http_proxy:</span></span><br><span class="line">    <span class="attr">source:</span> <span class="string">ie</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">http</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">http_proxy</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_http_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">https</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">https_proxy</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_https_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="literal">no</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">no_proxy</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_no_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">HTTP</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">HTTP_PROXY</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_http_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="string">HTTPS</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">HTTPS_PROXY</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_https_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Set</span> <span class="string">Linux</span> <span class="string">style</span> <span class="literal">NO</span> <span class="string">proxy</span></span><br><span class="line">  <span class="attr">win_environment:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">NO_PROXY</span></span><br><span class="line">    <span class="attr">value:</span> <span class="string">'{{linux_style_init_no_proxy}}'</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">machine</span></span><br><span class="line">    <span class="attr">state:</span> <span class="string">present</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>变量：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">win_init_http_proxy:</span> <span class="string">"&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="attr">win_init_https_proxy:</span> <span class="string">"&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="attr">win_init_ftp_proxy:</span> <span class="string">"&lt;server&gt;:&lt;port&gt;"</span></span><br><span class="line"><span class="attr">win_init_no_proxy:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&lt;local&gt;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"*.xxxx.com"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"192.168.56.*"</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">"10.0.0.*"</span></span><br><span class="line"></span><br><span class="line"><span class="attr">linux_style_init_http_proxy:</span> <span class="string">http://&lt;server&gt;:&lt;port&gt;</span></span><br><span class="line"><span class="attr">linux_style_init_https_proxy:</span> <span class="string">http://&lt;server&gt;:&lt;port&gt;</span></span><br><span class="line"><span class="attr">linux_style_init_ftp_proxy:</span> <span class="string">http://&lt;server&gt;:&lt;port&gt;</span></span><br><span class="line"><span class="attr">linux_style_init_no_proxy:</span> <span class="string">"localhost,127.0.0.1,.xxxx.com,xxxx.com,192.168.0.5"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <tags>
+        <tag>Windows</tag>
       </tags>
   </entry>
 </search>
