@@ -116,11 +116,11 @@
           });
       </script>]]></content>
       <categories>
-        <category>Aliyun</category>
+        <category>Kubernetes</category>
       </categories>
       <tags>
-        <tag>Aliyun</tag>
-        <tag>Kubernetess</tag>
+        <tag>Kubernetes</tag>
+        <tag>AliCloud</tag>
       </tags>
   </entry>
   <entry>
@@ -222,12 +222,10 @@
           });
       </script>]]></content>
       <categories>
-        <category>Aliyun</category>
-        <category>RAM</category>
+        <category>阿里云</category>
       </categories>
       <tags>
-        <tag>Aliyun</tag>
-        <tag>RAM</tag>
+        <tag>AliCloud</tag>
       </tags>
   </entry>
   <entry>
@@ -721,11 +719,12 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
       <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
         <tag>Azure DevOps</tag>
-        <tag>Docker</tag>
+        <tag>CI/CD</tag>
       </tags>
   </entry>
   <entry>
@@ -846,13 +845,279 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
       <tags>
-        <tag>Kubernetes</tag>
-        <tag>DevOps</tag>
         <tag>CI/CD</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从Git仓库中永久清理脏数据</title>
+    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
+    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
+<span id="more"></span>
+<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
+<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
+<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
+</li>
+<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
+<ul>
+<li>替换文件中的敏感信息</li>
+<li>删除文件或文件夹</li>
+</ul>
+<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
+<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
+<li><p>通过mirror的方式克隆代码仓库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+
+<p>比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
+</blockquote>
+<ul>
+<li><p>替换所有文件中的指定的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>需要打开强制推送到Git仓库的功能</p>
+</blockquote>
+</li>
+<li><p>替换指定文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
+<blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
+</blockquote>
+<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
+<ul>
+<li>获取指定文件在所有变更历史中对应的blob id号</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>从变更历史中删除指定的文件(Blob)</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
+</blockquote>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
         <tag>Git</tag>
-        <tag>Github</tag>
-        <tag>K8s</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git安装与配置</title>
+    <url>/2020/12/31/git-install-configure/</url>
+    <content><![CDATA[<p><a href="https://git-scm.com/">Git</a>是目前使用最广泛的分布式版本管理系统。相对于集中式代码管理系统，例如Subversion, Perforce等，来说，它有着无法比拟的优势，比如轻量级的分支管理，适合不同场景的分支合并策略，离线状态下的版本管理和变更历史查询等，而这些优势也正好符合了当前敏捷和精益的软件开发方法。本文将介绍如何在Linux，Mac和Windows系统中安装并配置Git。</p>
+<span id="more"></span>
+<h1 id="安装Git"><a href="#安装Git" class="headerlink" title="安装Git"></a>安装Git</h1><p>本文只介绍Git命令行的安装，因为使用命令行更能掌握Git的本质，且对于DevOps或系统维护人员来说，使用命令行也是日常的基本功。当掌握了Git命令行的使用后，再去使用图形化客户端，也会变得更容易。</p>
+<h2 id="在Mac中的安装"><a href="#在Mac中的安装" class="headerlink" title="在Mac中的安装"></a>在Mac中的安装</h2><p>Mac Xcode自带了Git。如果你的Mac电脑上已经安装了Xcode，就已经有Git可以使用了，Git命令的安装路径为/usr/bin/git。但是这个Git不一定是比较新的版本，可以通过Homebrew或第三方提供的DMG安装包，重新安装一个比较新的版本。</p>
+<ul>
+<li><p>通过Homebrew安装</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">brew install git</span><br></pre></td></tr></tbody></table></figure>
+<p>  Homebrew将Git安装在/usr/local/Cellar/git/2.29.2/路径下，同时会建立一个符号链接/usr/local/bin/git指向Git命令/usr/local/Cellar/git/2.29.2/bin/git。2.29.2是当前Homebrew支持的最新版本。</p>
+<blockquote>
+<p>在PATH环境变量中确保路径/usr/local/bin在/usr/bin之前，这样Homebrew安装的Git命令会被优先使用。</p>
+</blockquote>
+</li>
+<li><p>通过DMG安装包安装</p>
+<p>  可以从<a href="https://sourceforge.net/projects/git-osx-installer/">https://sourceforge.net/projects/git-osx-installer/</a> 下载较新的版本去安装。通过DMG安装的Git被安装在/usr/local/git下, 并且会在/usr/local/bin和/usr/share/man/中建立符号链接。</p>
+<p>  可以通过下面的命令卸载Git.</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> /usr/local/git/uninstall.sh</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<blockquote>
+<p>推荐用Homebrew的方式安装Git，不但能获得较新的版本，而且以后升级也方便。</p>
+</blockquote>
+<h2 id="在Linux中的安装"><a href="#在Linux中的安装" class="headerlink" title="在Linux中的安装"></a>在Linux中的安装</h2><p>Linux系统也缺省自带了Git，不过一般不是最新的版本，但不影响使用。如果想安装最新版本或相对较新的版本的话，可以参照下面方法安装。</p>
+<h3 id="在Ubuntu中安装最新版本的Git"><a href="#在Ubuntu中安装最新版本的Git" class="headerlink" title="在Ubuntu中安装最新版本的Git"></a>在Ubuntu中安装最新版本的Git</h3><p>Ubuntu自带的Git是安装在路径/usr/bin/git下。在Ubuntu中，可以通过<a href="https://launchpad.net/ubuntu/+ppas">PPA（Personal Package Archive）</a>安装最新版本的Git，安装完后会覆盖旧的版本。以下是安装步骤：</p>
+<ul>
+<li><p>添加Git的PPA库</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> add-apt-repository ppa:git-core/ppa</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新APT缓存</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt update</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>搜索最新版本的Git</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-cache madison git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>安装Git</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt install git</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<blockquote>
+<p>这里选择的是Ubuntu18。</p>
+</blockquote>
+<h3 id="在CentOS中安装最新版本的Git"><a href="#在CentOS中安装最新版本的Git" class="headerlink" title="在CentOS中安装最新版本的Git"></a>在CentOS中安装最新版本的Git</h3><p>CentOS 7自带的Git非常旧，还是1.x的版本，执行<code>rpm -qa | grep git</code>可以看到Git包为”git-1.8.3.1-23.el7_8.x86_64“，安装路径为/usr/bin/git。在CentOS中，可以通过Endpoint仓库安装最新版本的Git。以下是安装步骤：</p>
+<ul>
+<li><p>删除旧的Git</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum remove git*</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>添加CentOS 7 Endpoint仓库</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新Yum缓存</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum update</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>搜索最新版本的Git</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum list git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>安装Git</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum install git</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<blockquote>
+<p>这里选择的是CentOS 7。</p>
+</blockquote>
+<h2 id="在Windows中的安装"><a href="#在Windows中的安装" class="headerlink" title="在Windows中的安装"></a>在Windows中的安装</h2><p>从<a href="https://git-scm.com/download/win">https://git-scm.com/download/win</a> 下载最新版本的Windows安装包，并安装。</p>
+<div class="justified-gallery">
+
+<p><img src="/2020/12/31/git-install-configure/1.png" alt="1"><br><img src="/2020/12/31/git-install-configure/2.png" alt="2"><br><img src="/2020/12/31/git-install-configure/3.png" alt="3"><br><img src="/2020/12/31/git-install-configure/4.png" alt="4"><br><img src="/2020/12/31/git-install-configure/5.png" alt="5"><br><img src="/2020/12/31/git-install-configure/6.png" alt="6"><br><img src="/2020/12/31/git-install-configure/7.png" alt="7"><br><img src="/2020/12/31/git-install-configure/8.png" alt="8"></p>
+</div>  
+  
+  
+<blockquote>
+<p>尽量选择红色框里的选项，这样能最大限度地用Linux的方式使用Git命令。</p>
+</blockquote>
+<h1 id="配置Git"><a href="#配置Git" class="headerlink" title="配置Git"></a>配置Git</h1><p>为了更好地使用Git命令行客户端，需要做一些必要的设置，有些设置是不同平台共享的，有些设置是平台独有的。</p>
+<h2 id="共享配置"><a href="#共享配置" class="headerlink" title="共享配置"></a>共享配置</h2><ul>
+<li><p>设置用户名和邮件地址</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git config --global user.name mikejianzhang</span><br><span class="line">git config --global user.email mikejianzhang@163.com</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>设置引用路径为false</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git config --global core.quotepath <span class="literal">false</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>  如果文件名或路径中含有非英文字符或者允许的控制字符，例如中文字符，反斜杠，双引号等，当不设置”core.quotepath”或者设置它的值为true时，Git命令在显示这些文件名或路径时会用双引号引用这些文件名或路径，并对这些字符进行转义显示，即对非英文字符用八进制格式显示UTF-8编码，而对控制字符则通过反斜杠进行转义，当设置”core.quotepath”为false时，则对非英文字符会显示原来的文本，但是对控制字符仍然会转义显示。  </p>
+<p>  下面的两个文件名中既包含了中文字符又包含了控制字符，反斜杠和双引号。</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">mikepro:git-test mike$ <span class="built_in">ls</span> -l</span><br><span class="line">total 16</span><br><span class="line">-rw-r--r--  1 mike  staff  12 Jan  1 19:33 你好\上海 <span class="string">"大家们"</span>.txt</span><br><span class="line">-rw-r--r--  1 mike  staff  13 Jan  1 19:28 你好祖国.txt</span><br></pre></td></tr></tbody></table></figure>
+<p>  当不设置”core.quotepath”或者设置它的值为true时，<code>git status</code>显示如下：</p>
+  <figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">mikepro:git-test mike$ git status</span><br><span class="line">On branch master</span><br><span class="line"></span><br><span class="line">No commits yet</span><br><span class="line"></span><br><span class="line">Untracked files:</span><br><span class="line">(use "git add &lt;file&gt;..." to include in what will be committed)</span><br><span class="line">    "\344\275\240\345\245\275\\\344\270\212\346\265\267 \"\345\244\247\345\256\266\344\273\254\".txt"</span><br><span class="line">    "\344\275\240\345\245\275\347\245\226\345\233\275.txt"</span><br></pre></td></tr></tbody></table></figure>
+<p>  当设置”core.quotepath”为false时，<code>git status</code>显示如下：</p>
+  <figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">mikepro:git-test mike$ git status</span><br><span class="line">On branch master</span><br><span class="line"></span><br><span class="line">No commits yet</span><br><span class="line"></span><br><span class="line">Untracked files:</span><br><span class="line">(use "git add &lt;file&gt;..." to include in what will be committed)</span><br><span class="line">    "你好\\上海 \"大家们\".txt"</span><br><span class="line">    你好祖国.txt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>设置永久缓存Git账号</p>
+<p>  当通过http协议访问Git仓库时，需要提供用户名和密码，为了避免每次都要输入用户名和密码，可以设置永久缓存Git账号。</p>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">    git config --global credential.helper store</span><br><span class="line">    ```  </span><br><span class="line">    &gt; 在Mac系统中，账号会被缓存到Keychain里，而在Linux/Windows中，账号会被缓存到文件~/.git-credentials中。</span><br><span class="line"></span><br><span class="line">+ 设置安全的换行符</span><br><span class="line">    ```sh</span><br><span class="line">    git config --global core.safecrlf <span class="literal">true</span></span><br><span class="line">    ```  </span><br><span class="line"></span><br><span class="line">    &gt; 严格检查文本或代码文件的换行符是否正确，例如在Linux/Mac/Unix平台上，应该都是LF格式，在Windows平台上，应该是CRLF格式，或者是在.gitattribute中，通过选项”eol“显式指定的换行符，如果不正确则阻止提交。</span><br><span class="line"></span><br><span class="line">+ 设置忽略ssl证书验证</span><br><span class="line"></span><br><span class="line">    ```sh</span><br><span class="line">    git config --global http.sslverify <span class="literal">false</span></span><br><span class="line">    ```  </span><br><span class="line">    &gt; 如果Git通过http协议访问代码仓库，可以设置忽略ssl证书验证，尤其是Git服务器用的是自签名证书。</span><br><span class="line"></span><br><span class="line">+ 设置空格处理</span><br><span class="line"></span><br><span class="line">    ```sh</span><br><span class="line">    git config --global core.whitespace cr-at-eol,-trailing-space</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>在执行<code>git diff</code>和<code>git apply</code>命令时，如何处理空格或换行很重要，否则在团队协同开发的过程中会产生很大的干扰。</p>
+</blockquote>
+<blockquote>
+<p>cr-at-eol: 如果行尾为CR字符，当做换行符处理，不显示^M<br>-trailing-space: 执行<code>git apply</code>时，对于行末或文末的空格不提示错误</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="Linx-Mac中的配置"><a href="#Linx-Mac中的配置" class="headerlink" title="Linx/Mac中的配置"></a>Linx/Mac中的配置</h2><ul>
+<li><p>设置文件检出时的换行符</p>
+<pre><code class="language-sh">git config --global core.autocrlf input
+</code></pre>
+<blockquote>
+<p>在Linx/Mac系统中，从代码仓库检出文件时，保持服务端的文件换行符，因为Git服务端是按照Linux格式的换行符存储文本或代码文件的。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="Windows中的配置"><a href="#Windows中的配置" class="headerlink" title="Windows中的配置"></a>Windows中的配置</h2><ul>
+<li><p>设置文件检出时的换行符</p>
+<pre><code class="language-sh">git config --global core.autocrlf true
+</code></pre>
+<p>  在Windows系统中，从代码仓库检出文件时，将文本或代码文件的换行符自动转换成Windows格式的换行符CRLF，除非在.gitattribute中显式指定某些文件的换行符为Linux格式的换行符LF。</p>
+</li>
+<li><p>设置允许长路径文件</p>
+<pre><code class="language-sh">git config --global core.longpaths true
+</code></pre>
+<p>  设置Windows中的Git命令支持长路径（大于260字节）。</p>
+</li>
+</ul>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
       </tags>
   </entry>
   <entry>
@@ -1036,149 +1301,9 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Git安装与配置</title>
-    <url>/2020/12/31/git-install-configure/</url>
-    <content><![CDATA[<p><a href="https://git-scm.com/">Git</a>是目前使用最广泛的分布式版本管理系统。相对于集中式代码管理系统，例如Subversion, Perforce等，来说，它有着无法比拟的优势，比如轻量级的分支管理，适合不同场景的分支合并策略，离线状态下的版本管理和变更历史查询等，而这些优势也正好符合了当前敏捷和精益的软件开发方法。本文将介绍如何在Linux，Mac和Windows系统中安装并配置Git。</p>
-<span id="more"></span>
-<h1 id="安装Git"><a href="#安装Git" class="headerlink" title="安装Git"></a>安装Git</h1><p>本文只介绍Git命令行的安装，因为使用命令行更能掌握Git的本质，且对于DevOps或系统维护人员来说，使用命令行也是日常的基本功。当掌握了Git命令行的使用后，再去使用图形化客户端，也会变得更容易。</p>
-<h2 id="在Mac中的安装"><a href="#在Mac中的安装" class="headerlink" title="在Mac中的安装"></a>在Mac中的安装</h2><p>Mac Xcode自带了Git。如果你的Mac电脑上已经安装了Xcode，就已经有Git可以使用了，Git命令的安装路径为/usr/bin/git。但是这个Git不一定是比较新的版本，可以通过Homebrew或第三方提供的DMG安装包，重新安装一个比较新的版本。</p>
-<ul>
-<li><p>通过Homebrew安装</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">brew install git</span><br></pre></td></tr></tbody></table></figure>
-<p>  Homebrew将Git安装在/usr/local/Cellar/git/2.29.2/路径下，同时会建立一个符号链接/usr/local/bin/git指向Git命令/usr/local/Cellar/git/2.29.2/bin/git。2.29.2是当前Homebrew支持的最新版本。</p>
-<blockquote>
-<p>在PATH环境变量中确保路径/usr/local/bin在/usr/bin之前，这样Homebrew安装的Git命令会被优先使用。</p>
-</blockquote>
-</li>
-<li><p>通过DMG安装包安装</p>
-<p>  可以从<a href="https://sourceforge.net/projects/git-osx-installer/">https://sourceforge.net/projects/git-osx-installer/</a> 下载较新的版本去安装。通过DMG安装的Git被安装在/usr/local/git下, 并且会在/usr/local/bin和/usr/share/man/中建立符号链接。</p>
-<p>  可以通过下面的命令卸载Git.</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> /usr/local/git/uninstall.sh</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<blockquote>
-<p>推荐用Homebrew的方式安装Git，不但能获得较新的版本，而且以后升级也方便。</p>
-</blockquote>
-<h2 id="在Linux中的安装"><a href="#在Linux中的安装" class="headerlink" title="在Linux中的安装"></a>在Linux中的安装</h2><p>Linux系统也缺省自带了Git，不过一般不是最新的版本，但不影响使用。如果想安装最新版本或相对较新的版本的话，可以参照下面方法安装。</p>
-<h3 id="在Ubuntu中安装最新版本的Git"><a href="#在Ubuntu中安装最新版本的Git" class="headerlink" title="在Ubuntu中安装最新版本的Git"></a>在Ubuntu中安装最新版本的Git</h3><p>Ubuntu自带的Git是安装在路径/usr/bin/git下。在Ubuntu中，可以通过<a href="https://launchpad.net/ubuntu/+ppas">PPA（Personal Package Archive）</a>安装最新版本的Git，安装完后会覆盖旧的版本。以下是安装步骤：</p>
-<ul>
-<li><p>添加Git的PPA库</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> add-apt-repository ppa:git-core/ppa</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新APT缓存</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt update</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>搜索最新版本的Git</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-cache madison git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>安装Git</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt install git</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<blockquote>
-<p>这里选择的是Ubuntu18。</p>
-</blockquote>
-<h3 id="在CentOS中安装最新版本的Git"><a href="#在CentOS中安装最新版本的Git" class="headerlink" title="在CentOS中安装最新版本的Git"></a>在CentOS中安装最新版本的Git</h3><p>CentOS 7自带的Git非常旧，还是1.x的版本，执行<code>rpm -qa | grep git</code>可以看到Git包为”git-1.8.3.1-23.el7_8.x86_64“，安装路径为/usr/bin/git。在CentOS中，可以通过Endpoint仓库安装最新版本的Git。以下是安装步骤：</p>
-<ul>
-<li><p>删除旧的Git</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum remove git*</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>添加CentOS 7 Endpoint仓库</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新Yum缓存</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum update</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>搜索最新版本的Git</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum list git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>安装Git</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum install git</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<blockquote>
-<p>这里选择的是CentOS 7。</p>
-</blockquote>
-<h2 id="在Windows中的安装"><a href="#在Windows中的安装" class="headerlink" title="在Windows中的安装"></a>在Windows中的安装</h2><p>从<a href="https://git-scm.com/download/win">https://git-scm.com/download/win</a> 下载最新版本的Windows安装包，并安装。</p>
-<div class="justified-gallery">
-
-<p><img src="/2020/12/31/git-install-configure/1.png" alt="1"><br><img src="/2020/12/31/git-install-configure/2.png" alt="2"><br><img src="/2020/12/31/git-install-configure/3.png" alt="3"><br><img src="/2020/12/31/git-install-configure/4.png" alt="4"><br><img src="/2020/12/31/git-install-configure/5.png" alt="5"><br><img src="/2020/12/31/git-install-configure/6.png" alt="6"><br><img src="/2020/12/31/git-install-configure/7.png" alt="7"><br><img src="/2020/12/31/git-install-configure/8.png" alt="8"></p>
-</div>  
-  
-  
-<blockquote>
-<p>尽量选择红色框里的选项，这样能最大限度地用Linux的方式使用Git命令。</p>
-</blockquote>
-<h1 id="配置Git"><a href="#配置Git" class="headerlink" title="配置Git"></a>配置Git</h1><p>为了更好地使用Git命令行客户端，需要做一些必要的设置，有些设置是不同平台共享的，有些设置是平台独有的。</p>
-<h2 id="共享配置"><a href="#共享配置" class="headerlink" title="共享配置"></a>共享配置</h2><ul>
-<li><p>设置用户名和邮件地址</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git config --global user.name mikejianzhang</span><br><span class="line">git config --global user.email mikejianzhang@163.com</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>设置引用路径为false</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git config --global core.quotepath <span class="literal">false</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>  如果文件名或路径中含有非英文字符或者允许的控制字符，例如中文字符，反斜杠，双引号等，当不设置”core.quotepath”或者设置它的值为true时，Git命令在显示这些文件名或路径时会用双引号引用这些文件名或路径，并对这些字符进行转义显示，即对非英文字符用八进制格式显示UTF-8编码，而对控制字符则通过反斜杠进行转义，当设置”core.quotepath”为false时，则对非英文字符会显示原来的文本，但是对控制字符仍然会转义显示。  </p>
-<p>  下面的两个文件名中既包含了中文字符又包含了控制字符，反斜杠和双引号。</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">mikepro:git-test mike$ <span class="built_in">ls</span> -l</span><br><span class="line">total 16</span><br><span class="line">-rw-r--r--  1 mike  staff  12 Jan  1 19:33 你好\上海 <span class="string">"大家们"</span>.txt</span><br><span class="line">-rw-r--r--  1 mike  staff  13 Jan  1 19:28 你好祖国.txt</span><br></pre></td></tr></tbody></table></figure>
-<p>  当不设置”core.quotepath”或者设置它的值为true时，<code>git status</code>显示如下：</p>
-  <figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">mikepro:git-test mike$ git status</span><br><span class="line">On branch master</span><br><span class="line"></span><br><span class="line">No commits yet</span><br><span class="line"></span><br><span class="line">Untracked files:</span><br><span class="line">(use "git add &lt;file&gt;..." to include in what will be committed)</span><br><span class="line">    "\344\275\240\345\245\275\\\344\270\212\346\265\267 \"\345\244\247\345\256\266\344\273\254\".txt"</span><br><span class="line">    "\344\275\240\345\245\275\347\245\226\345\233\275.txt"</span><br></pre></td></tr></tbody></table></figure>
-<p>  当设置”core.quotepath”为false时，<code>git status</code>显示如下：</p>
-  <figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">mikepro:git-test mike$ git status</span><br><span class="line">On branch master</span><br><span class="line"></span><br><span class="line">No commits yet</span><br><span class="line"></span><br><span class="line">Untracked files:</span><br><span class="line">(use "git add &lt;file&gt;..." to include in what will be committed)</span><br><span class="line">    "你好\\上海 \"大家们\".txt"</span><br><span class="line">    你好祖国.txt</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>设置永久缓存Git账号</p>
-<p>  当通过http协议访问Git仓库时，需要提供用户名和密码，为了避免每次都要输入用户名和密码，可以设置永久缓存Git账号。</p>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">    git config --global credential.helper store</span><br><span class="line">    ```  </span><br><span class="line">    &gt; 在Mac系统中，账号会被缓存到Keychain里，而在Linux/Windows中，账号会被缓存到文件~/.git-credentials中。</span><br><span class="line"></span><br><span class="line">+ 设置安全的换行符</span><br><span class="line">    ```sh</span><br><span class="line">    git config --global core.safecrlf <span class="literal">true</span></span><br><span class="line">    ```  </span><br><span class="line"></span><br><span class="line">    &gt; 严格检查文本或代码文件的换行符是否正确，例如在Linux/Mac/Unix平台上，应该都是LF格式，在Windows平台上，应该是CRLF格式，或者是在.gitattribute中，通过选项”eol“显式指定的换行符，如果不正确则阻止提交。</span><br><span class="line"></span><br><span class="line">+ 设置忽略ssl证书验证</span><br><span class="line"></span><br><span class="line">    ```sh</span><br><span class="line">    git config --global http.sslverify <span class="literal">false</span></span><br><span class="line">    ```  </span><br><span class="line">    &gt; 如果Git通过http协议访问代码仓库，可以设置忽略ssl证书验证，尤其是Git服务器用的是自签名证书。</span><br><span class="line"></span><br><span class="line">+ 设置空格处理</span><br><span class="line"></span><br><span class="line">    ```sh</span><br><span class="line">    git config --global core.whitespace cr-at-eol,-trailing-space</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>在执行<code>git diff</code>和<code>git apply</code>命令时，如何处理空格或换行很重要，否则在团队协同开发的过程中会产生很大的干扰。</p>
-</blockquote>
-<blockquote>
-<p>cr-at-eol: 如果行尾为CR字符，当做换行符处理，不显示^M<br>-trailing-space: 执行<code>git apply</code>时，对于行末或文末的空格不提示错误</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="Linx-Mac中的配置"><a href="#Linx-Mac中的配置" class="headerlink" title="Linx/Mac中的配置"></a>Linx/Mac中的配置</h2><ul>
-<li><p>设置文件检出时的换行符</p>
-<pre><code class="language-sh">git config --global core.autocrlf input
-</code></pre>
-<blockquote>
-<p>在Linx/Mac系统中，从代码仓库检出文件时，保持服务端的文件换行符，因为Git服务端是按照Linux格式的换行符存储文本或代码文件的。</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="Windows中的配置"><a href="#Windows中的配置" class="headerlink" title="Windows中的配置"></a>Windows中的配置</h2><ul>
-<li><p>设置文件检出时的换行符</p>
-<pre><code class="language-sh">git config --global core.autocrlf true
-</code></pre>
-<p>  在Windows系统中，从代码仓库检出文件时，将文本或代码文件的换行符自动转换成Windows格式的换行符CRLF，除非在.gitattribute中显式指定某些文件的换行符为Linux格式的换行符LF。</p>
-</li>
-<li><p>设置允许长路径文件</p>
-<pre><code class="language-sh">git config --global core.longpaths true
-</code></pre>
-<p>  设置Windows中的Git命令支持长路径（大于260字节）。</p>
-</li>
-</ul>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
       <tags>
         <tag>Git</tag>
       </tags>
@@ -1300,108 +1425,11 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>GitOps</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
-    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
-    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
-<span id="more"></span>
-<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
-<ol>
-<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
-<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
-</ol>
-<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
-<ul>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
-<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
-</ul>
-<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
-<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
-<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
-</li>
-<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
-</li>
-</ol>
-<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
-<ul>
-<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
-<li>Pull request事件: 选择”Opened”和”Modified”</li>
-<li>Repository事件: 选择”Push”<blockquote>
-<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
-</blockquote>
-</li>
-</ul>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        bitBucketTrigger(</span><br><span class="line">            [</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>,</span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerCreatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ], </span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerUpdatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ],</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRRepositoryTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [</span><br><span class="line">                                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRServerRepositoryPushActionFilter'</span>, </span><br><span class="line">                                    <span class="symbol">allowedBranches:</span> <span class="string">''</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfNothingChanged:</span> <span class="literal">true</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfTagPush:</span> <span class="literal">false</span></span><br><span class="line">                                ]</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        BITBUCKET_URL = <span class="string">"http://130.147.249.221:7990"</span></span><br><span class="line">        BITBUCKET_ORG = <span class="string">"miks"</span></span><br><span class="line">        BITBUCKET_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/pr/*/merge"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull-requests/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${BITBUCKET_URL}/scm/${BITBUCKET_ORG}/${BITBUCKET_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
-<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull/merge request)的本质”</a>。</p>
-<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/${BITBUCKET_PULL_REQUEST_ID}/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
-<blockquote>
-<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
-</blockquote>
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
-</li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
-</li>
-<li><p>点击”Save”按钮保存Jenkins Job</p>
-</li>
-<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
-</li>
-</ol>
-<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
-<li><p>Bitbucket的合并请求(pull/merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
-</li>
-</ol>
-<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
       <categories>
-        <category>Jenkins</category>
+        <category>DevOps</category>
       </categories>
       <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Jenkins</tag>
-        <tag>Bitbucket</tag>
+        <tag>GitOps</tag>
       </tags>
   </entry>
   <entry>
@@ -1500,262 +1528,81 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
+      <categories>
+        <category>开发</category>
+      </categories>
       <tags>
         <tag>Python</tag>
       </tags>
   </entry>
   <entry>
-    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
-    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
-    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
+    <title>Jenkins构建Bitbucket合并请求(Pull Request)</title>
+    <url>/2020/02/23/jenkins-bibucket-pullrequest/</url>
+    <content><![CDATA[<p>在<a href="http://www.mikesay.com/2020/01/30/jenkins-github-pullrequest/">“Jenkins随笔(3)  Jenkins构建Github合并请求(Pull Request)”</a>中介绍了用Jenkins构建Github合并请求(Pull Request)的方法以及preflight流水线的意义。本文将继续介绍如何配置Jenkins和Bitbucket来构建Bitbucket合并请求(Pull Request)。</p>
 <span id="more"></span>
-
-<h1 id="一个典型的CI-CD流水线"><a href="#一个典型的CI-CD流水线" class="headerlink" title="一个典型的CI/CD流水线"></a>一个典型的CI/CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
-<p>上图是个典型的CI/CD流水线，由5个阶段（Phase）组成：Build/UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
-<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
-<ul>
-<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
-</li>
-<li><p>调试CI/CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
-</li>
-</ul>
-<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
-<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
-<ul>
-<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
-</li>
-<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
-</li>
-</ul>
-<blockquote>
-<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
-</blockquote>
-<p>下图是状态存储与恢复的过程。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
-<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
-<h1 id="在Jenkins上实现这个CI-CD流水线"><a href="#在Jenkins上实现这个CI-CD流水线" class="headerlink" title="在Jenkins上实现这个CI/CD流水线"></a>在Jenkins上实现这个CI/CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
-<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
-</li>
-<li><p>必要的插件</p>
-<ul>
-<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
-<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
-</li>
-<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
-<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI/CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI/CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
-</li>
-<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
-<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI/CD流水线建设的要求。</p>
-</li>
-<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
-<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI/CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
-</li>
-<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
-<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
-<blockquote>
-<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI/CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
-</blockquote>
-</li>
-<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
-<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI/CD流水线中能显示更多的信息。</p>
-</li>
-<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
-<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
-</li>
-<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
-<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI/CD流水线必要的特征。</p>
-</li>
-<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
-<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
-</li>
-</ul>
-</li>
-</ol>
-<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI/CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build/UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
-<p>步骤的一些说明：</p>
+<p>Bitbucket官网提供了以下两种方法来配置Jenkins构建Bitbucket合并请求(Pull Request):</p>
 <ol>
-<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
-</li>
-<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
-</li>
-<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
-</li>
-<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
-</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/git/">Git插件</a>结合Bitbucket插件<a href="https://marketplace.atlassian.com/apps/1211284/webhook-to-jenkins-for-bitbucket/version-history">Webhook to Jenkins for Bitbucket</a></li>
+<li>Jenkins <a href="https://plugins.jenkins.io/cloudbees-bitbucket-branch-source/">Bitbucket Branch Source</a>插件</li>
 </ol>
-<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
-<p>步骤的一些说明：</p>
-<ol>
-<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
-</li>
-<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
-</li>
-<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
-</li>
-<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
-</li>
-<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
-</li>
-</ol>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
-<ol>
-<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
-</li>
-<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
-</li>
-</ol>
-<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Jenkins</category>
-      </categories>
-      <tags>
-        <tag>DevOps</tag>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
-    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
-    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
-<span id="more"></span>
-
-<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
+<p>方法1中的Bitbucket插件Webhook to Jenkins for Bitbucket是商业版的，需要收费，个人觉得不值得，也没有尝试。方法2中的Jenkins Bitbucket Branch Source插件适合于Jenkins多分支流水线， 也不是本文讨论的范围。除此之外，Jenkins还有这三个插件可用：</p>
+<ul>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">Bitbucket Pullrequest Builder</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket/">Bitbucket</a>插件</li>
+<li>Jenkins <a href="https://plugins.jenkins.io/bitbucket-push-and-pull-request/">Bitbucket Push and Pull Request</a>插件</li>
+</ul>
+<p>Bitbucket Pullrequest Builder插件有一些严重的问题<a href="https://plugins.jenkins.io/bitbucket-pullrequest-builder/">(https://plugins.jenkins.io/bitbucket-pullrequest-builder/)</a>，所以不能采用。Bitbucket插件是目前网上大部分文章讨论用到的插件，但是测试下来发现个问题，即提交代码到现有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建，这个问题首先是Bitbucket Webhook并没有提供一个这样的事件(<a href="https://community.atlassian.com/t5/Bitbucket-questions/How-to-trigger-a-webhook-when-a-commit-is-pushed-to-an-open-pull/qaq-p/1029556">网上也有类似的讨论</a>)，其次Bitbucket插件也没有提供足够的灵活性方便解决它。最终测试下来觉得Bitbucket Push and Pull Request插件可以使用，首先它是从Bitbucket插件继承过来的，包含了Bitbucket插件的所有功能，其次通过使用Bitbucket Push and Pull Request插件，可以配置一个临时的方法解决我们发现的Bitbucket插件和Bitbucket Webhook的问题。下面将详细介绍利用Jenkins Bitbucket Push and Pull Request插件来构建Bitbucket合并请求(Pull Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Bitbucket-Push-and-Pull-Request插件"><a href="#安装Bitbucket-Push-and-Pull-Request插件" class="headerlink" title="安装Bitbucket Push and Pull Request插件"></a>安装Bitbucket Push and Pull Request插件</h2><ol>
 <li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
 </li>
-<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/1.png"></p>
 </li>
 <li><p>必要时重启Jenkins让插件生效</p>
 </li>
 </ol>
-<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
-<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
-<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
-<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
+<p>安装完插件后，生成的Web hook url地址为<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code>。</p>
+<h1 id="配置Bitbucket代码仓库"><a href="#配置Bitbucket代码仓库" class="headerlink" title="配置Bitbucket代码仓库"></a>配置Bitbucket代码仓库</h1><ol>
+<li><p>点击”Repository settings” -&gt; “Webhooks”打开Webhooks创建页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/2.png"></p>
 </li>
-<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
-</li>
-<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
+<li><p>点击”Create webhook”按钮打开添加Webhook页面<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/3.png"></p>
 </li>
 </ol>
-<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+<p>添加以下的信息后点击保存按钮创建新的Webhook:</p>
+<ul>
+<li>URL: 设置为Bitbucket Push and Pull Request插件生成的Web hook url地址：<code>http://&lt;jenkins url&gt;/bitbucket-hook/</code></li>
+<li>Pull request事件: 选择”Opened”和”Modified”</li>
+<li>Repository事件: 选择”Push”<blockquote>
+<p>这里选择Push事件是为了解决文章开头提到的Bitbucket插件和Bitbucket Webhook的问题，即提交代码到已有的合并请求(Pull Request)不会触发新的合并请求(Pull Request)的构建。</p>
+</blockquote>
 </li>
-<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
-</li>
-<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
-</li>
-<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
-<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        gitlab(</span><br><span class="line">            <span class="symbol">triggerOnPush:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">triggerOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">triggerOpenMergeRequestOnPush:</span> <span class="string">"source"</span>,</span><br><span class="line">            <span class="symbol">triggerOnNoteRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">noteRegex:</span> <span class="string">".*\\[run\\W+ci\\].*"</span>,</span><br><span class="line">            <span class="symbol">skipWorkInProgressMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">ciSkip:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">setBuildDescription:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addNoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addCiMessage:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addVoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">acceptMergeRequestOnSuccess:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">branchFilterType:</span> <span class="string">"NameBasedFilter"</span>,</span><br><span class="line">            <span class="symbol">includeBranchesSpec:</span> <span class="string">"master"</span>,</span><br><span class="line">            <span class="symbol">excludeBranchesSpec:</span> <span class="string">""</span></span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITLAB_URL = <span class="string">"http://mygitlab.philips.com"</span></span><br><span class="line">        GITLAB_ORG = <span class="string">"mikesay"</span></span><br><span class="line">        GITLAB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">        gitLabConnection <span class="string">'mygitlab'</span></span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'gitlab_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITLAB_URL}/${GITLAB_ORG}/${GITLAB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">      failure {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'failed'</span></span><br><span class="line">      }</span><br><span class="line">      success {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'success'</span></span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+</ul>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        bitBucketTrigger(</span><br><span class="line">            [</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>,</span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerCreatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ], </span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRPullRequestServerTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [<span class="attr">$class:</span> <span class="string">'BitBucketPPRPullRequestServerUpdatedActionFilter'</span>, <span class="attr">allowedBranches:</span> <span class="string">''</span>]</span><br><span class="line">                ],</span><br><span class="line">                [</span><br><span class="line">                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRRepositoryTriggerFilter'</span>, </span><br><span class="line">                    <span class="symbol">actionFilter:</span> [</span><br><span class="line">                                    <span class="symbol">$class:</span> <span class="string">'BitBucketPPRServerRepositoryPushActionFilter'</span>, </span><br><span class="line">                                    <span class="symbol">allowedBranches:</span> <span class="string">''</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfNothingChanged:</span> <span class="literal">true</span>, </span><br><span class="line">                                    <span class="symbol">triggerAlsoIfTagPush:</span> <span class="literal">false</span></span><br><span class="line">                                ]</span><br><span class="line">                ]</span><br><span class="line">            ]</span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        BITBUCKET_URL = <span class="string">"http://130.147.249.221:7990"</span></span><br><span class="line">        BITBUCKET_ORG = <span class="string">"miks"</span></span><br><span class="line">        BITBUCKET_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/pr/*/merge"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull-requests/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${BITBUCKET_URL}/scm/${BITBUCKET_ORG}/${BITBUCKET_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
-<ol>
-<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>triggerOnPush</td>
-<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnMergeRequest</td>
-<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOpenMergeRequestOnPush</td>
-<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
-</tr>
-<tr>
-<td>triggerOnNoteRequest</td>
-<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
-</tr>
-<tr>
-<td>ciSkip</td>
-<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
-</tr>
-<tr>
-<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
-<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
- <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/merge-requests/*:refs/remotes/origin/mr/*'</span></span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>39行: branches选择”origin/mr/${gitlabMergeRequestId}/head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
- <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]]</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
-<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">gitlabBranch</span><br><span class="line">gitlabSourceBranch</span><br><span class="line">gitlabActionType</span><br><span class="line">gitlabUserName</span><br><span class="line">gitlabUserUsername</span><br><span class="line">gitlabUserEmail</span><br><span class="line">gitlabSourceRepoHomepage</span><br><span class="line">gitlabSourceRepoName</span><br><span class="line">gitlabSourceNamespace</span><br><span class="line">gitlabSourceRepoURL</span><br><span class="line">gitlabSourceRepoSshUrl</span><br><span class="line">gitlabSourceRepoHttpUrl</span><br><span class="line">gitlabMergeRequestTitle</span><br><span class="line">gitlabMergeRequestDescription</span><br><span class="line">gitlabMergeRequestId</span><br><span class="line">gitlabMergeRequestIid</span><br><span class="line">gitlabMergeRequestState</span><br><span class="line">gitlabMergedByUser</span><br><span class="line">gitlabMergeRequestAssignee</span><br><span class="line">gitlabMergeRequestLastCommit</span><br><span class="line">gitlabMergeRequestTargetProjectId</span><br><span class="line">gitlabTargetBranch</span><br><span class="line">gitlabTargetRepoName</span><br><span class="line">gitlabTargetNamespace</span><br><span class="line">gitlabTargetRepoSshUrl</span><br><span class="line">gitlabTargetRepoHttpUrl</span><br><span class="line">gitlabBefore</span><br><span class="line">gitlabAfter</span><br><span class="line">gitlabTriggerPhrase</span><br></pre></td></tr></tbody></table></figure>
-
+<p>8行-24行: 配置Job触发事件，分别是合并请求(Pull Request)的创建(Create)，更新(Update)事件，以及Git仓库的推送(Push)事件，同时设置”triggerAlsoIfNothingChanged”的值为true。勾选Git仓库的推送(Push)事件和设置”triggerAlsoIfNothingChanged”的值为true是为了过滤前面Webhook中设置的Git仓库的推送(Push)事件，这样当有新的提交推送到合并请求(Pull Request)后，Job也能被触发。</p>
+<p>53行：设置拉取合并请求(Pull Request)的配置。可以参考之前的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git随笔(1) Git合并请求(pull/merge request)的本质”</a>。</p>
+<p>42行：构建分支设置为<code>origin/pr/*/merge</code>，这样可以构建所有合并请求(Pull Request)对应的分支。Bitbucket Push and Pull Request插件在触发构建时会传递一个环境变量”BITBUCKET_PULL_REQUEST_ID”到构建Job中，这个环境变量的值就是合并请求(Pull Request)的ID号。利用这个环境变量可以将构建分支设置的更精确一点，比如<code>origin/pr/${BITBUCKET_PULL_REQUEST_ID}/merge</code>，但只有合并请求(Pull Request)的创建，关闭和重新打开的事件触发的构建Job才会传递这个变量，所以不怎么通用。</p>
+<blockquote>
+<p>将构建分支设置为通用的合并请求(Pull Request)分支也带来了个缺陷，就是当构建Job创建好后，必须手动触发多次以获取所有未完成的合并请求(Pull Request)分支的信息以便后续合并请求(Pull Request)有更新时，能够触发正确的构建。</p>
+</blockquote>
 <h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
 <li><p>点击”New Item”</p>
 </li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”bitbucket-preflight”，点击”Ok”按钮<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/4.png"></p>
 </li>
-<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/5.png"></p>
 </li>
 <li><p>点击”Save”按钮保存Jenkins Job</p>
 </li>
-<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
+<li><p>手动触发Jenkins Job多次以获取所有未完成的合并请求(Pull Request)分支的信息。如果目前没有未完成的合并请求(Pull Request)，也需要手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/6.png"></p>
 </li>
 </ol>
-<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
-<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
+<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
+<li><p>Bitbucket的合并请求(pull/merge request)<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/7.png"></p>
 </li>
-<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
-</li>
-<li><p>点击Save按钮保存</p>
+<li><p>触发的构建<br><img src="/2020/02/23/jenkins-bibucket-pullrequest/8.png"></p>
 </li>
 </ol>
-<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
-<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
-</li>
-<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
-</li>
-</ol>
-<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user's api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
-<ol start="3">
-<li>点击Add webhook按钮添加Web hook</li>
-</ol>
-<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
-<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
-</li>
-</ol>
-<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
+<p>细心的读者可能发现，和Github合并请求(Pull Request)的构建相比少了很多有用的信息，比如构建描述中没有显示合并请求(Pull Request)号，不太容易知道当前的构建是由哪个合并请求(Pull Request)触发的，而在合并请求(Pull Request)的页面中也看不到当前构建的状态。这些都是由Jenkins插件提供的功能多少决定的，对于Bitbucket合并请求(Pull Request)的构建，我们需要更多的自定义工作以提供足够多的信息，比如从当前构建中获取合并请求(Pull Request)分支，提取出合并请求(Pull Request)号并且设置到构建描述中。</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -1776,14 +1623,12 @@
           });
       </script>]]></content>
       <categories>
-        <category>Jenkins</category>
+        <category>DevOps</category>
       </categories>
       <tags>
-        <tag>DevOps</tag>
         <tag>CI/CD</tag>
-        <tag>Git</tag>
         <tag>Jenkins</tag>
-        <tag>GitLab</tag>
+        <tag>Bitbucket</tag>
       </tags>
   </entry>
   <entry>
@@ -1885,203 +1730,11 @@
           });
       </script>]]></content>
       <categories>
-        <category>Jenkins</category>
+        <category>DevOps</category>
       </categories>
       <tags>
-        <tag>DevOps</tag>
         <tag>CI/CD</tag>
         <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>基于VSCode+Continue+Ollama手搓本地开源AI辅助编程工作台</title>
-    <url>/2026/04/09/local-opensource-ai-assistant-coding-setup/</url>
-    <content><![CDATA[<p>在上一篇文章<a href="https://www.mikesay.com/2026/04/08/vibe-coding/#more?t=1775724599864">《AI辅助编程：从“复制粘贴”到“氛围编程 (Vibe Coding)”》</a>中，我们探讨了AI如何改变开发者的心智模型。所谓的 <strong>氛围编程 (Vibe Coding)</strong>，本质上是让开发者从繁琐的语法细节中抽离，通过自然语言驱动 AI 完成复杂的逻辑构建。  </p>
-<span id="more"></span>
-
-<p>要实现这种“行云流水”的体验，一个成熟的 <strong>AI Coding Agent</strong> 必须具备以下核心能力：  </p>
-<ul>
-<li><strong>LLM 语义理解</strong>：深度理解代码意图，而非简单的字符补全。</li>
-<li><strong>项目结构解读</strong>：具备 RAG 能力，能扫描工程目录并建立上下文索引（@Codebase）。</li>
-<li><strong>多文件编辑与生成</strong>：能够自动创建文件并跨文件协同重构。</li>
-<li><strong>内联编辑 (Inline Edit)</strong>：支持代码行间的 Diff 对比与一键采纳。</li>
-<li><strong>工具调用 (Tool Use)</strong>：自动运行终端命令或读取系统文件。</li>
-</ul>
-<h1 id="1-商业战场的博弈：能力强大但“金钱”驱动"><a href="#1-商业战场的博弈：能力强大但“金钱”驱动" class="headerlink" title="1. 商业战场的博弈：能力强大但“金钱”驱动"></a>1. 商业战场的博弈：能力强大但“金钱”驱动</h1><p>目前市场上的商业级 AI 编程工具主要由 SaaS 服务驱动，依托闭源大模型提供服务。  </p>
-<table>
-<thead>
-<tr>
-<th align="left">AI Coding Agent</th>
-<th align="left">License</th>
-<th align="left">CLI</th>
-<th align="left">VS Code</th>
-<th align="left">其他 IDE</th>
-<th align="left">Ollama 支持</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>GitHub Copilot</strong></td>
-<td align="left">Commercial</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">JetBrains, Vim</td>
-<td align="left">✅</td>
-</tr>
-<tr>
-<td align="left"><strong>Claude Code</strong></td>
-<td align="left">Commercial</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">Terminal</td>
-<td align="left">✅</td>
-</tr>
-<tr>
-<td align="left"><strong>Cursor</strong></td>
-<td align="left">Commercial</td>
-<td align="left">❌</td>
-<td align="left">✅</td>
-<td align="left">Standalone</td>
-<td align="left">✅</td>
-</tr>
-<tr>
-<td align="left"><strong>Droid</strong></td>
-<td align="left">Commercial</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">Slack</td>
-<td align="left">✅</td>
-</tr>
-</tbody></table>
-<ul>
-<li><strong>优势</strong>：依托云端顶级模型，不占用本地资源，响应逻辑强。</li>
-<li><strong>缺点</strong>：按月订阅收费；代码隐私存在风险；如果不是合理使用会造成额度浪费。</li>
-</ul>
-<h1 id="2-极客的选择：在-Mac-M3-上打造本地“大脑”"><a href="#2-极客的选择：在-Mac-M3-上打造本地“大脑”" class="headerlink" title="2. 极客的选择：在 Mac M3 上打造本地“大脑”"></a>2. 极客的选择：在 Mac M3 上打造本地“大脑”</h1><p>如果你拥有一台 <strong>MacBook Pro M3</strong>，其独特的统一内存架构（Unified Memory）简直是为运行中大型本地模型而生的。相比于昂贵的 SaaS 订阅，利用开源工具在本地搭建工作台，不仅能榨干 M3 的性能，还能确保代码资产的绝对安全。  </p>
-<h2 id="1-底层引擎的选择：为什么是-Ollama？"><a href="#1-底层引擎的选择：为什么是-Ollama？" class="headerlink" title="(1) 底层引擎的选择：为什么是 Ollama？"></a>(1) 底层引擎的选择：为什么是 Ollama？</h2><p>在本地运行 LLM 的工具链中，虽然有 LM Studio, vLLM 等选择，但 <strong>Ollama</strong> 依然是目前的最佳实践：  </p>
-<ul>
-<li><strong>极致的本地化体验</strong>：一行命令 <code>ollama run</code> 即可部署，完全不依赖外部网络。</li>
-<li><strong>资源调度优化</strong>：针对 Apple Silicon 的 GPU 进行了深度优化，加载 32B 模型也能实现极低延迟。</li>
-<li><strong>标准的 API 接口</strong>：提供兼容 OpenAI 格式的本地 HTTP 接口，让前端 Agent 插件（如 Continue）能够无缝对接。</li>
-</ul>
-<h2 id="2-交互层的对比：AI-Coding-Agent-哪家强？"><a href="#2-交互层的对比：AI-Coding-Agent-哪家强？" class="headerlink" title="(2) 交互层的对比：AI Coding Agent 哪家强？"></a>(2) 交互层的对比：AI Coding Agent 哪家强？</h2><p>在开源社区中，有几个备受瞩目的 AI Coding Agent 方案，我们对其进行了横向对比：  </p>
-<table>
-<thead>
-<tr>
-<th align="left">开源 Agent 项目</th>
-<th align="left">License</th>
-<th align="left">CLI</th>
-<th align="left">VS Code</th>
-<th align="left">核心特色与推荐理由</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>OpenCode</strong></td>
-<td align="left">Open Source</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">轻量极客风，对 NeoVim 用户极其友好。</td>
-</tr>
-<tr>
-<td align="left"><strong>Aider</strong></td>
-<td align="left">Open Source</td>
-<td align="left">✅</td>
-<td align="left">🛠️</td>
-<td align="left"><strong>终端交互战神</strong>。擅长复杂重构，支持 Git 自动提交变更。</td>
-</tr>
-<tr>
-<td align="left"><strong>Cline</strong></td>
-<td align="left">Open Source</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left"><strong>功能激进</strong>。支持 Agent 模式直接执行终端指令和读写文件。</td>
-</tr>
-<tr>
-<td align="left"><strong>Continue</strong></td>
-<td align="left"><strong>Open Source</strong></td>
-<td align="left"><strong>✅</strong></td>
-<td align="left"><strong>✅</strong></td>
-<td align="left"><strong>全能选手</strong>。插件生态成熟，上下文索引强大，能完美适配 Ollama。</td>
-</tr>
-</tbody></table>
-<p><strong>最终选择：Continue</strong><br>经过权衡，我最终选择了 <strong>Continue</strong>。它的优势在于高度的自定义自由度，能够灵活配置不同的本地模型（Chat 用大模型，补全用小模型），且其 UI 交互与 <strong>GitHub Copilot Chat</strong> 高度一致，是目前手搓 AI 工作台的“满分”底座。  </p>
-<h3 id="Continue-与-GitHub-Copilot-Chat-的详细比较"><a href="#Continue-与-GitHub-Copilot-Chat-的详细比较" class="headerlink" title="Continue 与 GitHub Copilot Chat 的详细比较"></a>Continue 与 GitHub Copilot Chat 的详细比较</h3><p>我们可以从以下三个维度来拆解它们的关系：  </p>
-<ol>
-<li><strong>核心功能的“平替”</strong>：在侧边栏对话 (<code>Cmd+L</code>)、内联编辑 (<code>Cmd+I</code>) 和代码自动补全上，Continue 完全复刻了 Copilot Chat 的核心体验。  </li>
-<li><strong>Continue 的“降维打击”</strong>：Copilot 只能用 OpenAI 的模型，而 Continue 让你实现“模型自由”——用 <strong>Qwen 30B</strong> 搞深度思考，用 <strong>DeepSeek 16B</strong> 做代码重写。同时，它的 <code>@</code> 体系（如 <code>@Codebase</code>）提供了 Copilot 难以触及的精准本地上下文。  </li>
-<li><strong>与 Cursor/Cline 的区别</strong>：不同于魔改整个 IDE 的 Cursor 或频繁执行系统指令的 Cline，Continue 保持了插件的纯粹性，不改变你的 IDE 习惯，仅作为超强增强包存在。</li>
-</ol>
-<h1 id="3-落地实践：手把手配置你的-AI-工作台"><a href="#3-落地实践：手把手配置你的-AI-工作台" class="headerlink" title="3. 落地实践：手把手配置你的 AI 工作台"></a>3. 落地实践：手把手配置你的 AI 工作台</h1><p>在 Mac M3 环境下，我们将使用 <strong>Ollama</strong> 作为后端，结合 <strong>Qwen3 Coder 30B</strong>（高性能大模型）与 <strong>DeepSeek Coder V2 16B</strong>。  </p>
-<h2 id="1-安装-Ollama-与模型准备"><a href="#1-安装-Ollama-与模型准备" class="headerlink" title="(1) 安装 Ollama 与模型准备"></a>(1) 安装 Ollama 与模型准备</h2><p>首先，通过 Homebrew 安装 Ollama 并将其设为后台服务。  </p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># 安装 Ollama</span></span><br><span class="line">brew install ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将 Ollama 设为 brew service 后台运行</span></span><br><span class="line">brew services start ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载并运行模型进行测试</span></span><br><span class="line">ollama run qwen3-coder:30b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载备用模型及向量索引模型</span></span><br><span class="line">ollama pull deepseek-coder-v2:16b</span><br><span class="line">ollama pull nomic-embed-text  </span><br></pre></td></tr></tbody></table></figure>
-<h2 id="2-安装-VS-Code-Continue-插件并配置"><a href="#2-安装-VS-Code-Continue-插件并配置" class="headerlink" title="(2) 安装 VS Code Continue 插件并配置"></a>(2) 安装 VS Code Continue 插件并配置</h2><p>安装Continue插件后，修改配置文件 <code>~/.continue/config.yaml</code> 如下：  </p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Local</span> <span class="string">Ollama</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">version:</span> <span class="number">1.0</span><span class="number">.0</span></span><br><span class="line"><span class="attr">schema:</span> <span class="string">v1</span></span><br><span class="line"></span><br><span class="line"><span class="attr">models:</span></span><br><span class="line">  <span class="comment"># Primary Model (Default for Chat and Edit)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Coder</span> <span class="string">30B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Secondary Model (Available in dropdown)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">DeepSeek</span> <span class="string">Coder</span> <span class="string">V2</span> <span class="string">16B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">deepseek-coder-v2:16b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Dedicated Autocomplete Model</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Autocomplete</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">autocomplete</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Embeddings Model (for @codebase)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Nomic</span> <span class="string">Embed</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">nomic-embed-text</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">embed</span></span><br><span class="line"></span><br><span class="line"><span class="attr">context:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">currentFile</span> </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">file</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">folder</span>   </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">open</span>        </span><br><span class="line">    <span class="attr">params:</span></span><br><span class="line">      <span class="attr">onlyPinned:</span> <span class="literal">false</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">code</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">terminal</span>    </span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="3-开启-Vibe-Coding：实战演练"><a href="#3-开启-Vibe-Coding：实战演练" class="headerlink" title="(3) 开启 Vibe Coding：实战演练"></a>(3) 开启 Vibe Coding：实战演练</h2><p>配置完成后，你可以通过Continue的侧边栏或快捷键进入“氛围编程”模式。核心技巧在于利用 <strong>@ 符号</strong> 精确喂给 AI 上下文，以及让它跨越当前文件去创造新内容。  </p>
-<p><strong>实战场景示例：使用 Vibe Coding 创建一个 uv 管理依赖的 Python 项目</strong><br>假设你希望使用 Continue 来完全自动化地构建一个基于 <code>uv</code> 的 Python 项目，包括创建目录结构、生成 <code>pyproject.toml</code>、编写主程序和测试文件。</p>
-<ul>
-<li><p><strong>第一步：启动项目</strong><br>在 Continue 侧边栏（<code>Cmd + L</code>）中输入：</p>
-<blockquote>
-<p>“请使用 <code>uv init --no-workspace weather_cli</code> 命令初始化一个 Python 项目，项目名为 <code>weather_cli</code>，并使用 <code>uv</code> 管理依赖。先不要创建代码文件”</p>
-</blockquote>
-<p>AI 会自动在当前目录中运行 <code>uv init weather_cli</code> 命令，并创建项目结构和 <code>pyproject.toml</code> 文件。</p>
-</li>
-<li><p><strong>第二步：生成主程序文件</strong><br>在 Continue 侧边栏中输入：</p>
-<blockquote>
-<p>“@weather_cli，请编辑 <code>main.py</code> 生成一个 CLI 程序，使用 <code>click</code> 库，程序入口为 <code>main</code>，功能是打印当前天气信息。”</p>
-</blockquote>
-<p>AI 将自动编辑 <code>main.py</code> 文件，并生成完整的代码。你可以点击右上角的“应用”按钮，或者手动保存文件。</p>
-</li>
-<li><p><strong>第三步：生成测试文件</strong><br>在 Continue 侧边栏中输入：</p>
-<blockquote>
-<p>“@weather_cli，请在 <code>test_main.py</code> 中生成一个单元测试文件，测试 <code>main</code> 函数的执行逻辑。”</p>
-</blockquote>
-<p>AI 会生成一个完整的 <code>test_main.py</code> 文件，包含测试用例，使用 <code>unittest</code> 模块进行测试。</p>
-</li>
-<li><p><strong>第四步：内联编辑与集成</strong><br>打开 <code>main.py</code>，按下 <code>Cmd + I</code> 唤起内联编辑框。<br>在 <code>main</code> 函数内部，将光标放在 <code>click.command()</code> 装饰器之后，例如：</p>
-<blockquote>
-<p>“在 <code>main</code> 函数中加入 <code>@click.option('--city', default='Beijing')</code> 参数，并将 <code>city</code> 作为参数传入 <code>get_weather</code>。”<br>AI 会自动在函数中插入新逻辑，并显示 Diff 对比界面，绿色为新增，红色为修改。</p>
-</blockquote>
-</li>
-<li><p><strong>第五步：使用 @terminal 进行调试</strong><br>如果在运行 <code>uv run python -m weather_cli.main</code> 时报错：<br>在 Continue 侧边栏输入：</p>
-<blockquote>
-<p>“@Terminal 帮我分析这个报错。”</p>
-</blockquote>
-<p>AI 会读取终端输出的错误日志，并提示你如何解决，比如提示缺少依赖或模块路径问题。</p>
-</li>
-<li><p><strong>第六步：自动依赖安装</strong><br>在 Continue 侧边栏输入：</p>
-<blockquote>
-<p>“请在 <code>pyproject.toml</code> 中添加 <code>requests</code> 和 <code>click</code> 依赖，并使用 uv 安装它们。”</p>
-</blockquote>
-<p>AI 会自动更新 <code>pyproject.toml</code> 文件，并提示你使用 <code>uv sync</code> 或 <code>uv pip install</code> 来安装依赖。</p>
-</li>
-</ul>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>通过 <strong>VS Code + Continue + Ollama</strong> 的组合，我们成功在本地 Mac M3 上构建了一个完全属于自己的 AI 编程大脑。这不仅省去了每月的订阅费，更重要的是它实现了代码资产的100%隐私安全，并将 AI 的响应速度提升到了极致。  </p>
-<p>真正的“氛围编程(vibe coding)”不在于AI替你写所有代码，而在于你能够通过简单的 <strong>@指令</strong> 和 <strong>意图描述</strong>，指挥AI在你的项目阵地里开疆拓土。  </p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>AICoding</category>
-      </categories>
-      <tags>
-        <tag>LLM</tag>
-        <tag>AI Coding Agent</tag>
       </tags>
   </entry>
   <entry>
@@ -2237,14 +1890,496 @@
           });
       </script>]]></content>
       <categories>
-        <category>Jenkins</category>
+        <category>DevOps</category>
       </categories>
       <tags>
-        <tag>DevOps</tag>
         <tag>CI/CD</tag>
-        <tag>Git</tag>
-        <tag>Github</tag>
         <tag>Jenkins</tag>
+        <tag>Github</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
+    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
+    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
+<span id="more"></span>
+
+<h1 id="一个典型的CI-CD流水线"><a href="#一个典型的CI-CD流水线" class="headerlink" title="一个典型的CI/CD流水线"></a>一个典型的CI/CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
+<p>上图是个典型的CI/CD流水线，由5个阶段（Phase）组成：Build/UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
+<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
+<ul>
+<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
+</li>
+<li><p>调试CI/CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
+</li>
+</ul>
+<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
+<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
+<ul>
+<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
+</li>
+<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
+</li>
+</ul>
+<blockquote>
+<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
+</blockquote>
+<p>下图是状态存储与恢复的过程。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
+<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
+<h1 id="在Jenkins上实现这个CI-CD流水线"><a href="#在Jenkins上实现这个CI-CD流水线" class="headerlink" title="在Jenkins上实现这个CI/CD流水线"></a>在Jenkins上实现这个CI/CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
+<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
+</li>
+<li><p>必要的插件</p>
+<ul>
+<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
+<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
+</li>
+<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
+<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI/CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI/CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
+</li>
+<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
+<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI/CD流水线建设的要求。</p>
+</li>
+<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
+<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI/CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
+</li>
+<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
+<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
+<blockquote>
+<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI/CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
+</blockquote>
+</li>
+<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
+<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI/CD流水线中能显示更多的信息。</p>
+</li>
+<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
+<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
+</li>
+<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
+<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI/CD流水线必要的特征。</p>
+</li>
+<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
+<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI/CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build/UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
+</li>
+<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
+</li>
+<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
+</li>
+<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
+</li>
+</ol>
+<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
+</li>
+<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
+</li>
+<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
+</li>
+<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
+</li>
+<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
+</li>
+</ol>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
+<ol>
+<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
+</li>
+<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
+</li>
+</ol>
+<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Jenkins构建GitLab合并请求(Merge Request)</title>
+    <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
+    <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
+<span id="more"></span>
+
+<p>GitLab<a href="https://docs.gitlab.com/ee/integration/jenkins.html">官方文档</a>有写到用Jenkins去构建GitLab中的代码，但是用到了”Jenkins CI”这个项目服务，而这个服务在GitLab免费版本(社区版)中并没有提供，所以不去过多的讨论此方法。下面将利用Jenkins的<a href="https://plugins.jenkins.io/git/">Git插件</a>和<a href="https://plugins.jenkins.io/gitlab-plugin/">GitLab插件</a>去实现Jenkins构建GitLab的合并请求(Merge Request)。</p>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装"><a href="#安装GitLab插件-如果Git插件不存在，会作为GitLab插件的依赖被安装" class="headerlink" title="安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)"></a>安装GitLab插件(如果Git插件不存在，会作为GitLab插件的依赖被安装)</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择GitLab插件，点击Install without restart按钮</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<p>安装完插件后，生成的Web hook url地址为<code>https://JENKINS_URL/project/YOUR_JOB</code>。</p>
+<h2 id="创建Gitlab-Personal-Access-Token"><a href="#创建Gitlab-Personal-Access-Token" class="headerlink" title="创建Gitlab Personal Access Token"></a>创建Gitlab Personal Access Token</h2><ol>
+<li><p>点击Settings打开用户设置页面，并点击Access Tokens打开创建Personal Access Token页面</p>
+<p><img src="/2020/03/09/jenkins-gitlab-pullrequest/3.png"></p>
+</li>
+<li><p>在Name字段填上Token的名字，在Scope字段选上需要的权限，api的权限应该足够了。如果需要设置有效期限，可以设置Expires at字段，否则Token永不过期</p>
+</li>
+<li><p>点击Create personal access token按钮创建Token。注意，需要立即复制这个Token值，否则页面刷新后就会被隐藏掉</p>
+</li>
+</ol>
+<h2 id="配置Jenkins-Gitlab插件"><a href="#配置Jenkins-Gitlab插件" class="headerlink" title="配置Jenkins Gitlab插件"></a>配置Jenkins Gitlab插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”GitLab“段落，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/2.png"></p>
+</li>
+<li><p>选择”GitLab API Token”类型的凭证，在API token字段里输入前面创建的Gitlab Personal Access Token，设置Token的ID和描述<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/4.png"></p>
+</li>
+<li><p>设置Gitlab详细的连接信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/5.png"></p>
+<p>设置Connection name，Gitlab host URL，选择刚刚创建的GitLab API Token，连接和读取超时可以稍微设大一点。可以点击Test Connection测试是否能连通。</p>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-Merge-Request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-Merge-Request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(Merge Request)"></a>创建Jenkins pipeline job用来构建合并请求(Merge Request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    triggers {</span><br><span class="line">        gitlab(</span><br><span class="line">            <span class="symbol">triggerOnPush:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">triggerOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">triggerOpenMergeRequestOnPush:</span> <span class="string">"source"</span>,</span><br><span class="line">            <span class="symbol">triggerOnNoteRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">noteRegex:</span> <span class="string">".*\\[run\\W+ci\\].*"</span>,</span><br><span class="line">            <span class="symbol">skipWorkInProgressMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">ciSkip:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">setBuildDescription:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addNoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addCiMessage:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">addVoteOnMergeRequest:</span> <span class="literal">true</span>,</span><br><span class="line">            <span class="symbol">acceptMergeRequestOnSuccess:</span> <span class="literal">false</span>,</span><br><span class="line">            <span class="symbol">branchFilterType:</span> <span class="string">"NameBasedFilter"</span>,</span><br><span class="line">            <span class="symbol">includeBranchesSpec:</span> <span class="string">"master"</span>,</span><br><span class="line">            <span class="symbol">excludeBranchesSpec:</span> <span class="string">""</span></span><br><span class="line">        )</span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITLAB_URL = <span class="string">"http://mygitlab.philips.com"</span></span><br><span class="line">        GITLAB_ORG = <span class="string">"mikesay"</span></span><br><span class="line">        GITLAB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">        gitLabConnection <span class="string">'mygitlab'</span></span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'gitlab_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/heads/*:refs/remotes/origin/* +refs/merge-requests/*:refs/remotes/origin/mr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITLAB_URL}/${GITLAB_ORG}/${GITLAB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">      failure {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'failed'</span></span><br><span class="line">      }</span><br><span class="line">      success {</span><br><span class="line">        updateGitlabCommitStatus <span class="attr">name:</span> <span class="string">'build'</span>, <span class="attr">state:</span> <span class="string">'success'</span></span><br><span class="line">      }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<ol>
+<li><p>6行-22行设置GitLab触发器，主要设置如下：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>triggerOnPush</td>
+<td>任何推送事件都会触发构建。因为是用来构建合并请求(Merge Request)，只需要监听合并请求(Merge Request)事件，所以不需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnMergeRequest</td>
+<td>设置合并请求(Merge Request)事件触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOpenMergeRequestOnPush</td>
+<td>当合并请求(Merge Request)的原分支有新的推送触发构建，需要打开。</td>
+</tr>
+<tr>
+<td>triggerOnNoteRequest</td>
+<td>合并请求(Merge Request)的评论有更新时触发构建，需要打开，并且配合noteRegex设置具体的触发构建的字符串。</td>
+</tr>
+<tr>
+<td>ciSkip</td>
+<td>当合并请求(Merge Request)的评论包括字符串”[ci-skip]”时，不会构建这个合并请求(Merge Request)。</td>
+</tr>
+<tr>
+<td>branchFilterType, includeBranchesSpec, excludeBranchesSpec</td>
+<td>设置哪些分支上的合并请求(Merge Request)会触发构建。</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>50行: 添加refspec获取合并请求(merge request)的分支信息</p>
+ <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/merge-requests/*:refs/remotes/origin/mr/*'</span></span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>39行: branches选择”origin/mr/${gitlabMergeRequestId}/head”, 是合并后的分支。环境变量”gitlabMergeRequestId”是合并请求(merge request)的ID号</p>
+ <figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"origin/mr/${gitlabMergeRequestId}/head"</span>]]</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<p>除了”gitlabMergeRequestId”外，Gitlab插件还往当前构建中注入了许多变量供构建Job使用：</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">gitlabBranch</span><br><span class="line">gitlabSourceBranch</span><br><span class="line">gitlabActionType</span><br><span class="line">gitlabUserName</span><br><span class="line">gitlabUserUsername</span><br><span class="line">gitlabUserEmail</span><br><span class="line">gitlabSourceRepoHomepage</span><br><span class="line">gitlabSourceRepoName</span><br><span class="line">gitlabSourceNamespace</span><br><span class="line">gitlabSourceRepoURL</span><br><span class="line">gitlabSourceRepoSshUrl</span><br><span class="line">gitlabSourceRepoHttpUrl</span><br><span class="line">gitlabMergeRequestTitle</span><br><span class="line">gitlabMergeRequestDescription</span><br><span class="line">gitlabMergeRequestId</span><br><span class="line">gitlabMergeRequestIid</span><br><span class="line">gitlabMergeRequestState</span><br><span class="line">gitlabMergedByUser</span><br><span class="line">gitlabMergeRequestAssignee</span><br><span class="line">gitlabMergeRequestLastCommit</span><br><span class="line">gitlabMergeRequestTargetProjectId</span><br><span class="line">gitlabTargetBranch</span><br><span class="line">gitlabTargetRepoName</span><br><span class="line">gitlabTargetNamespace</span><br><span class="line">gitlabTargetRepoSshUrl</span><br><span class="line">gitlabTargetRepoHttpUrl</span><br><span class="line">gitlabBefore</span><br><span class="line">gitlabAfter</span><br><span class="line">gitlabTriggerPhrase</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字，比如”gitlab-preflight”，点击”Ok”按钮<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/6.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile(Jenkinsfile是单独放在一个独立的Git仓库中的)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/7.png"></p>
+</li>
+<li><p>点击”Save”按钮保存Jenkins Job</p>
+</li>
+<li><p>手动触发Job一次让Jenkinsfile中设置的触发规则配置到job中。<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="配置Gitlab"><a href="#配置Gitlab" class="headerlink" title="配置Gitlab"></a>配置Gitlab</h1><h2 id="创建Jenkins-API-token"><a href="#创建Jenkins-API-token" class="headerlink" title="创建Jenkins API token"></a>创建Jenkins API token</h2><ol>
+<li><p>进入Jenkins用户设置页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/11.png"></p>
+</li>
+<li><p>点击Add new Token，并点击Generate按钮产生当前用户的API Token，注意立即复制保存，因为页面刷新后，将被隐藏<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/12.png"></p>
+</li>
+<li><p>点击Save按钮保存</p>
+</li>
+</ol>
+<h2 id="创建Gitlab-Web-hook"><a href="#创建Gitlab-Web-hook" class="headerlink" title="创建Gitlab Web hook"></a>创建Gitlab Web hook</h2><ol>
+<li><p>进入具体的项目页面，点击Settings -&gt; Integrations打开创建Web hook的页面<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/13.png"></p>
+</li>
+<li><p>设置Web hook详细信息<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/14.png"></p>
+</li>
+</ol>
+<p>在URL地址里输入Jenkins Gitlab插件生成的Web hook地址，包括Jenkins的认证信息，比如<code>https://&lt;jenkins user&gt;:&lt;user's api token&gt;@mykube.com/jenkins/project/gitlab-preflight</code>，选择”Comments”和”Merge request events”用来监听合并请求(merge request)事件，包括评论更新事件。</p>
+<ol start="3">
+<li>点击Add webhook按钮添加Web hook</li>
+</ol>
+<h1 id="创建合并请求-merge-request-触发构建"><a href="#创建合并请求-merge-request-触发构建" class="headerlink" title="创建合并请求(merge request)触发构建"></a>创建合并请求(merge request)触发构建</h1><ol>
+<li><p>Gitlab的合并请求(merge request)<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/9.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/03/09/jenkins-gitlab-pullrequest/10.png"></p>
+</li>
+</ol>
+<p>从构建的描述来看，Jenkins Gitlab插件提供了比较全面的功能，显示了合并请求(merge request)的信息，同时在Gitlab的合并请求(merge request)页面也显示了构建的信息。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+        <tag>GitLab</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>VS Code + Continue + Ollama：全栈私有化 AI 辅助编程环境搭建指南</title>
+    <url>/2026/04/09/local-opensource-ai-assistant-coding-setup/</url>
+    <content><![CDATA[<p>在上一篇文章<a href="https://www.mikesay.com/2026/04/08/vibe-coding/#more?t=1775724599864">《AI辅助编程：从“复制粘贴”到“氛围编程 (Vibe Coding)”》</a>中，我们探讨了AI如何改变开发者的心智模型。所谓的 <strong>氛围编程 (Vibe Coding)</strong>，本质上是让开发者从繁琐的语法细节中抽离，通过自然语言驱动 AI 完成复杂的逻辑构建。  </p>
+<span id="more"></span>
+
+<p>要实现这种“行云流水”的体验，一个成熟的 <strong>AI Coding Agent</strong> 必须具备以下核心能力：  </p>
+<ul>
+<li><strong>LLM 语义理解</strong>：深度理解代码意图，而非简单的字符补全。</li>
+<li><strong>项目结构解读</strong>：具备 RAG 能力，能扫描工程目录并建立上下文索引（@Codebase）。</li>
+<li><strong>多文件编辑与生成</strong>：能够自动创建文件并跨文件协同重构。</li>
+<li><strong>内联编辑 (Inline Edit)</strong>：支持代码行间的 Diff 对比与一键采纳。</li>
+<li><strong>工具调用 (Tool Use)</strong>：自动运行终端命令或读取系统文件。</li>
+</ul>
+<h1 id="1-商业战场的博弈：能力强大但“金钱”驱动"><a href="#1-商业战场的博弈：能力强大但“金钱”驱动" class="headerlink" title="1. 商业战场的博弈：能力强大但“金钱”驱动"></a>1. 商业战场的博弈：能力强大但“金钱”驱动</h1><p>目前市场上的商业级 AI 编程工具主要由 SaaS 服务驱动，依托闭源大模型提供服务。  </p>
+<table>
+<thead>
+<tr>
+<th align="left">AI Coding Agent</th>
+<th align="left">License</th>
+<th align="left">CLI</th>
+<th align="left">VS Code</th>
+<th align="left">其他 IDE</th>
+<th align="left">Ollama 支持</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>GitHub Copilot</strong></td>
+<td align="left">Commercial</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">JetBrains, Vim</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td align="left"><strong>Claude Code</strong></td>
+<td align="left">Commercial</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">Terminal</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td align="left"><strong>Cursor</strong></td>
+<td align="left">Commercial</td>
+<td align="left">❌</td>
+<td align="left">✅</td>
+<td align="left">Standalone</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td align="left"><strong>Droid</strong></td>
+<td align="left">Commercial</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">Slack</td>
+<td align="left">✅</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>优势</strong>：依托云端顶级模型，不占用本地资源，响应逻辑强。</li>
+<li><strong>缺点</strong>：按月订阅收费；代码隐私存在风险；如果不是合理使用会造成额度浪费。</li>
+</ul>
+<h1 id="2-极客的选择：在-Apple-Silicon-Mac-上构建私有“大脑”"><a href="#2-极客的选择：在-Apple-Silicon-Mac-上构建私有“大脑”" class="headerlink" title="2. 极客的选择：在 Apple Silicon Mac 上构建私有“大脑”"></a>2. 极客的选择：在 Apple Silicon Mac 上构建私有“大脑”</h1><p>如果你手中有一台搭载 Apple 芯片（M1/M2/M3/M4 系列）的 Mac，其独特的统一内存架构（Unified Memory）将是运行中大型本地模型的“性能怪兽”。相比于按月付费的 SaaS 订阅，利用开源工具搭建本地工作台，不仅能榨干芯片的每一点算力，更能为你的代码资产提供物理级的数据隔离与安全防护。  </p>
+<blockquote>
+<p>注：本文实测环境基于 MacBook Pro (M3 Chip)，但在其他 Apple Silicon 机型上同样具备极佳参考价值。  </p>
+</blockquote>
+<h2 id="1-底层引擎的选择：为什么是-Ollama？"><a href="#1-底层引擎的选择：为什么是-Ollama？" class="headerlink" title="(1) 底层引擎的选择：为什么是 Ollama？"></a>(1) 底层引擎的选择：为什么是 Ollama？</h2><p>在本地运行 LLM 的工具链中，虽然有 LM Studio, vLLM 等选择，但 <strong>Ollama</strong> 依然是目前的最佳实践：  </p>
+<ul>
+<li><strong>极致的本地化体验</strong>：一行命令 <code>ollama run</code> 即可部署，完全不依赖外部网络。</li>
+<li><strong>资源调度优化</strong>：针对 Apple Silicon 的 GPU 进行了深度优化，加载 32B 模型也能实现极低延迟。</li>
+<li><strong>标准的 API 接口</strong>：提供兼容 OpenAI 格式的本地 HTTP 接口，让前端 Agent 插件（如 Continue）能够无缝对接。</li>
+</ul>
+<h2 id="2-交互层的对比：AI-Coding-Agent-哪家强？"><a href="#2-交互层的对比：AI-Coding-Agent-哪家强？" class="headerlink" title="(2) 交互层的对比：AI Coding Agent 哪家强？"></a>(2) 交互层的对比：AI Coding Agent 哪家强？</h2><p>在开源社区中，有几个备受瞩目的 AI Coding Agent 方案，我们对其进行了横向对比：  </p>
+<table>
+<thead>
+<tr>
+<th align="left">开源 Agent 项目</th>
+<th align="left">License</th>
+<th align="left">CLI</th>
+<th align="left">VS Code</th>
+<th align="left">核心特色与推荐理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>OpenCode</strong></td>
+<td align="left">Open Source</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">轻量极客风，对 NeoVim 用户极其友好。</td>
+</tr>
+<tr>
+<td align="left"><strong>Aider</strong></td>
+<td align="left">Open Source</td>
+<td align="left">✅</td>
+<td align="left">🛠️</td>
+<td align="left"><strong>终端交互战神</strong>。擅长复杂重构，支持 Git 自动提交变更。</td>
+</tr>
+<tr>
+<td align="left"><strong>Cline</strong></td>
+<td align="left">Open Source</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left"><strong>功能激进</strong>。支持 Agent 模式直接执行终端指令和读写文件。</td>
+</tr>
+<tr>
+<td align="left"><strong>Continue</strong></td>
+<td align="left"><strong>Open Source</strong></td>
+<td align="left"><strong>✅</strong></td>
+<td align="left"><strong>✅</strong></td>
+<td align="left"><strong>全能选手</strong>。插件生态成熟，上下文索引强大，能完美适配 Ollama。</td>
+</tr>
+</tbody></table>
+<p><strong>最终选择：Continue</strong><br>经过权衡，我最终选择了 <strong>Continue</strong>。它的优势在于高度的自定义自由度，能够灵活配置不同的本地模型（Chat 用大模型，补全用小模型），且其 UI 交互与 <strong>GitHub Copilot Chat</strong> 高度一致，是目前手搓 AI 工作台的“满分”底座。  </p>
+<h3 id="Continue-与-GitHub-Copilot-Chat-的详细比较"><a href="#Continue-与-GitHub-Copilot-Chat-的详细比较" class="headerlink" title="Continue 与 GitHub Copilot Chat 的详细比较"></a>Continue 与 GitHub Copilot Chat 的详细比较</h3><p>我们可以从以下三个维度来拆解它们的关系：  </p>
+<ol>
+<li><strong>核心功能的“平替”</strong>：在侧边栏对话 (<code>Cmd+L</code>)、内联编辑 (<code>Cmd+I</code>) 和代码自动补全上，Continue 完全复刻了 Copilot Chat 的核心体验。  </li>
+<li><strong>Continue 的“降维打击”</strong>：Copilot 只能用 OpenAI 的模型，而 Continue 让你实现“模型自由”——用 <strong>Qwen 30B</strong> 搞深度思考，用 <strong>DeepSeek 16B</strong> 做代码重写。同时，它的 <code>@</code> 体系（如 <code>@Codebase</code>）提供了 Copilot 难以触及的精准本地上下文。  </li>
+<li><strong>与 Cursor/Cline 的区别</strong>：不同于魔改整个 IDE 的 Cursor 或频繁执行系统指令的 Cline，Continue 保持了插件的纯粹性，不改变你的 IDE 习惯，仅作为超强增强包存在。</li>
+</ol>
+<h1 id="3-落地实践：手把手配置你的-AI-工作台"><a href="#3-落地实践：手把手配置你的-AI-工作台" class="headerlink" title="3. 落地实践：手把手配置你的 AI 工作台"></a>3. 落地实践：手把手配置你的 AI 工作台</h1><p>在 Mac M3 环境下，我们将使用 <strong>Ollama</strong> 作为后端，结合 <strong>Qwen3 Coder 30B</strong>（高性能大模型）与 <strong>DeepSeek Coder V2 16B</strong>。  </p>
+<h2 id="1-安装-Ollama-与模型准备"><a href="#1-安装-Ollama-与模型准备" class="headerlink" title="(1) 安装 Ollama 与模型准备"></a>(1) 安装 Ollama 与模型准备</h2><p>首先，通过 Homebrew 安装 Ollama 并将其设为后台服务。  </p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># 安装 Ollama</span></span><br><span class="line">brew install ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将 Ollama 设为 brew service 后台运行</span></span><br><span class="line">brew services start ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载并运行模型进行测试</span></span><br><span class="line">ollama run qwen3-coder:30b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载备用模型及向量索引模型</span></span><br><span class="line">ollama pull deepseek-coder-v2:16b</span><br><span class="line">ollama pull nomic-embed-text  </span><br></pre></td></tr></tbody></table></figure>
+<h2 id="2-安装-VS-Code-Continue-插件并配置"><a href="#2-安装-VS-Code-Continue-插件并配置" class="headerlink" title="(2) 安装 VS Code Continue 插件并配置"></a>(2) 安装 VS Code Continue 插件并配置</h2><p>安装Continue插件后，修改配置文件 <code>~/.continue/config.yaml</code> 如下：  </p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Local</span> <span class="string">Ollama</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">version:</span> <span class="number">1.0</span><span class="number">.0</span></span><br><span class="line"><span class="attr">schema:</span> <span class="string">v1</span></span><br><span class="line"></span><br><span class="line"><span class="attr">models:</span></span><br><span class="line">  <span class="comment"># Primary Model (Default for Chat and Edit)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Coder</span> <span class="string">30B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Secondary Model (Available in dropdown)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">DeepSeek</span> <span class="string">Coder</span> <span class="string">V2</span> <span class="string">16B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">deepseek-coder-v2:16b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Dedicated Autocomplete Model</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Autocomplete</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">autocomplete</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Embeddings Model (for @codebase)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Nomic</span> <span class="string">Embed</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">nomic-embed-text</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">embed</span></span><br><span class="line"></span><br><span class="line"><span class="attr">context:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">currentFile</span> </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">file</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">folder</span>   </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">open</span>        </span><br><span class="line">    <span class="attr">params:</span></span><br><span class="line">      <span class="attr">onlyPinned:</span> <span class="literal">false</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">code</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">terminal</span>    </span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="3-开启-Vibe-Coding：实战演练"><a href="#3-开启-Vibe-Coding：实战演练" class="headerlink" title="(3) 开启 Vibe Coding：实战演练"></a>(3) 开启 Vibe Coding：实战演练</h2><p>配置完成后，你可以通过Continue的侧边栏或快捷键进入“氛围编程”模式。核心技巧在于利用 <strong>@ 符号</strong> 精确喂给 AI 上下文，以及让它跨越当前文件去创造新内容。  </p>
+<p><strong>实战场景示例：使用 Vibe Coding 创建一个简单的命令行工具</strong><br>我们以创建一个简单的命令行工具为例，目标是让 AI 帮你完成从项目初始化到代码生成的全过程，无需你懂任何编程知识。</p>
+<ul>
+<li><p><strong>第一步：初始化项目</strong><br>在 Continue 侧边栏（<code>Cmd + L</code>）中输入：  </p>
+<blockquote>
+<p>帮我创建一个空的命令行工具项目，使用python语言作为主编程语言，使用 <code>uv</code> 管理项目和依赖，项目名称叫 <code>my_cli</code>，这一步不要生成代码。  </p>
+</blockquote>
+<p>AI 会自动运行 <code>uv init my_cli_tool</code> 命令，并生成项目目录结构和 <code>pyproject.toml</code> 文件。  </p>
+</li>
+<li><p><strong>第二步：生成主程序文件</strong><br>在 Continue 侧边栏中输入：  </p>
+<blockquote>
+<p>@my_cli 编辑 <code>main.py</code> 文件，修改功能为打印‘Hello, World!。自动将代码应用到main.py里。  </p>
+</blockquote>
+<p>AI 会自动编辑 <code>main.py</code> 文件，生成一个完整的命令行程序，你可以点击“应用”按钮保存更改。  </p>
+<p>你可能会遇到生成的代码有问题，所以在Continue侧边栏中继续输入：  </p>
+<blockquote>
+<p>@my_cli 修复代码main.py中的问题  </p>
+</blockquote>
+<p>AI会自动修复有问题的代码。  </p>
+</li>
+<li><p><strong>第三步：内联编辑与修改</strong><br>打开 <code>main.py</code> 文件，选中main函数中的代码，按下 <code>Cmd + I</code> 唤起内联编辑框，输入：  </p>
+<blockquote>
+<p>修改这个程序，让它在运行时提示用户输入名字，并打印‘Hello, [名字]!’。  </p>
+</blockquote>
+<p>AI 会自动更新程序代码，增加用户输入功能，并生成相应逻辑。  </p>
+</li>
+<li><p><strong>第四步：生成测试文件</strong><br>在 Continue 侧边栏中输入：  </p>
+<blockquote>
+<p>请创建并编辑 <code>test_main.py</code> 文件，生成一个基本的测试文件，测试 <code>main</code> 函数是否能正常运行。  </p>
+</blockquote>
+<p>AI 会生成一个完整的测试文件，包含基本的测试用例，方便你验证程序功能。  </p>
+</li>
+<li><p><strong>第五步：一键调试</strong><br>在 Continue 侧边栏输入：</p>
+<blockquote>
+<p>@Terminal 帮我调试代码，要求覆盖单元测试和主程序运行。  </p>
+</blockquote>
+<p>AI 将自动执行测试并运行代码，如遇报错，会循序渐进地引导你修复。  </p>
+</li>
+<li><p><strong>第六步：生成打包配置</strong><br>在 Continue 侧边栏输入：</p>
+<blockquote>
+<p>@my_cli 为该 Python 项目生成打包配置并测试安装。  </p>
+</blockquote>
+<p>AI 会自动完成配置编写、安装测试，并根据结果进行迭代优化。  </p>
+</li>
+<li><p><strong>第七步：配置 CI/CD 流水线</strong><br>在 Continue 侧边栏输入：</p>
+<blockquote>
+<p>@my_cli 基于 GitHub Actions 生成流水线，将 Python 包发布至内部 Artifactory。  </p>
+</blockquote>
+<p>AI 将分步引导你完成自动化部署环境的搭建。</p>
+</li>
+</ul>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>借助 Continue 与 Ollama，我们利用 Mac 本地算力构建了一个全封闭的 AI 开发环境。这不仅解决了云端 AI 潜在的隐私泄露风险，还通过本地化部署获得了零延迟的反馈体验。<br>所谓的“氛围编程(Vibe Coding)”，核心在于开发者意图的无缝传递。只需简单的指令描述，AI 就能在你的项目范围内快速生成、调试代码，大幅缩短从构思到上线的工作流。  </p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>AI辅助编程</category>
+      </categories>
+      <tags>
+        <tag>LLM</tag>
+        <tag>AI Coding Agent</tag>
       </tags>
   </entry>
   <entry>
@@ -2300,9 +2435,12 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
       <tags>
+        <tag>Kubernetes</tag>
         <tag>Docker</tag>
-        <tag>Container</tag>
         <tag>Podman</tag>
       </tags>
   </entry>
@@ -2378,96 +2516,11 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
       <tags>
-        <tag>DevOps</tag>
         <tag>Git</tag>
-        <tag>Github</tag>
-        <tag>Bitbucket</tag>
-        <tag>Gitlab</tag>
-        <tag>TFS Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>浅析SonarQube插件的运行原理</title>
-    <url>/2021/01/17/sonar-plugin-principle/</url>
-    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
-<span id="more"></span>
-
-<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar</span><br><span class="line">(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.</span><br><span class="line">[ERROR] Re-run Maven using the -X switch to enable full debug logging.</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] For more information about the errors and possible solutions, please read the following articles:</span><br><span class="line">[ERROR] [Help 1]</span><br></pre></td></tr></tbody></table></figure>
-
-<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] Load metrics repository</span><br><span class="line">[INFO] Load metrics repository (done) | time=268ms</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java]</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms</span><br><span class="line">[INFO] Sensor PmdSensor [pmd]</span><br><span class="line">[INFO] Execute PMD 6.10.0</span><br><span class="line">[INFO] Execute PMD 6.10.0 (done) | time=15ms</span><br></pre></td></tr></tbody></table></figure>
-
-<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="tag">&lt;/<span class="name">pmd.plugin.version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.version</span>&gt;</span>6.29.0<span class="tag">&lt;/<span class="name">pmd.version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.plugin.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-java<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-javascript<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-jsp<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">failOnViolation</span>&gt;</span>true<span class="tag">&lt;/<span class="name">failOnViolation</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">printFailingErrors</span>&gt;</span>true<span class="tag">&lt;/<span class="name">printFailingErrors</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">targetJdk</span>&gt;</span>14<span class="tag">&lt;/<span class="name">targetJdk</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">executions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">execution</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">goals</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">goal</span>&gt;</span>check<span class="tag">&lt;/<span class="name">goal</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">goals</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">execution</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">executions</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---</span><br><span class="line">[INFO] PMD version: 6.29.0</span><br><span class="line">[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml</span><br></pre></td></tr></tbody></table></figure>
-<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] SonarQube version: 7.9.4</span><br><span class="line">[INFO] Default locale: "en_CN", source code encoding: "UTF-8"</span><br><span class="line">[INFO] Load global settings</span><br><span class="line">[INFO] Load global settings (done) | time=1676ms</span><br><span class="line">[INFO] Server id: 9C01C42E-1505da3410fc976</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] Load/download plugins</span><br><span class="line">[INFO] Load plugins index</span><br><span class="line">[INFO] Load plugins index (done) | time=295ms</span><br><span class="line">[INFO] Load/download plugins (done) | time=501ms</span><br></pre></td></tr></tbody></table></figure>
-
-<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa</span><br><span class="line"></span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar</span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar_unzip</span><br></pre></td></tr></tbody></table></figure>
-
-<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib</span><br><span class="line"></span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar</span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar</span><br></pre></td></tr></tbody></table></figure>
-<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
-<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
-<ul>
-<li><p>SonarQube服务包含了三个进程：</p>
-<ul>
-<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
-<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
-<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
-</ul>
-</li>
-<li><p>SonarQube数据库用来存储：</p>
-<ul>
-<li>SonarQube实例的配置（安全，插件配置等）</li>
-<li>项目或视图的质量快照</li>
-</ul>
-</li>
-<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
-</li>
-<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
-</li>
-<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
-</li>
-</ul>
-<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
-<ul>
-<li>扫描器(Scanner)，执行源代码分析</li>
-<li>计算引擎，整合扫描器的结果</li>
-<li>Web应用</li>
-<li>SonarLint</li>
-</ul>
-<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
-<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@ScannerSide</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PmdConfiguration</span> {</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PROPERTY_GENERATE_XML</span> <span class="operator">=</span> <span class="string">"sonar.pmd.generateXml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PMD_RESULT_XML</span> <span class="operator">=</span> <span class="string">"pmd-result.xml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Logger</span> <span class="variable">LOG</span> <span class="operator">=</span> Loggers.get(PmdConfiguration.class);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> FileSystem fileSystem;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Configuration settings;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PmdConfiguration</span><span class="params">(FileSystem fileSystem, Configuration settings)</span> {</span><br><span class="line">        <span class="built_in">this</span>.fileSystem = fileSystem;</span><br><span class="line">        <span class="built_in">this</span>.settings = settings;</span><br><span class="line">    }</span><br><span class="line">...</span><br></pre></td></tr></tbody></table></figure>
-
-<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <tags>
-        <tag>SonarQube</tag>
-        <tag>Code Quality</tag>
       </tags>
   </entry>
   <entry>
@@ -2684,125 +2737,6 @@
       </tags>
   </entry>
   <entry>
-    <title>从Git仓库中永久清理脏数据</title>
-    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
-    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
-<span id="more"></span>
-<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
-<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
-<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
-</li>
-<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
-<ul>
-<li>替换文件中的敏感信息</li>
-<li>删除文件或文件夹</li>
-</ul>
-<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
-<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
-<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
-<li><p>通过mirror的方式克隆代码仓库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-
-<p>比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
-</blockquote>
-</li>
-</ul>
-<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
-</blockquote>
-<ul>
-<li><p>替换所有文件中的指定的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>需要打开强制推送到Git仓库的功能</p>
-</blockquote>
-</li>
-<li><p>替换指定文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
-<blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
-</blockquote>
-<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
-<ul>
-<li>获取指定文件在所有变更历史中对应的blob id号</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>从变更历史中删除指定的文件(Blob)</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
-</blockquote>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Terraform如何调用Ansible配置虚拟机资源</title>
     <url>/2018/11/14/terraform-call-ansible/</url>
     <content><![CDATA[<p>Terraform（<a href="https://www.terraform.io/">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
@@ -2881,11 +2815,98 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
+      <categories>
+        <category>架构即代码</category>
+      </categories>
       <tags>
-        <tag>DevOps</tag>
-        <tag>Infrastructure As Code</tag>
         <tag>Terraform</tag>
         <tag>Ansible</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>浅析SonarQube插件的运行原理</title>
+    <url>/2021/01/17/sonar-plugin-principle/</url>
+    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
+<span id="more"></span>
+
+<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar</span><br><span class="line">(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.</span><br><span class="line">[ERROR] Re-run Maven using the -X switch to enable full debug logging.</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] For more information about the errors and possible solutions, please read the following articles:</span><br><span class="line">[ERROR] [Help 1]</span><br></pre></td></tr></tbody></table></figure>
+
+<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] Load metrics repository</span><br><span class="line">[INFO] Load metrics repository (done) | time=268ms</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java]</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms</span><br><span class="line">[INFO] Sensor PmdSensor [pmd]</span><br><span class="line">[INFO] Execute PMD 6.10.0</span><br><span class="line">[INFO] Execute PMD 6.10.0 (done) | time=15ms</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="tag">&lt;/<span class="name">pmd.plugin.version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.version</span>&gt;</span>6.29.0<span class="tag">&lt;/<span class="name">pmd.version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.plugin.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-java<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-javascript<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-jsp<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">failOnViolation</span>&gt;</span>true<span class="tag">&lt;/<span class="name">failOnViolation</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">printFailingErrors</span>&gt;</span>true<span class="tag">&lt;/<span class="name">printFailingErrors</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">targetJdk</span>&gt;</span>14<span class="tag">&lt;/<span class="name">targetJdk</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">executions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">execution</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">goals</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">goal</span>&gt;</span>check<span class="tag">&lt;/<span class="name">goal</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">goals</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">execution</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">executions</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---</span><br><span class="line">[INFO] PMD version: 6.29.0</span><br><span class="line">[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml</span><br></pre></td></tr></tbody></table></figure>
+<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] SonarQube version: 7.9.4</span><br><span class="line">[INFO] Default locale: "en_CN", source code encoding: "UTF-8"</span><br><span class="line">[INFO] Load global settings</span><br><span class="line">[INFO] Load global settings (done) | time=1676ms</span><br><span class="line">[INFO] Server id: 9C01C42E-1505da3410fc976</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] Load/download plugins</span><br><span class="line">[INFO] Load plugins index</span><br><span class="line">[INFO] Load plugins index (done) | time=295ms</span><br><span class="line">[INFO] Load/download plugins (done) | time=501ms</span><br></pre></td></tr></tbody></table></figure>
+
+<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa</span><br><span class="line"></span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar</span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar_unzip</span><br></pre></td></tr></tbody></table></figure>
+
+<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib</span><br><span class="line"></span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar</span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar</span><br></pre></td></tr></tbody></table></figure>
+<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
+<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
+<ul>
+<li><p>SonarQube服务包含了三个进程：</p>
+<ul>
+<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
+<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
+<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
+</ul>
+</li>
+<li><p>SonarQube数据库用来存储：</p>
+<ul>
+<li>SonarQube实例的配置（安全，插件配置等）</li>
+<li>项目或视图的质量快照</li>
+</ul>
+</li>
+<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
+</li>
+<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
+</li>
+<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
+</li>
+</ul>
+<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
+<ul>
+<li>扫描器(Scanner)，执行源代码分析</li>
+<li>计算引擎，整合扫描器的结果</li>
+<li>Web应用</li>
+<li>SonarLint</li>
+</ul>
+<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
+<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@ScannerSide</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PmdConfiguration</span> {</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PROPERTY_GENERATE_XML</span> <span class="operator">=</span> <span class="string">"sonar.pmd.generateXml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PMD_RESULT_XML</span> <span class="operator">=</span> <span class="string">"pmd-result.xml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Logger</span> <span class="variable">LOG</span> <span class="operator">=</span> Loggers.get(PmdConfiguration.class);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> FileSystem fileSystem;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Configuration settings;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PmdConfiguration</span><span class="params">(FileSystem fileSystem, Configuration settings)</span> {</span><br><span class="line">        <span class="built_in">this</span>.fileSystem = fileSystem;</span><br><span class="line">        <span class="built_in">this</span>.settings = settings;</span><br><span class="line">    }</span><br><span class="line">...</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Code Quality</tag>
+        <tag>SonarQube</tag>
       </tags>
   </entry>
   <entry>
@@ -2997,7 +3018,7 @@
           });
       </script>]]></content>
       <categories>
-        <category>AICoding</category>
+        <category>AI辅助编程</category>
       </categories>
       <tags>
         <tag>LLM</tag>
@@ -3074,6 +3095,9 @@
             document.body.appendChild(img);
           });
       </script>]]></content>
+      <categories>
+        <category>系统管理</category>
+      </categories>
       <tags>
         <tag>Windows</tag>
       </tags>
