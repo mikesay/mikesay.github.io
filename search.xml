@@ -106,78 +106,101 @@
       </tags>
   </entry>
   <entry>
-    <title>云计算巨头如何用“软件韧性”重构基础设施</title>
-    <url>/2026/06/19/cloud-base-resiliency/</url>
-    <content><![CDATA[<blockquote>
-<p><strong>“云计算厂商在构建平台时，更多依赖的是韧性思维（Resilience Thinking），而非在硬件层盲目追求极高的可靠性。”</strong></p>
-</blockquote>
-<p>这句话精准地击中了现代云计算最底层的商业与工程逻辑。这不仅是应用开发者的共识，更是 AWS、阿里云、微软 Azure 等巨头得以实现规模化盈利的基石。</p>
+    <title>记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</title>
+    <url>/2021/09/06/aliyun-coredns-issue-tracking/</url>
+    <content><![CDATA[<p>最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。</p>
 <span id="more"></span>
 
-<p>如果云厂商试图在硬件层面追求绝对的可靠性——比如使用军工级抗震机架或昂贵的专用容错芯片——结果将是灾难性的：<strong>成本会高到无法商业化</strong>，且依然无法对抗地震、海啸或“挖掘机挖断光缆”这类物理世界的不可抗力。</p>
-<p>那么，云计算是如何做到 <strong>既便宜又可靠</strong> 的？<br>答案是：<strong>用“软件定义的韧性”屏蔽“硬件固有的缺陷”。</strong></p>
-<h2 id="一、-云厂商的工程哲学：商用硬件-智能软件"><a href="#一、-云厂商的工程哲学：商用硬件-智能软件" class="headerlink" title="一、 云厂商的工程哲学：商用硬件 + 智能软件"></a>一、 云厂商的工程哲学：商用硬件 + 智能软件</h2><p>云厂商的数据中心由无数商用级（Commodity）、廉价、标准化的硬件组装而成。他们的核心竞争力不在于硬件“不坏”，而在于<strong>当硬件“坏了”的时候，用户感知不到</strong>。</p>
-<p>以下是云厂商在基础设施层（IaaS）构建韧性的 5 个核心具体落地方式：</p>
-<h3 id="1-接入与流量控制层-Gateway-Traffic"><a href="#1-接入与流量控制层-Gateway-Traffic" class="headerlink" title="1. 接入与流量控制层 (Gateway &amp; Traffic)"></a>1. 接入与流量控制层 (Gateway &amp; Traffic)</h3><ul>
-<li><strong>硬件现状</strong>：单台负载均衡器（SLB）或边缘交换机可能因高温或网卡故障随时宕机。</li>
-<li><strong>韧性手段</strong>：<strong>Anycast BGP（任播）与分布式路由</strong>。</li>
-<li><strong>效果</strong>：当某个接入点失效，路由表会在毫秒级自动切换，将用户流量无缝引流至最近的健康节点，全程无感知。</li>
+<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>通过以下命令在Pod中通过域名访问某个服务时，有时能正常访问，有时访问不了。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};<span class="keyword">do</span> curl http://&lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+<p>错误大致为:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Couldn<span class="string">'t resolve host xxxx</span></span><br></pre></td></tr></tbody></table></figure>
+<p>从错误信息来看，是域名解析出了问题。用nslookup命令去检查域名解析，发现解析确实不稳定。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};nslookup &lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h1><h2 id="ACK集群的结构介绍"><a href="#ACK集群的结构介绍" class="headerlink" title="ACK集群的结构介绍"></a>ACK集群的结构介绍</h2><p>在详细排查问题之前，先了解下阿里云ACK集群的结构。<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">阿里云容器服务Kubernetes版（Alibaba Cloud Container Service for Kubernetes，简称容器服务ACK）</a>包含了专有版Kubernetes（Dedicated Kubernetes）、托管版Kubernetes（Managed Kubernetes）、Serverless Kubernetes三种形态。本文讨论的是托管版ACK，结构如下：</p>
+<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/1.png"></p>
+<p>集群的详细信息：<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/2.jpeg"></p>
+<ul>
+<li>Pod网络类型是Flannel，CIDR: 172.20.0.0/16。每个工作节点的最大的Pod数量为64 (ECS-1 CIDR: 172.20.0.192/26, ECS-2 CIDR: 172.20.0.128/26 …)</li>
+<li>Service CIDR: 172.21.0.0/20</li>
+<li>系统组件CoreDNS目前有两个Pod，分别运行在两个工作节点上</li>
 </ul>
-<h3 id="2-控制面治理层-Control-Plane"><a href="#2-控制面治理层-Control-Plane" class="headerlink" title="2. 控制面治理层 (Control Plane)"></a>2. 控制面治理层 (Control Plane)</h3><ul>
-<li><strong>硬件现状</strong>：管理云资源的控制面服务器（如 K8s Master、控制台后端）可能突发 OOM（内存溢出）或硬件损坏。</li>
-<li><strong>韧性手段</strong>：<strong>解耦与无状态化 + Raft 协议</strong>。</li>
-<li><strong>效果</strong>：控制面全面分布式部署，跨机房多活。一台服务器倒下，新的 Leader 秒级选举产生，确保对外 API 持续可用。</li>
+<h2 id="检查前的准备"><a href="#检查前的准备" class="headerlink" title="检查前的准备"></a>检查前的准备</h2><p>分别在CoreDNS Pods所在的两个工作节点上各启动一个测试Pod：Pod(Busybox)，Service(Nginx) + Pod(Nginx)。  </p>
+<blockquote>
+<p>将测试Pods分散在不同的工作节点上，并调度到CoreDNS Pods所在的工作节点中，这样既能测试同一节点上的CoreDNS访问，也能测试跨节点的CoreDNS访问。</p>
+</blockquote>
+<ul>
+<li>在ECS-1主机上启动Pod(Busybox)</li>
 </ul>
-<h3 id="3-计算编排层-Compute-ECS-VM"><a href="#3-计算编排层-Compute-ECS-VM" class="headerlink" title="3. 计算编排层 (Compute - ECS/VM)"></a>3. 计算编排层 (Compute - ECS/VM)</h3><ul>
-<li><strong>硬件现状</strong>：物理机的主板、内存条经常发生硬件报错（MCE），电源也可能突然损坏。</li>
-<li><strong>韧性手段</strong>：<strong>热迁移（Live Migration）与自动撤离</strong>。</li>
-<li><strong>效果</strong>：监控系统一旦侦测到物理机隐患，在不中断业务的前提下，将整台虚拟机毫秒级“搬家”到健康物理机上。</li>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.1.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">yauritux/busybox-curl:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">args:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">sh</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">"sleep 36000"</span></span><br><span class="line"><span class="string">```</span>  </span><br><span class="line">  </span><br><span class="line"><span class="string">&gt;</span> <span class="string">通过nodeSelector绑定到ECS-1主机（10.0.1.121）上。</span></span><br><span class="line"></span><br><span class="line"><span class="string">+</span> <span class="string">在ECS-2主机上启动Service(Nginx)</span> <span class="string">+</span> <span class="string">Pod(Nginx)</span></span><br><span class="line"><span class="string">```yaml</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.2.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">nginx:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">ports:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">              <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">              <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/instance:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>通过nodeSelector绑定到ECS-2主机（10.0.2.121）上。</p>
+</blockquote>
+<h2 id="检查系统组件CoreDNS"><a href="#检查系统组件CoreDNS" class="headerlink" title="检查系统组件CoreDNS"></a>检查系统组件CoreDNS</h2><blockquote>
+<p>参考官方文档 <a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">Debugging DNS Resolution</a></p>
+</blockquote>
+<h3 id="检查CoreDNS-Pod是否正在运行"><a href="#检查CoreDNS-Pod是否正在运行" class="headerlink" title="检查CoreDNS Pod是否正在运行"></a>检查CoreDNS Pod是否正在运行</h3><p>执行命令<code>kubectl get pods</code>验证CoreDNS Pod正在运行。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl get pods -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
+
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME                           READY   STATUS    RESTARTS   AGE</span><br><span class="line">pod/coredns-849698df86-j9474   1/1     Running   0          9d</span><br><span class="line">pod/coredns-849698df86-xl5g9   1/1     Running   0          9d</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果没有看到CoreDNS Pod正在运行，可能在你当前的环境里缺省没有安装CoreDNS插件，你可能需要手动安装它。如果看到CoreDNS Pod失败，执行命令<code>kubectl describe pod</code>检查CoreDNS Pod的事件。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl describe pod -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="检查CoreDNS-Pod是否有运行时错误"><a href="#检查CoreDNS-Pod是否有运行时错误" class="headerlink" title="检查CoreDNS Pod是否有运行时错误"></a>检查CoreDNS Pod是否有运行时错误</h3><p>运行状态正常的Pod并不代表没有错误，有时程序会处理异常以保证服务的可用性。所以需要执行命令<code>kubectl logs</code>检查Pod的日志是否有任何可疑或异常的消息。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs -l k8s-app=kube-dns -n=kube-system</span><br></pre></td></tr></tbody></table></figure>
+
+<p>正常的CoreDNS日志实例：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br><span class="line"></span><br><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="检查CoreDNS服务"><a href="#检查CoreDNS服务" class="headerlink" title="检查CoreDNS服务"></a>检查CoreDNS服务</h3><p>执行命令<code>kubect get svc -l k8s-app=kube-dns -n=kube-system</code>检查CoreDNS服务是否存在。如果服务不存在，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>进行排查。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)                  AGE</span><br><span class="line">service/kube-dns   ClusterIP   172.21.0.10   &lt;none&gt;        53/UDP,53/TCP,9153/TCP   450d</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="检查CoreDNS-endpoints对象是否存在"><a href="#检查CoreDNS-endpoints对象是否存在" class="headerlink" title="检查CoreDNS endpoints对象是否存在"></a>检查CoreDNS endpoints对象是否存在</h3><p>执行命令<code>kubectl get endpoints</code>检查CoreDNS endpoints是否存在。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME       ENDPOINTS                                                       AGE</span><br><span class="line">kube-dns   172.20.0.146:53,172.20.0.205:53,172.20.0.146:9153 + 3 more...   458d</span><br></pre></td></tr></tbody></table></figure>
+<p>如果没有检查到endpoints，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>文档中的endpoints段落。</p>
+<h3 id="检查DNS查询是否被CoreDNS处理"><a href="#检查DNS查询是否被CoreDNS处理" class="headerlink" title="检查DNS查询是否被CoreDNS处理"></a>检查DNS查询是否被CoreDNS处理</h3><p>首先，修改CoreDNS的配置添加日志插件。</p>
+<p>执行以下命令打开CoreDNS的配置：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl edit cm coredns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
+<p>在Corefile段落添加<code>log</code>：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: ConfigMap</span><br><span class="line">data:</span><br><span class="line">  Corefile: |-</span><br><span class="line">    .:53 {</span><br><span class="line">      <span class="built_in">log</span></span><br><span class="line">      autopath @kubernetes</span><br><span class="line">      cache 30</span><br><span class="line">      errors</span><br><span class="line">      forward . /etc/resolv.conf</span><br><span class="line">      health</span><br><span class="line">      kubernetes cluster.local in-addr.arpa ip6.arpa {</span><br><span class="line">        pods verified</span><br><span class="line">        fallthrough in-addr.arpa ip6.arpa</span><br><span class="line">      }</span><br><span class="line">      loadbalance</span><br><span class="line">      loop</span><br><span class="line">      prometheus :9153</span><br><span class="line">      ready</span><br><span class="line">      reload</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+<p>其次，执行以下命令打开CoreDNS Pods日志：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs --<span class="built_in">tail</span> 20 -f -l k8s-app=kube-dns -n kube-system | grep -E <span class="string">"\"A IN nginx.default.svc.cluster.local"</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>通过grep命令仅提取域名nginx.default.svc.cluster.local的DNS查询日志，后面我们将查询这个域名。</p>
+</blockquote>
+<p>接下来，执行以下命令进入Pod(Busybox)：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- sh</span><br></pre></td></tr></tbody></table></figure>
+<p>在Pod(Busybox)中，重复查询域名nginx.default.svc.cluster.local多次，例如100次：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>检查CoreDNS Pods日志，看是否有同样次数的域名解析日志：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] 172.20.0.219:48418 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000179197s</span><br><span class="line">[INFO] 172.20.0.219:59640 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000067985s</span><br><span class="line">[INFO] 172.20.0.219:34682 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000072317s</span><br><span class="line">[INFO] 172.20.0.219:37560 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000075455s</span><br><span class="line">[INFO] 172.20.0.219:59156 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.00006403s</span><br><span class="line">......</span><br></pre></td></tr></tbody></table></figure>
+<p>如果域名解析的次数少于查询的次数，说明有些解析请求没有被CoreDNS获取，客户端<code>nslookup</code>命令就会出现有时解析成功，有时解析失败的情况。这也证明了前面描述的域名解析不稳定的问题。</p>
+<h3 id="直接调用CoreDNS的Pod-IP解析域名"><a href="#直接调用CoreDNS的Pod-IP解析域名" class="headerlink" title="直接调用CoreDNS的Pod IP解析域名"></a>直接调用CoreDNS的Pod IP解析域名</h3><p>直接使用CoreDNS Pod IP可以避免CoreDNS服务到CoreDNS Pod的代理解析。如果检查下来问题仍旧存在，说明从CoreDNS服务到CoreDNS Pod的代理解析没有问题，否则需要详细检查kube-proxy的状态。</p>
+<p>Pod(Busybox)缺省使用CoreDNS服务IP调用CoreDNS解析域名。执行以下命令可以查看Pod(Busybox)中的DNS配置：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- <span class="built_in">cat</span> /etc/resolv.conf</span><br></pre></td></tr></tbody></table></figure>
+
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nameserver 172.21.0.10</span><br><span class="line">search default.svc.cluster.local svc.cluster.local cluster.local</span><br><span class="line">options ndots:5</span><br></pre></td></tr></tbody></table></figure>
+<p>172.21.0.10是CoreDNS的服务IP。</p>
+<p>编辑Pod(Busybox)中的<code>/etc/resolv.conf</code>将nameserver换成同一节点上的CoreDNS Pod IP（172.20.0.205），执行以下命令检查Nginx服务域名的解析情况：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+<p>测试下来发现使用同一个节点上的CoreDNS Pod解析域名正常且稳定。</p>
+<p>将Pod(Busybox)的nameserver换成另一个节点上的CoreDNS Pod IP（172.20.0.146），再执行上面同样的测试发现域名解析都失败了。 这个测试说明Pod(Busybox)可以访问同一节点上的CoreDNS Pod，但是不能访问另一个节点上的CoreDNS Pod，也就是跨节点的Pod之间无法访问。接下来就需要检查跨节点Pod之间的路由信息是否正确了。</p>
+<h2 id="检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息"><a href="#检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息" class="headerlink" title="检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息"></a>检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息</h2><ul>
+<li><p>Pod(Busybox)里的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/3.png"><br>从Pod(Busybox)出来的流量会通过红色的路由规则进入到节点ECS-1。</p>
+</li>
+<li><p>VPC里跨节点之间的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/4.png"><br>红框中的系统路由规则使两个节点之间路由可达。</p>
+<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/5.png"><br>蓝框中的路由规则使流量从ECS-1路由到ECS-2中。</p>
+</li>
+<li><p>ECS-2的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/6.png"><br>红色路由规则使得流量从ECS-2路由到网桥接口cni0，最终由cni0根据目的Pod IP地址进入CoreDNS Pod（172.20.0.146）。</p>
+</li>
 </ul>
-<h3 id="4-网络与内部总线-Networking"><a href="#4-网络与内部总线-Networking" class="headerlink" title="4. 网络与内部总线 (Networking)"></a>4. 网络与内部总线 (Networking)</h3><ul>
-<li><strong>硬件现状</strong>：内部高速交换机或光纤可能发生单路中断、老化或丢包。</li>
-<li><strong>韧性手段</strong>：<strong>Clos 架构（多路径网络）</strong>。</li>
-<li><strong>效果</strong>：任何两点间都有无数条冗余路径。单根光纤断裂，数据包瞬间动态重路由（Dynamic Re-routing），自动绕过故障点。</li>
-</ul>
-<h3 id="5-持久化存储层-Storage-OSS-EBS"><a href="#5-持久化存储层-Storage-OSS-EBS" class="headerlink" title="5. 持久化存储层 (Storage - OSS/EBS)"></a>5. 持久化存储层 (Storage - OSS/EBS)</h3><ul>
-<li><strong>硬件现状</strong>：硬盘是数据中心损坏率最高的部件，每天都有成百上千块硬盘报废。</li>
-<li><strong>韧性手段</strong>：<strong>三副本与纠删码（Erasure Coding）</strong>。</li>
-<li><strong>效果</strong>：数据写入时自动切片，分布在不同机架甚至不同机房。硬盘坏了？系统会自动利用剩余分片在后台“自愈”数据，完全不影响前端读写。</li>
-</ul>
-<h2 id="二、-认知的统一：这就解释了什么是“云原生”思维"><a href="#二、-认知的统一：这就解释了什么是“云原生”思维" class="headerlink" title="二、 认知的统一：这就解释了什么是“云原生”思维"></a>二、 认知的统一：这就解释了什么是“云原生”思维</h2><p>当云厂商用软件韧性构建了这套体系后，他们售卖的不再是“永不损坏的物理机”，而是 <strong>“允许局部瞬时故障，但保证整体高可用”</strong> 的云服务。</p>
-<p>这就倒逼了作为用户的我们，必须彻底改变思维模式：</p>
-<table>
-<thead>
-<tr>
-<th align="left">维度</th>
-<th align="left">传统 IT 思维 (Legacy)</th>
-<th align="left">云原生思维 (Cloud Native)</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>底层假设</strong></td>
-<td align="left">硬件是可靠的，坏了是重大事故。</td>
-<td align="left"><strong>硬件是会坏的，故障才是常态。</strong></td>
-</tr>
-<tr>
-<td align="left"><strong>硬件依赖</strong></td>
-<td align="left">依赖昂贵的高端存储和小机（Mainframe）。</td>
-<td align="left"><strong>依赖廉价商用硬件 + 软件容错。</strong></td>
-</tr>
-<tr>
-<td align="left"><strong>应用架构</strong></td>
-<td align="left">应用假设底层环境绝对稳定。</td>
-<td align="left"><strong>应用假设底层随时可能发生抖动。</strong></td>
-</tr>
-</tbody></table>
-<h2 id="三、-现代云原生的“套娃式韧性设计”"><a href="#三、-现代云原生的“套娃式韧性设计”" class="headerlink" title="三、 现代云原生的“套娃式韧性设计”"></a>三、 现代云原生的“套娃式韧性设计”</h2><p>理解了上述逻辑，我们就能看清现代云原生体系的演进路径。这其实是一个精妙的 <strong>“三层重构循环”</strong>：</p>
-<ol>
-<li><strong>第一层</strong>：云厂商用<strong>软件韧性</strong>屏蔽底层物理硬件故障。</li>
-<li><strong>第二层</strong>：从不确定性的硬件中，提炼出相对标准、弹性的<strong>云资源</strong>。</li>
-<li><strong>第三层</strong>：用户的业务应用，再用<strong>韧性架构</strong>（如重试、降级、熔断）去屏蔽云资源的偶发性抖动。</li>
-</ol>
-<p>这就是现代云原生体系的 <strong>“套娃式韧性设计”</strong>（Nested Resilience）。</p>
-<p>如果你还在试图向云厂商购买一台“永不宕机”的云服务器，或者在云上试图全盘复刻传统物理机的高可用架构，而不去利用云原生的弹性和容灾特性，那么：<br><strong>你既没有享受到云计算带来的成本红利，也没有真正获得云原生的弹性优势。</strong></p>
-<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p><strong>接受失败是常态。</strong><br>放弃对单点绝对可靠的执念，通过分布式协同与软件智慧来解决单点不可靠的问题，这才是云计算真正的技术护城河，也是每一位现代架构师的必修课。</p>
+<p>从路由分析下来看，跨节点Pod之前相互访问没有问题。接下来就需要检查施加在工作节点上的安全组规则，看流量是否被禁止了。</p>
+<h2 id="检查安全组"><a href="#检查安全组" class="headerlink" title="检查安全组"></a>检查安全组</h2><p>通过这个检查，最终发现工作节点上的安全组并不是当前集群对应的安全组，从而导致所有跨节点之前的Pod访问流量被禁止了。安全组用错的原因是在新建ACK集群时并没有创建新的节点而是选择了已经存在的节点。</p>
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>找到问题后，解决方案就简单了，也就是将所有的工作节点的安全组全部换成当前集群的安全组。</p>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>对于这次的问题定位和解决花费了一定的精力，而且这个问题未来也可能再次出现。所以，我们可以将跨节点Pod之间的网络连通性纳入到监控系统中，这样可以保证下次同样的问题出现时，能够通过监控系统快速的发现和定位问题。</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -198,12 +221,11 @@
           });
       </script>]]></content>
       <categories>
-        <category>架构</category>
+        <category>Kubernetes</category>
       </categories>
       <tags>
-        <tag>Architecture</tag>
-        <tag>Cloud-Native</tag>
-        <tag>Stability/Aailability</tag>
+        <tag>AliCloud</tag>
+        <tag>Kubernetes</tag>
       </tags>
   </entry>
   <entry>
@@ -561,6 +583,107 @@
       <tags>
         <tag>Kubernetes</tag>
         <tag>Kind</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>云计算巨头如何用“软件韧性”重构基础设施</title>
+    <url>/2026/06/19/cloud-base-resiliency/</url>
+    <content><![CDATA[<blockquote>
+<p><strong>“云计算厂商在构建平台时，更多依赖的是韧性思维（Resilience Thinking），而非在硬件层盲目追求极高的可靠性。”</strong></p>
+</blockquote>
+<p>这句话精准地击中了现代云计算最底层的商业与工程逻辑。这不仅是应用开发者的共识，更是 AWS、阿里云、微软 Azure 等巨头得以实现规模化盈利的基石。</p>
+<span id="more"></span>
+
+<p>如果云厂商试图在硬件层面追求绝对的可靠性——比如使用军工级抗震机架或昂贵的专用容错芯片——结果将是灾难性的：<strong>成本会高到无法商业化</strong>，且依然无法对抗地震、海啸或“挖掘机挖断光缆”这类物理世界的不可抗力。</p>
+<p>那么，云计算是如何做到 <strong>既便宜又可靠</strong> 的？<br>答案是：<strong>用“软件定义的韧性”屏蔽“硬件固有的缺陷”。</strong></p>
+<h2 id="一、-云厂商的工程哲学：商用硬件-智能软件"><a href="#一、-云厂商的工程哲学：商用硬件-智能软件" class="headerlink" title="一、 云厂商的工程哲学：商用硬件 + 智能软件"></a>一、 云厂商的工程哲学：商用硬件 + 智能软件</h2><p>云厂商的数据中心由无数商用级（Commodity）、廉价、标准化的硬件组装而成。他们的核心竞争力不在于硬件“不坏”，而在于<strong>当硬件“坏了”的时候，用户感知不到</strong>。</p>
+<p>以下是云厂商在基础设施层（IaaS）构建韧性的 5 个核心具体落地方式：</p>
+<h3 id="1-接入与流量控制层-Gateway-Traffic"><a href="#1-接入与流量控制层-Gateway-Traffic" class="headerlink" title="1. 接入与流量控制层 (Gateway &amp; Traffic)"></a>1. 接入与流量控制层 (Gateway &amp; Traffic)</h3><ul>
+<li><strong>硬件现状</strong>：单台负载均衡器（SLB）或边缘交换机可能因高温或网卡故障随时宕机。</li>
+<li><strong>韧性手段</strong>：<strong>Anycast BGP（任播）与分布式路由</strong>。</li>
+<li><strong>效果</strong>：当某个接入点失效，路由表会在毫秒级自动切换，将用户流量无缝引流至最近的健康节点，全程无感知。</li>
+</ul>
+<h3 id="2-控制面治理层-Control-Plane"><a href="#2-控制面治理层-Control-Plane" class="headerlink" title="2. 控制面治理层 (Control Plane)"></a>2. 控制面治理层 (Control Plane)</h3><ul>
+<li><strong>硬件现状</strong>：管理云资源的控制面服务器（如 K8s Master、控制台后端）可能突发 OOM（内存溢出）或硬件损坏。</li>
+<li><strong>韧性手段</strong>：<strong>解耦与无状态化 + Raft 协议</strong>。</li>
+<li><strong>效果</strong>：控制面全面分布式部署，跨机房多活。一台服务器倒下，新的 Leader 秒级选举产生，确保对外 API 持续可用。</li>
+</ul>
+<h3 id="3-计算编排层-Compute-ECS-VM"><a href="#3-计算编排层-Compute-ECS-VM" class="headerlink" title="3. 计算编排层 (Compute - ECS/VM)"></a>3. 计算编排层 (Compute - ECS/VM)</h3><ul>
+<li><strong>硬件现状</strong>：物理机的主板、内存条经常发生硬件报错（MCE），电源也可能突然损坏。</li>
+<li><strong>韧性手段</strong>：<strong>热迁移（Live Migration）与自动撤离</strong>。</li>
+<li><strong>效果</strong>：监控系统一旦侦测到物理机隐患，在不中断业务的前提下，将整台虚拟机毫秒级“搬家”到健康物理机上。</li>
+</ul>
+<h3 id="4-网络与内部总线-Networking"><a href="#4-网络与内部总线-Networking" class="headerlink" title="4. 网络与内部总线 (Networking)"></a>4. 网络与内部总线 (Networking)</h3><ul>
+<li><strong>硬件现状</strong>：内部高速交换机或光纤可能发生单路中断、老化或丢包。</li>
+<li><strong>韧性手段</strong>：<strong>Clos 架构（多路径网络）</strong>。</li>
+<li><strong>效果</strong>：任何两点间都有无数条冗余路径。单根光纤断裂，数据包瞬间动态重路由（Dynamic Re-routing），自动绕过故障点。</li>
+</ul>
+<h3 id="5-持久化存储层-Storage-OSS-EBS"><a href="#5-持久化存储层-Storage-OSS-EBS" class="headerlink" title="5. 持久化存储层 (Storage - OSS/EBS)"></a>5. 持久化存储层 (Storage - OSS/EBS)</h3><ul>
+<li><strong>硬件现状</strong>：硬盘是数据中心损坏率最高的部件，每天都有成百上千块硬盘报废。</li>
+<li><strong>韧性手段</strong>：<strong>三副本与纠删码（Erasure Coding）</strong>。</li>
+<li><strong>效果</strong>：数据写入时自动切片，分布在不同机架甚至不同机房。硬盘坏了？系统会自动利用剩余分片在后台“自愈”数据，完全不影响前端读写。</li>
+</ul>
+<h2 id="二、-认知的统一：这就解释了什么是“云原生”思维"><a href="#二、-认知的统一：这就解释了什么是“云原生”思维" class="headerlink" title="二、 认知的统一：这就解释了什么是“云原生”思维"></a>二、 认知的统一：这就解释了什么是“云原生”思维</h2><p>当云厂商用软件韧性构建了这套体系后，他们售卖的不再是“永不损坏的物理机”，而是 <strong>“允许局部瞬时故障，但保证整体高可用”</strong> 的云服务。</p>
+<p>这就倒逼了作为用户的我们，必须彻底改变思维模式：</p>
+<table>
+<thead>
+<tr>
+<th align="left">维度</th>
+<th align="left">传统 IT 思维 (Legacy)</th>
+<th align="left">云原生思维 (Cloud Native)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>底层假设</strong></td>
+<td align="left">硬件是可靠的，坏了是重大事故。</td>
+<td align="left"><strong>硬件是会坏的，故障才是常态。</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>硬件依赖</strong></td>
+<td align="left">依赖昂贵的高端存储和小机（Mainframe）。</td>
+<td align="left"><strong>依赖廉价商用硬件 + 软件容错。</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>应用架构</strong></td>
+<td align="left">应用假设底层环境绝对稳定。</td>
+<td align="left"><strong>应用假设底层随时可能发生抖动。</strong></td>
+</tr>
+</tbody></table>
+<h2 id="三、-现代云原生的“套娃式韧性设计”"><a href="#三、-现代云原生的“套娃式韧性设计”" class="headerlink" title="三、 现代云原生的“套娃式韧性设计”"></a>三、 现代云原生的“套娃式韧性设计”</h2><p>理解了上述逻辑，我们就能看清现代云原生体系的演进路径。这其实是一个精妙的 <strong>“三层重构循环”</strong>：</p>
+<ol>
+<li><strong>第一层</strong>：云厂商用<strong>软件韧性</strong>屏蔽底层物理硬件故障。</li>
+<li><strong>第二层</strong>：从不确定性的硬件中，提炼出相对标准、弹性的<strong>云资源</strong>。</li>
+<li><strong>第三层</strong>：用户的业务应用，再用<strong>韧性架构</strong>（如重试、降级、熔断）去屏蔽云资源的偶发性抖动。</li>
+</ol>
+<p>这就是现代云原生体系的 <strong>“套娃式韧性设计”</strong>（Nested Resilience）。</p>
+<p>如果你还在试图向云厂商购买一台“永不宕机”的云服务器，或者在云上试图全盘复刻传统物理机的高可用架构，而不去利用云原生的弹性和容灾特性，那么：<br><strong>你既没有享受到云计算带来的成本红利，也没有真正获得云原生的弹性优势。</strong></p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p><strong>接受失败是常态。</strong><br>放弃对单点绝对可靠的执念，通过分布式协同与软件智慧来解决单点不可靠的问题，这才是云计算真正的技术护城河，也是每一位现代架构师的必修课。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>架构</category>
+      </categories>
+      <tags>
+        <tag>Architecture</tag>
+        <tag>Cloud-Native</tag>
+        <tag>Stability/Aailability</tag>
       </tags>
   </entry>
   <entry>
@@ -1094,128 +1217,6 @@
       <tags>
         <tag>CI/CD</tag>
         <tag>Azure DevOps</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>从Git仓库中永久清理脏数据</title>
-    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
-    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
-<span id="more"></span>
-<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
-<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
-<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
-</li>
-<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
-<ul>
-<li>替换文件中的敏感信息</li>
-<li>删除文件或文件夹</li>
-</ul>
-<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
-<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
-<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
-<li><p>通过mirror的方式克隆代码仓库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-
-<p>比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
-</blockquote>
-</li>
-</ul>
-<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
-</blockquote>
-<ul>
-<li><p>替换所有文件中的指定的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>需要打开强制推送到Git仓库的功能</p>
-</blockquote>
-</li>
-<li><p>替换指定文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
-<blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
-</blockquote>
-<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
-<ul>
-<li>获取指定文件在所有变更历史中对应的blob id号</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>从变更历史中删除指定的文件(Blob)</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
-</blockquote>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Git</tag>
       </tags>
   </entry>
   <entry>
@@ -1876,241 +1877,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins Job的并发执行</title>
-    <url>/2019/07/08/jenkins-concurrent-builds/</url>
-    <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
-<ul>
-<li>充分利用Slave资源。如果让一台VM Slave一次只处理一个CI请求，往往会浪费很多的资源（CPU，Memory，Storage）。</li>
-<li>持续集成的最佳实践要求快速地“Build Per Change Commit”，但是对于一些比较耗时的持续集成流水线，比如项目比较大，或者自动化测试的时间比较长，往往是前一个集成还没结束，新的change commit已经到来，如果不能并发执行，只能阻塞等待，导致commit的提交者不能及时得到反馈，从而使持续集成流水线在项目中失去了应有的作用，地位也会变得比较尴尬。此时，如果再一味地推进与持续集成流水线配套的一些策略，将会受到很大的阻力。</li>
-</ul>
-<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：<br>1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；<br>2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
-<p>为了支持Jenkins Job并发执行，首先需要设置Jenkins Slave的Build Executors的数量大于1：<br><img src="/2019/07/08/jenkins-concurrent-builds/1.png"></p>
-<p>当Jenkins Job有新的build请求时，只要匹配的Slave节点有空闲的Executor，即使已经有build在执行，新的build也会立刻被并发执行。如果匹配的Slave节点没有空闲的Executor，这个新的build请求将被放入待执行队列里等待调度。</p>
-<p>Free Style Job缺省并没有打开并发执行的功能。需要在Job的配置中打开选项“Execute concurrent builds if necessary”：<br><img src="/2019/07/08/jenkins-concurrent-builds/2.png"></p>
-<p>Pipeline2.0的Job缺省是并发执行模式。如果要禁止并发执行，可以通过添加以下代码：</p>
-<ul>
-<li><p>Scripted Pipeline</p>
-<p>在Jenkinsfile头部添加以下属性：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">properties(</span><br><span class="line">  [</span><br><span class="line">      disableConcurrentBuilds()</span><br><span class="line">  ]</span><br><span class="line">)</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>Declarative Pipeline</p>
-<p>在pipeline块中添加以下选项：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    options {</span><br><span class="line">        disableConcurrentBuilds()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="Jenkins-Job并发执行需要解决的问题"><a href="#Jenkins-Job并发执行需要解决的问题" class="headerlink" title="Jenkins Job并发执行需要解决的问题"></a>Jenkins Job并发执行需要解决的问题</h1><p>Jenkins Job的并发执行是一把双刃剑，用得好，所向披靡，能够充分利用既有资源服务更多的持续集成请求，用得不好，会出现很多预料不到的问题，而且有些问题并不能重复出现，给调试带来了很大的负担。Jenkins Job的并发执行主要面临的问题是资源使用的冲突。下图是一个常见的基于Pipeline2.0实现的一个Jenkins CI Job(yunzai-ci)：<br><img src="/2019/07/08/jenkins-concurrent-builds/3.png">按照流程顺序，逐一分析如下：</p>
-<ul>
-<li><p>在“Checkout Code”阶段，同一个Jenkins Job并发执行的build在同一个Slave上的Workspace会存在着冲突。对于这个问题，其实Jenkins已经提供了解决方案，细心的你一定会发现在Slave机子上同一个Job会存在着多个文件夹，比如“yunzai-ci”，“yunzai-ci@1”，“yunzai-ci@2”…，这就是同一个Job并发执行的build对应的不同的Workspace。Jenkins缺省是在Job的名字后面加上符号@和数字来命名不同的Workspace的，当并发执行的build数量大于Workspace的数量，Jenkins会根据命名规则自动创建一个新的Workspace，当并发执行的build数量小于Workspace数量，Jenkins会按顺序重用已有的Workspace。</p>
-<blockquote>
-<p>Workspace的分隔符@可以在启动Jenkins master时设置Java系统属性“hudson.slaves.WorkspaceList”来改变。比如，“hudson.slaves.WorkspaceList=-”将Workspace的分隔符改为中划线。</p>
-</blockquote>
-<p>Workspace的冲突解决了，但是又引入了一个潜在的效率问题。想象一下，如果项目的代码库比较大(几百兆，或者几个G)，那么在创建一个新的Workspace时，会重新从远处的代码仓库克隆代码，这将导致当前Jenkins job执行的时间被拉长。可以优化Jenkins Job，通过拷贝本地已有Workspace的代码来提升速度(Linux上可以使用Rsync，Window上可以使用Robocopy)，而不是直接从远程代码仓库去克隆代码。</p>
-</li>
-<li><p>在“Build/UT”阶段，会使用不同的自动构建工具和包管理工具，比如Maven, Gradle, Npm, Bower等等，构建出来的制品会上传到制品仓库(Artifactory或Nexus)。这里，自动构建工具的本地缓存，以及构建制品上传到制品仓库都可能存在冲突。比如Maven, 缺省的本地缓存是在当前用户的.m2目录下，Maven执行时会更新或者下载项目的依赖到本地缓存，或者安装当前构建的制品到本地缓存，当同一个Jenkins Job并发执行的build运行在同一个Jenkins Slave上时，会启动多个Maven进程同时执行，它们会下载同一个依赖包或者安装相同版本(Maven的snapshot版本或者其它原因导致两个build版本相同)的构建制品到到同一个缓存目录，这时就会经常出现写磁盘文件冲突的问题，而且这个问题不是每次都发生。当多个Maven进程同时上传相同版本的制品到制品仓库时，也会存在着冲突。<br>要解决这类型的冲突，需要具体情况，具体对待。对于Maven来说，可以通过属性”maven.repo.local”来为每个Maven进程指定不同的本地缓存目录，且保证每个Build的版本都是唯一的。这个解决方案同样存在着效率问题，每开一个新的Maven本地缓存目录都会增加build的执行时间，因为Maven要重新去下载项目的所有依赖，这时也可以通过拷贝本地已有的缓存目录来提升速度。</p>
-</li>
-<li><p>在“Code Static Check”阶段，如果使用的是SonarQube，则不会产生冲突，因为每一个并发执行的build都会在SonarQube服务端产生一个独立的分析，所以不会相互干扰。但如果是其它的静态代码分析服务器，可能就需要具体情况，具体对待。</p>
-</li>
-<li><p>在“自动化测试”阶段，由于资源有限(自动化测试机器有限，而且执行自动化测试用例也需要一定的时间)，所以不一定能够服务于并发执行的多个build。这时可以增加自动化测试机器(虚拟机)，同时进行测试分级，抽取出部分重要的测试用例放到Jenkins Job中去执行以降低测试执行的时间。可以把全量测试降级为以天为单位，比如每晚取最新的build去执行全量测试，并给出测试报告。</p>
-</li>
-</ul>
-<p>不同公司或组织的持续集成流水线可能和上文描述的不相同，为了能够并发执行Jenkins Job，需要逐一分析和解决每个阶段可能出现的资源冲突问题。</p>
-<h1 id="Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin"><a href="#Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin" class="headerlink" title="Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)"></a>Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)</h1><p>Jenkins Job缺省的并发行为是只要有足够可用的Jenkins Slave和Executor资源，启动的build数量是不限的。但实际情况是我们需要精确地控制某个Jenkins Job总的并发执行的build数量，同时也希望单个Jenkins Slave节点上同一个Jenkins Job并发执行的build数量，这样可以限制某个Jenkins Job的总体资源消耗，保证其它Jenkins Job也能均衡执行。借助于Jenkins插件“Throttle Concurrent Builds Plugin”可以达到这样的控制目的。“Throttle Concurrent Builds Plugin”支持系统级别的配置，也支持Job级别的配置：</p>
-<ul>
-<li><p>系统级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/4.png">系统级别的配置可以设置一个并发执行的类别，不同的Jenkins Job可以引用这个类别。<br>“Maximum Total Courrent Builds”用来设置Jenkins Job最大的并发数量。<br>“Maximum Concurrent Builds Per Node”用来设置同一个Jenkins Job在同一个Slave节点上最大的并发数量。</p>
-</li>
-<li><p>Free Style Job级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/5.png">在Job级别，可以选择“Throttle this project alone”，并且设置“Maximum Total Courrent Builds”和“Maximum Concurrent Builds Per Node”这两个值，也可以通过“Multi-Project Throttle Category”选择系统级别配置好的并发执行的类别。</p>
-</li>
-<li><p>Scripted Pipeline只支持使用系统级别配置好的并发执行类别：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">throttle(['test-cocurrent']) {</span><br><span class="line">  node('xxxx') {</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
-<li><p>对于Declarative Pipeline，目前“Throttle Concurrent Builds Plugin”还不支持，所以只能是前面讨论的缺省并发行为。</p>
-<blockquote>
-<p>对于插件“Throttle Concurrent Builds Plugin”的详细用法，<br>可以参考插件的Wiki: <a href="https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds">https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds+Plugin</a>和GitHub地址: <a href="https://github.com/jenkinsci/throttle-concurrent-builds-plugin">https://github.com/jenkinsci/throttle-concurrent-builds-plugin</a>。</p>
-</blockquote>
-</li>
-</ul>
-<h1 id="Jenkins-Job相同参数build的执行情况"><a href="#Jenkins-Job相同参数build的执行情况" class="headerlink" title="Jenkins Job相同参数build的执行情况"></a>Jenkins Job相同参数build的执行情况</h1><p>所谓相同参数build，就是指同一个Jenkins Job以相同的参数触发多个build。不论是Jenkins Job并发执行，还是非并发执行，只要有符合Jenkins Job执行的Slave和Executor资源而且并发策略允许，所有被触发的build都会被立刻执行。但如果没有足够的执行资源，或者并发策略不允许，而且已经有build在待执行队列里等待的情况下，再次触发与等待的build参数相同的build，行为就会有些区别，总结如下：</p>
-<table>
-<thead>
-<tr>
-<th>Job类型</th>
-<th>并发执行</th>
-<th>非并发执行</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Free Style Job</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-<tr>
-<td>Scripted Pipeline</td>
-<td>相同参数的build会重复加入到待执行队列</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-<tr>
-<td>Declarative Pipeline</td>
-<td>相同参数的build会重复加入到待执行队列</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-</tbody></table>
-<p>以上是根据实测得到的结果，并没有任何官方文档提供详细的说明，所以随着Jenkins版本的升级，其行为有可能会变化。</p>
-<h1 id="容器作为Slave节点会让并发执行变得容易吗？"><a href="#容器作为Slave节点会让并发执行变得容易吗？" class="headerlink" title="容器作为Slave节点会让并发执行变得容易吗？"></a>容器作为Slave节点会让并发执行变得容易吗？</h1><p>最近几年容器技术借助于Docker在IT领域里掀起了巨大的变革，容器编排平台Kubernetes的出现更是将容器化的应用推向高潮。在CI/CD领域也不例外，越来越多的组织开始尝试利用Docker容器作为CI Job执行的Slave节点，通过Kubernetes平台统一管理调度虚拟机资源，以期望更加细粒度地控制和使用计算资源。Docker容器作为Slave节点确实是实现了本地执行环境的隔离，但每次执行都会启动全新的容器，都得重新下载代码和构建工具的本地缓存，使得每次的构建都要花费更长的时间，所以还是要考虑如何提升效率。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
-    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
-    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
-<span id="more"></span>
-
-<h1 id="一个典型的CI-CD流水线"><a href="#一个典型的CI-CD流水线" class="headerlink" title="一个典型的CI/CD流水线"></a>一个典型的CI/CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
-<p>上图是个典型的CI/CD流水线，由5个阶段（Phase）组成：Build/UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
-<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
-<ul>
-<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
-</li>
-<li><p>调试CI/CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
-</li>
-</ul>
-<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
-<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
-<ul>
-<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
-</li>
-<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
-</li>
-</ul>
-<blockquote>
-<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
-</blockquote>
-<p>下图是状态存储与恢复的过程。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
-<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
-<h1 id="在Jenkins上实现这个CI-CD流水线"><a href="#在Jenkins上实现这个CI-CD流水线" class="headerlink" title="在Jenkins上实现这个CI/CD流水线"></a>在Jenkins上实现这个CI/CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
-<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
-</li>
-<li><p>必要的插件</p>
-<ul>
-<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
-<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
-</li>
-<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
-<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI/CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI/CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
-</li>
-<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
-<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI/CD流水线建设的要求。</p>
-</li>
-<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
-<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI/CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
-</li>
-<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
-<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
-<blockquote>
-<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI/CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
-</blockquote>
-</li>
-<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
-<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI/CD流水线中能显示更多的信息。</p>
-</li>
-<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
-<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
-</li>
-<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
-<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI/CD流水线必要的特征。</p>
-</li>
-<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
-<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
-</li>
-</ul>
-</li>
-</ol>
-<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI/CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build/UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
-<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
-<p>步骤的一些说明：</p>
-<ol>
-<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
-</li>
-<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
-</li>
-<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
-</li>
-<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
-</li>
-</ol>
-<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
-<p>步骤的一些说明：</p>
-<ol>
-<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
-</li>
-<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
-</li>
-<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
-</li>
-<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
-</li>
-<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
-</li>
-</ol>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
-<ol>
-<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
-</li>
-<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
-</li>
-</ol>
-<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins构建GitHub合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
@@ -2627,129 +2393,6 @@
       </tags>
   </entry>
   <entry>
-    <title>记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</title>
-    <url>/2021/09/06/aliyun-coredns-issue-tracking/</url>
-    <content><![CDATA[<p>最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。</p>
-<span id="more"></span>
-
-<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>通过以下命令在Pod中通过域名访问某个服务时，有时能正常访问，有时访问不了。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};<span class="keyword">do</span> curl http://&lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-<p>错误大致为:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Couldn<span class="string">'t resolve host xxxx</span></span><br></pre></td></tr></tbody></table></figure>
-<p>从错误信息来看，是域名解析出了问题。用nslookup命令去检查域名解析，发现解析确实不稳定。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};nslookup &lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h1><h2 id="ACK集群的结构介绍"><a href="#ACK集群的结构介绍" class="headerlink" title="ACK集群的结构介绍"></a>ACK集群的结构介绍</h2><p>在详细排查问题之前，先了解下阿里云ACK集群的结构。<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">阿里云容器服务Kubernetes版（Alibaba Cloud Container Service for Kubernetes，简称容器服务ACK）</a>包含了专有版Kubernetes（Dedicated Kubernetes）、托管版Kubernetes（Managed Kubernetes）、Serverless Kubernetes三种形态。本文讨论的是托管版ACK，结构如下：</p>
-<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/1.png"></p>
-<p>集群的详细信息：<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/2.jpeg"></p>
-<ul>
-<li>Pod网络类型是Flannel，CIDR: 172.20.0.0/16。每个工作节点的最大的Pod数量为64 (ECS-1 CIDR: 172.20.0.192/26, ECS-2 CIDR: 172.20.0.128/26 …)</li>
-<li>Service CIDR: 172.21.0.0/20</li>
-<li>系统组件CoreDNS目前有两个Pod，分别运行在两个工作节点上</li>
-</ul>
-<h2 id="检查前的准备"><a href="#检查前的准备" class="headerlink" title="检查前的准备"></a>检查前的准备</h2><p>分别在CoreDNS Pods所在的两个工作节点上各启动一个测试Pod：Pod(Busybox)，Service(Nginx) + Pod(Nginx)。  </p>
-<blockquote>
-<p>将测试Pods分散在不同的工作节点上，并调度到CoreDNS Pods所在的工作节点中，这样既能测试同一节点上的CoreDNS访问，也能测试跨节点的CoreDNS访问。</p>
-</blockquote>
-<ul>
-<li>在ECS-1主机上启动Pod(Busybox)</li>
-</ul>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.1.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">yauritux/busybox-curl:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">args:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">sh</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">"sleep 36000"</span></span><br><span class="line"><span class="string">```</span>  </span><br><span class="line">  </span><br><span class="line"><span class="string">&gt;</span> <span class="string">通过nodeSelector绑定到ECS-1主机（10.0.1.121）上。</span></span><br><span class="line"></span><br><span class="line"><span class="string">+</span> <span class="string">在ECS-2主机上启动Service(Nginx)</span> <span class="string">+</span> <span class="string">Pod(Nginx)</span></span><br><span class="line"><span class="string">```yaml</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.2.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">nginx:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">ports:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">              <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">              <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/instance:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>通过nodeSelector绑定到ECS-2主机（10.0.2.121）上。</p>
-</blockquote>
-<h2 id="检查系统组件CoreDNS"><a href="#检查系统组件CoreDNS" class="headerlink" title="检查系统组件CoreDNS"></a>检查系统组件CoreDNS</h2><blockquote>
-<p>参考官方文档 <a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">Debugging DNS Resolution</a></p>
-</blockquote>
-<h3 id="检查CoreDNS-Pod是否正在运行"><a href="#检查CoreDNS-Pod是否正在运行" class="headerlink" title="检查CoreDNS Pod是否正在运行"></a>检查CoreDNS Pod是否正在运行</h3><p>执行命令<code>kubectl get pods</code>验证CoreDNS Pod正在运行。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl get pods -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
-
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME                           READY   STATUS    RESTARTS   AGE</span><br><span class="line">pod/coredns-849698df86-j9474   1/1     Running   0          9d</span><br><span class="line">pod/coredns-849698df86-xl5g9   1/1     Running   0          9d</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果没有看到CoreDNS Pod正在运行，可能在你当前的环境里缺省没有安装CoreDNS插件，你可能需要手动安装它。如果看到CoreDNS Pod失败，执行命令<code>kubectl describe pod</code>检查CoreDNS Pod的事件。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl describe pod -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="检查CoreDNS-Pod是否有运行时错误"><a href="#检查CoreDNS-Pod是否有运行时错误" class="headerlink" title="检查CoreDNS Pod是否有运行时错误"></a>检查CoreDNS Pod是否有运行时错误</h3><p>运行状态正常的Pod并不代表没有错误，有时程序会处理异常以保证服务的可用性。所以需要执行命令<code>kubectl logs</code>检查Pod的日志是否有任何可疑或异常的消息。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs -l k8s-app=kube-dns -n=kube-system</span><br></pre></td></tr></tbody></table></figure>
-
-<p>正常的CoreDNS日志实例：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br><span class="line"></span><br><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="检查CoreDNS服务"><a href="#检查CoreDNS服务" class="headerlink" title="检查CoreDNS服务"></a>检查CoreDNS服务</h3><p>执行命令<code>kubect get svc -l k8s-app=kube-dns -n=kube-system</code>检查CoreDNS服务是否存在。如果服务不存在，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>进行排查。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)                  AGE</span><br><span class="line">service/kube-dns   ClusterIP   172.21.0.10   &lt;none&gt;        53/UDP,53/TCP,9153/TCP   450d</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="检查CoreDNS-endpoints对象是否存在"><a href="#检查CoreDNS-endpoints对象是否存在" class="headerlink" title="检查CoreDNS endpoints对象是否存在"></a>检查CoreDNS endpoints对象是否存在</h3><p>执行命令<code>kubectl get endpoints</code>检查CoreDNS endpoints是否存在。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME       ENDPOINTS                                                       AGE</span><br><span class="line">kube-dns   172.20.0.146:53,172.20.0.205:53,172.20.0.146:9153 + 3 more...   458d</span><br></pre></td></tr></tbody></table></figure>
-<p>如果没有检查到endpoints，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>文档中的endpoints段落。</p>
-<h3 id="检查DNS查询是否被CoreDNS处理"><a href="#检查DNS查询是否被CoreDNS处理" class="headerlink" title="检查DNS查询是否被CoreDNS处理"></a>检查DNS查询是否被CoreDNS处理</h3><p>首先，修改CoreDNS的配置添加日志插件。</p>
-<p>执行以下命令打开CoreDNS的配置：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl edit cm coredns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
-<p>在Corefile段落添加<code>log</code>：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: ConfigMap</span><br><span class="line">data:</span><br><span class="line">  Corefile: |-</span><br><span class="line">    .:53 {</span><br><span class="line">      <span class="built_in">log</span></span><br><span class="line">      autopath @kubernetes</span><br><span class="line">      cache 30</span><br><span class="line">      errors</span><br><span class="line">      forward . /etc/resolv.conf</span><br><span class="line">      health</span><br><span class="line">      kubernetes cluster.local in-addr.arpa ip6.arpa {</span><br><span class="line">        pods verified</span><br><span class="line">        fallthrough in-addr.arpa ip6.arpa</span><br><span class="line">      }</span><br><span class="line">      loadbalance</span><br><span class="line">      loop</span><br><span class="line">      prometheus :9153</span><br><span class="line">      ready</span><br><span class="line">      reload</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-<p>其次，执行以下命令打开CoreDNS Pods日志：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs --<span class="built_in">tail</span> 20 -f -l k8s-app=kube-dns -n kube-system | grep -E <span class="string">"\"A IN nginx.default.svc.cluster.local"</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>通过grep命令仅提取域名nginx.default.svc.cluster.local的DNS查询日志，后面我们将查询这个域名。</p>
-</blockquote>
-<p>接下来，执行以下命令进入Pod(Busybox)：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- sh</span><br></pre></td></tr></tbody></table></figure>
-<p>在Pod(Busybox)中，重复查询域名nginx.default.svc.cluster.local多次，例如100次：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>检查CoreDNS Pods日志，看是否有同样次数的域名解析日志：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] 172.20.0.219:48418 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000179197s</span><br><span class="line">[INFO] 172.20.0.219:59640 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000067985s</span><br><span class="line">[INFO] 172.20.0.219:34682 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000072317s</span><br><span class="line">[INFO] 172.20.0.219:37560 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000075455s</span><br><span class="line">[INFO] 172.20.0.219:59156 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.00006403s</span><br><span class="line">......</span><br></pre></td></tr></tbody></table></figure>
-<p>如果域名解析的次数少于查询的次数，说明有些解析请求没有被CoreDNS获取，客户端<code>nslookup</code>命令就会出现有时解析成功，有时解析失败的情况。这也证明了前面描述的域名解析不稳定的问题。</p>
-<h3 id="直接调用CoreDNS的Pod-IP解析域名"><a href="#直接调用CoreDNS的Pod-IP解析域名" class="headerlink" title="直接调用CoreDNS的Pod IP解析域名"></a>直接调用CoreDNS的Pod IP解析域名</h3><p>直接使用CoreDNS Pod IP可以避免CoreDNS服务到CoreDNS Pod的代理解析。如果检查下来问题仍旧存在，说明从CoreDNS服务到CoreDNS Pod的代理解析没有问题，否则需要详细检查kube-proxy的状态。</p>
-<p>Pod(Busybox)缺省使用CoreDNS服务IP调用CoreDNS解析域名。执行以下命令可以查看Pod(Busybox)中的DNS配置：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- <span class="built_in">cat</span> /etc/resolv.conf</span><br></pre></td></tr></tbody></table></figure>
-
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nameserver 172.21.0.10</span><br><span class="line">search default.svc.cluster.local svc.cluster.local cluster.local</span><br><span class="line">options ndots:5</span><br></pre></td></tr></tbody></table></figure>
-<p>172.21.0.10是CoreDNS的服务IP。</p>
-<p>编辑Pod(Busybox)中的<code>/etc/resolv.conf</code>将nameserver换成同一节点上的CoreDNS Pod IP（172.20.0.205），执行以下命令检查Nginx服务域名的解析情况：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-<p>测试下来发现使用同一个节点上的CoreDNS Pod解析域名正常且稳定。</p>
-<p>将Pod(Busybox)的nameserver换成另一个节点上的CoreDNS Pod IP（172.20.0.146），再执行上面同样的测试发现域名解析都失败了。 这个测试说明Pod(Busybox)可以访问同一节点上的CoreDNS Pod，但是不能访问另一个节点上的CoreDNS Pod，也就是跨节点的Pod之间无法访问。接下来就需要检查跨节点Pod之间的路由信息是否正确了。</p>
-<h2 id="检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息"><a href="#检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息" class="headerlink" title="检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息"></a>检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息</h2><ul>
-<li><p>Pod(Busybox)里的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/3.png"><br>从Pod(Busybox)出来的流量会通过红色的路由规则进入到节点ECS-1。</p>
-</li>
-<li><p>VPC里跨节点之间的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/4.png"><br>红框中的系统路由规则使两个节点之间路由可达。</p>
-<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/5.png"><br>蓝框中的路由规则使流量从ECS-1路由到ECS-2中。</p>
-</li>
-<li><p>ECS-2的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/6.png"><br>红色路由规则使得流量从ECS-2路由到网桥接口cni0，最终由cni0根据目的Pod IP地址进入CoreDNS Pod（172.20.0.146）。</p>
-</li>
-</ul>
-<p>从路由分析下来看，跨节点Pod之前相互访问没有问题。接下来就需要检查施加在工作节点上的安全组规则，看流量是否被禁止了。</p>
-<h2 id="检查安全组"><a href="#检查安全组" class="headerlink" title="检查安全组"></a>检查安全组</h2><p>通过这个检查，最终发现工作节点上的安全组并不是当前集群对应的安全组，从而导致所有跨节点之前的Pod访问流量被禁止了。安全组用错的原因是在新建ACK集群时并没有创建新的节点而是选择了已经存在的节点。</p>
-<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>找到问题后，解决方案就简单了，也就是将所有的工作节点的安全组全部换成当前集群的安全组。</p>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>对于这次的问题定位和解决花费了一定的精力，而且这个问题未来也可能再次出现。所以，我们可以将跨节点Pod之间的网络连通性纳入到监控系统中，这样可以保证下次同样的问题出现时，能够通过监控系统快速的发现和定位问题。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>AliCloud</tag>
-        <tag>Kubernetes</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Podman介绍和使用</title>
     <url>/2021/10/10/podman-introduction-and-usage/</url>
     <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022/1/31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
@@ -2888,6 +2531,221 @@
       </categories>
       <tags>
         <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>浅析SonarQube插件的运行原理</title>
+    <url>/2021/01/17/sonar-plugin-principle/</url>
+    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
+<span id="more"></span>
+
+<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar</span><br><span class="line">(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.</span><br><span class="line">[ERROR] Re-run Maven using the -X switch to enable full debug logging.</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] For more information about the errors and possible solutions, please read the following articles:</span><br><span class="line">[ERROR] [Help 1]</span><br></pre></td></tr></tbody></table></figure>
+
+<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] Load metrics repository</span><br><span class="line">[INFO] Load metrics repository (done) | time=268ms</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java]</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms</span><br><span class="line">[INFO] Sensor PmdSensor [pmd]</span><br><span class="line">[INFO] Execute PMD 6.10.0</span><br><span class="line">[INFO] Execute PMD 6.10.0 (done) | time=15ms</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
+<figure class="highlight xml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="tag">&lt;/<span class="name">pmd.plugin.version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.version</span>&gt;</span>6.29.0<span class="tag">&lt;/<span class="name">pmd.version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.plugin.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-java<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-javascript<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-jsp<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">failOnViolation</span>&gt;</span>true<span class="tag">&lt;/<span class="name">failOnViolation</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">printFailingErrors</span>&gt;</span>true<span class="tag">&lt;/<span class="name">printFailingErrors</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">targetJdk</span>&gt;</span>14<span class="tag">&lt;/<span class="name">targetJdk</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">executions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">execution</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">goals</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">goal</span>&gt;</span>check<span class="tag">&lt;/<span class="name">goal</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">goals</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">execution</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">executions</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---</span><br><span class="line">[INFO] PMD version: 6.29.0</span><br><span class="line">[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml</span><br></pre></td></tr></tbody></table></figure>
+<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] SonarQube version: 7.9.4</span><br><span class="line">[INFO] Default locale: "en_CN", source code encoding: "UTF-8"</span><br><span class="line">[INFO] Load global settings</span><br><span class="line">[INFO] Load global settings (done) | time=1676ms</span><br><span class="line">[INFO] Server id: 9C01C42E-1505da3410fc976</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] Load/download plugins</span><br><span class="line">[INFO] Load plugins index</span><br><span class="line">[INFO] Load plugins index (done) | time=295ms</span><br><span class="line">[INFO] Load/download plugins (done) | time=501ms</span><br></pre></td></tr></tbody></table></figure>
+
+<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa</span><br><span class="line"></span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar</span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar_unzip</span><br></pre></td></tr></tbody></table></figure>
+
+<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib</span><br><span class="line"></span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar</span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar</span><br></pre></td></tr></tbody></table></figure>
+<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
+<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
+<ul>
+<li><p>SonarQube服务包含了三个进程：</p>
+<ul>
+<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
+<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
+<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
+</ul>
+</li>
+<li><p>SonarQube数据库用来存储：</p>
+<ul>
+<li>SonarQube实例的配置（安全，插件配置等）</li>
+<li>项目或视图的质量快照</li>
+</ul>
+</li>
+<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
+</li>
+<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
+</li>
+<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
+</li>
+</ul>
+<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
+<ul>
+<li>扫描器(Scanner)，执行源代码分析</li>
+<li>计算引擎，整合扫描器的结果</li>
+<li>Web应用</li>
+<li>SonarLint</li>
+</ul>
+<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
+<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
+<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@ScannerSide</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PmdConfiguration</span> {</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PROPERTY_GENERATE_XML</span> <span class="operator">=</span> <span class="string">"sonar.pmd.generateXml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PMD_RESULT_XML</span> <span class="operator">=</span> <span class="string">"pmd-result.xml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Logger</span> <span class="variable">LOG</span> <span class="operator">=</span> Loggers.get(PmdConfiguration.class);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> FileSystem fileSystem;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Configuration settings;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PmdConfiguration</span><span class="params">(FileSystem fileSystem, Configuration settings)</span> {</span><br><span class="line">        <span class="built_in">this</span>.fileSystem = fileSystem;</span><br><span class="line">        <span class="built_in">this</span>.settings = settings;</span><br><span class="line">    }</span><br><span class="line">...</span><br></pre></td></tr></tbody></table></figure>
+
+<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Code Quality</tag>
+        <tag>SonarQube</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
+    <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
+    <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
+<span id="more"></span>
+
+<h1 id="一个典型的CI-CD流水线"><a href="#一个典型的CI-CD流水线" class="headerlink" title="一个典型的CI/CD流水线"></a>一个典型的CI/CD流水线</h1><p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/2.png"></p>
+<p>上图是个典型的CI/CD流水线，由5个阶段（Phase）组成：Build/UT，Code Static Check，QA，STAGE和PROD。每个阶段（Phase）由一到多个任务（Task）组成，每个阶段（Phase）都有一个主任务（Task），阶段（Phase）之间的提升（Promotion）是由主任务（Task）的提升（Promotion）完成。同一个阶段（Phase）之间的任务（Task）可以串行执行，也可以并行执行。</p>
+<p>如果一个任务（Task）是通过提升（Promotion）的方式触发的，那么在当前流水线中这个任务（Task）可以被重复触发。这为流水线带来了两个好处：</p>
+<ul>
+<li><p>流水线可以从失败的点重新启动，而无需重新启动一个新的流水线实例：<br>当一个任务（Task）的执行由于某种临时原因失败了，比如网络不稳定，磁盘空间满了，断电等，可以通过重新提升（Promotion）再次触发。尤其是在前置阶段（Phase）和任务（Task）比较耗时，或者需要征用外部资源的时候，这一点更显得重要。</p>
+</li>
+<li><p>调试CI/CD流水线时，无需重复启动一个新的流水线实例：<br>这一点其实是上优点的延伸。调试流水线时往往是从前往后一个阶段（Phase）一个阶段（Phase）的调试，正是由于流水线可以从失败的点重新启动，可以直接略过通过的阶段（Phase），从失败的阶段（Phase）开始调试。</p>
+</li>
+</ul>
+<p>手动提升（Manual Promote）策略需要有权限的批准者根据提前制定好的质量关卡来决定是否需要提升（Promote）到下一个阶段（Phase）。在这个流水线中，QA阶段（Phase）到STAGE阶段（Phase），STAGE阶段（Phase）到PROD阶段（Phase）都需要手动提升（Mannual Promote），它们并不是在每一个流水线实例中都需要被触发。在开发的早期，软件还不是很稳定的时候，每一次的代码提交都会触发一个流水线实例，流水线实例往往会根据自动提升（Auto Promote）策略最大限度地往后续阶段（Phase）流转，如果在某一阶段（Phase）失败了，则会及时通知到相关开发人员，从而实现了及时反馈当前代码提交对软件质量的影响。</p>
+<p>只要没有被清理掉， 流水线实例可以在任何时间被重新启动，状态也会自动恢复。这为流水线带来了以下的好处：</p>
+<ul>
+<li><p>有时候由于质量和时间的原因，不一定会将最新版本的流水线实例从STAGE阶段（Phase）提升到PROD阶段（Phase），而是需要将几天前的已经处于STAGE阶段（Phase）的流水线实例提升到PROD阶段（Phase）；</p>
+</li>
+<li><p>流水线在停止状态不会占用任何Jenkins Master 或者 Slave节点资源。</p>
+</li>
+</ul>
+<blockquote>
+<p>往往是在第一个阶段（Phase）的构建（Build）任务（Task）中生成状态文件，后续阶段（Phase）只是拷贝和恢复，也有可能会添加更多的状态。</p>
+</blockquote>
+<p>下图是状态存储与恢复的过程。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/3.png"></p>
+<p>在上游阶段（Phase）的任务（Task）也就是Jenkins作业（Job）中将需要持久的状态以key-value的方式存储到build-info.prop文件中，并通过Jenkins Job的存档功能（Archive）将build-info.prop存到当前作业（Job）上，下游被触发的Jenkin作业（job）将上游作业（Job）的build-info.prop拷贝到本地工作区，将它注入为环境变量。</p>
+<h1 id="在Jenkins上实现这个CI-CD流水线"><a href="#在Jenkins上实现这个CI-CD流水线" class="headerlink" title="在Jenkins上实现这个CI/CD流水线"></a>在Jenkins上实现这个CI/CD流水线</h1><h2 id="Jenkins和必要的插件"><a href="#Jenkins和必要的插件" class="headerlink" title="Jenkins和必要的插件"></a>Jenkins和必要的插件</h2><ol>
+<li><p>Jenkins<br>从Jenkins官网（<a href="https://jenkins.io/">https://jenkins.io</a>）上下载最新版本的Jenkins并安装。或者，至少保证你的Jenkins版本在2.0以上，1.x版本还是太旧了。</p>
+</li>
+<li><p>必要的插件</p>
+<ul>
+<li><p>Parameterized Trigger Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin">https://wiki.jenkins.io/display/JENKINS/Parameterized+Trigger+Plugin</a></p>
+<p>在Jenkins pipeline2.0之前，Job之前的调用与被调用关系是通过这个插件或者一系列同类的插件实现的。</p>
+</li>
+<li><p>Delivery Pipeline Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin">https://wiki.jenkins.io/display/JENKINS/Delivery+Pipeline+Plugin</a></p>
+<p>将Job的上下游调用关系图形化显示为流水线。这个插件实现了CI/CD流水线的两个概念：阶段（Phase）和任务（Task）。一个任务（Task）就是一个Jenkins Freestyle Job（作业），一个阶段（Phase）可以包含多个任务（Task）。下图是从插件的网站上截取出来的最终CI/CD流水线的样式：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/1.png"></p>
+</li>
+<li><p>Promte Builds Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin">https://wiki.jenkins.io/display/JENKINS/Promoted+Builds+Plugin</a></p>
+<p>这个插件提供了一系列上下游作业（Job）之间的触发策略，主要分为自动触发，手动批准触发和自定义条件触发。除了三种主要的触发策略，还提供了一些更精细的控制策略，比如当前的提升（promotion）依赖于另一个提升（promotion）。可参考插件的wiki文档和内联的注释详细了解每一个触发策略，选中适合当前CI/CD流水线建设的要求。</p>
+</li>
+<li><p>Copy Artifact Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin">https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</a></p>
+<p>这个插件实现了实现了上下游作业（Job）传递数据的功能。在构建CI/CD流水线时，会将流水线的状态数据以key-value值的方式记录在文本文件中，并存档在当前的作业（Job）中。下游的作业（Job）可以通过这个插件从触发它的上游作业（Job）拷贝这个状态数据文件，加载成环境变量，从而实现状态的恢复。</p>
+</li>
+<li><p>EnvInject Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin">https://wiki.jenkins.io/display/JENKINS/EnvInject+Plugin</a></p>
+<p>利用这个插件可以将流水线的以key-value值的方式存储的状态文件加载为当前阶段（Phase）当前任务（Task）的环境变量。</p>
+<blockquote>
+<p>注意，key的名字不要包含中划线，否则Jenkins 作业（Job）不识别。<br>以上五个插件是实现CI/CD流水线必需的插件，装这四个插件可能还会自动安装一些依赖的插件。</p>
+</blockquote>
+</li>
+<li><p>Description Setter Plugin<br><a href="http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin">http://wiki.jenkins-ci.org/display/JENKINS/Description+Setter+Plugin</a></p>
+<p>这个插件比较简单了，主要是用来设置Job(Task)的描述，这样在CI/CD流水线中能显示更多的信息。</p>
+</li>
+<li><p>Flexible Publish Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin">https://wiki.jenkins.io/display/JENKINS/Flexible+Publish+Plugin</a></p>
+<p>这个插件主要是用来实现作业（Job）中的步骤（step）的控制流，扩展了Jenkins 作业（Job）的步骤（steps）只能顺序执行的方式。</p>
+</li>
+<li><p>Email-ext Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin</a></p>
+<p>扩展的邮件插件，能够定制复杂的邮件内容。邮件通知是一个成熟的CI/CD流水线必要的特征。</p>
+</li>
+<li><p>Token Macro Plugin<br><a href="https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin">https://wiki.jenkins.io/display/JENKINS/Token+Macro+Plugin</a></p>
+<p>在作业（Job）的描述或通知邮件的内容中可以通过引用Jenkins当前构建（build）的环境变量实现描述或邮件内容的模板化。Token Macro插件则负责在运行时解析这些变量引用。</p>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="Jenkins-Job配置"><a href="#Jenkins-Job配置" class="headerlink" title="Jenkins Job配置"></a>Jenkins Job配置</h2><p>为了实现这个CI/CD流水线，下图是一个Jenkins Job所需的步骤，但并不是所有的Job都需要实现所有的步骤。比如Build/UT阶段（Phase）的Build任务（Task）是整个流水线的第一个Jenkins作业（Job），所以不需要步骤3去拷贝流水线状态文件，也不需要步骤4去加载状态文件，而最后一个Smoke Test任务（Task）也不要步骤2去提升（Promote）到下一个阶段（Phase）或者任务（Task）。</p>
+<p><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/4.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>配置“Delivery Pipeline”节。“Stage Name”是阶段（Phase）名，“Task Name”是这个Jenkins Job在这个阶段（Phase）中的任务（Task）名字；</p>
+</li>
+<li><p>Jenkins作业（Job）提升（Promotion）的配置。在“Criteria”下选择提升（Promotion）的策略，在“Actions”中选择待触发的下游Jenkins作业（Job）；</p>
+</li>
+<li><p>从上游作业（Job）拷贝流水线状态文件；</p>
+</li>
+<li><p>将状态文件加载为当前作业（Job）的环境变量。</p>
+</li>
+</ol>
+<h2 id="如何提升（Promote）阶段（Phase）或任务（Task）"><a href="#如何提升（Promote）阶段（Phase）或任务（Task）" class="headerlink" title="如何提升（Promote）阶段（Phase）或任务（Task）"></a>如何提升（Promote）阶段（Phase）或任务（Task）</h2><p>下图展示了如何提升（Promote）阶段（Phase）或任务（Task），也就是Jenkins作业（Job）：<br><img src="/2018/10/07/jenkins-freestyle-cicd-pipeline/5.png"></p>
+<p>步骤的一些说明：</p>
+<ol>
+<li><p>在当前的流水线实例中打开上游作业（Job）的构建（Build）页面，点击左侧链接“Promotions Status”；</p>
+</li>
+<li><p>只有在“Approvers”列表里的用户有权手动批准提升（Promotion）；</p>
+</li>
+<li><p>点击“Approve”按钮触发提升（Promotion）；</p>
+</li>
+<li><p>Jenkins管理员有权限强制提升（Promotion）；</p>
+</li>
+<li><p>通过点击“Re-execute promotion”可重复提升（Promote）当前的作业（Job）。</p>
+</li>
+</ol>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>每一种方法有它的优点，必定也有它的缺点，没有一种方法是银弹，可以解决一切问题，打败天下无敌手。是否使用它，就要自己去权衡：是它的优点给你带来了更多，还是它的缺点是当前的最大障碍。这种方法的缺点大致如下：</p>
+<ol>
+<li><p>仅管“Delivery Pipeline Plugin”可以图形化显示Jenkins Pipeline 2.0（Jenkinsfile）作业（Job）的上下游调用关系，但是“Promotes Builds Plugin”不支持Jenkins Pipeline 2.0（Jenkinsfile），所以太多的Freestyle Job要去创建，设置和维护，这些Job只能作为配置存储在Jenkins Master服务器上，而不能作为代码存储在Git中；</p>
+</li>
+<li><p>会多占用一些Slave节点的线程，因为作业（Job）的提升其实也是作业（Job）需要占用一个Slave线程。</p>
+</li>
+</ol>
+<p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
       </tags>
   </entry>
   <entry>
@@ -3104,92 +2962,6 @@
       </tags>
   </entry>
   <entry>
-    <title>浅析SonarQube插件的运行原理</title>
-    <url>/2021/01/17/sonar-plugin-principle/</url>
-    <content><![CDATA[<p>最近公司的某个Java项目的<a href="https://www.sonarqube.org/">SonarQube</a>静态代码扫描出了问题，虽然最终解决了，但是在排查问题的过程中走了一些弯路，多花了点时间。分析下来，主要原因还是对SonarQube插件的运行机制不是很清楚。本文从分析SonarQube扫描的问题出发简单地介绍下SonarQube插件的运行原理。</p>
-<span id="more"></span>
-
-<h1 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h1><p>项目是用Maven构建的，Maven的<a href="https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-maven/">SonarScanner插件</a>用来做静态代码扫描。最近项目的Java版本升级到14，SonarQube扫描就遇到了下面的问题：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[ERROR] Failed to execute goal org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar</span><br><span class="line">(default-cli) on project aid-range-ocean: Unsupported Java version for PMD: 14 -&gt; [Help 1]</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.</span><br><span class="line">[ERROR] Re-run Maven using the -X switch to enable full debug logging.</span><br><span class="line">[ERROR]</span><br><span class="line">[ERROR] For more information about the errors and possible solutions, please read the following articles:</span><br><span class="line">[ERROR] [Help 1]</span><br></pre></td></tr></tbody></table></figure>
-
-<p>从错误日志看，PMD不支持Java14。再从下面的Sonar扫描的日志看，当前使用的PMD版本为6.10.0版本。</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] Load metrics repository</span><br><span class="line">[INFO] Load metrics repository (done) | time=268ms</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java]</span><br><span class="line">[INFO] Sensor JavaSquidSensor [java] (done) | time=2289ms</span><br><span class="line">[INFO] Sensor PmdSensor [pmd]</span><br><span class="line">[INFO] Execute PMD 6.10.0</span><br><span class="line">[INFO] Execute PMD 6.10.0 (done) | time=15ms</span><br></pre></td></tr></tbody></table></figure>
-
-<p>在<a href="https://github.com/pmd/pmd/releases/tag/pmd_releases%2F6.22.0#java-14-support">PMD的GitHub网站</a>看到PMD从6.22.0版本才开始支持Java14。刚开始，最直接的想法是如何让Maven的SonarScanner插件使用新版本的PMD，所以引入了<a href="https://maven.apache.org/plugins/maven-pmd-plugin/">Maven PMD插件</a>并设置PMD的版本为6.29.0，以下是Maven的POM文件：</p>
-<figure class="highlight xml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.plugin.version</span>&gt;</span>3.14.0<span class="tag">&lt;/<span class="name">pmd.plugin.version</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pmd.version</span>&gt;</span>6.29.0<span class="tag">&lt;/<span class="name">pmd.version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">build</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.plugin.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-java<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-javascript<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>net.sourceforge.pmd<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>pmd-jsp<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>${pmd.version}<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">pluginManagement</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">plugins</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-pmd-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- failOnViolation is actually true by default, but can be disabled --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">failOnViolation</span>&gt;</span>true<span class="tag">&lt;/<span class="name">failOnViolation</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- printFailingErrors is pretty useful --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">printFailingErrors</span>&gt;</span>true<span class="tag">&lt;/<span class="name">printFailingErrors</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">targetJdk</span>&gt;</span>14<span class="tag">&lt;/<span class="name">targetJdk</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">executions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">execution</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">goals</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">goal</span>&gt;</span>check<span class="tag">&lt;/<span class="name">goal</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">goals</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">execution</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">executions</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">plugins</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">build</span>&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-<p>但是运行下来发现问题并没有解决，而且又多了次PMD扫描。这个扫描来自于Maven PMD插件，用的版本确实是我们设置的6.29.0版本，也确实能够支持Java14。</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- maven-pmd-plugin:3.14.0:check (default) @ xxxx ---</span><br><span class="line">[INFO] PMD version: 6.29.0</span><br><span class="line">[INFO] You have 41 PMD violations. For more details see: xxxx/target/pmd.xml</span><br></pre></td></tr></tbody></table></figure>
-<p>所以，Maven PMD插件和Sonar扫描是没有关系的，即使没有SonarQube，Maven PMD插件也能够单独扫描Java代码。接下来，我们就把思路转到SonarQube的插件上了，而且发现SonarQube的服务端确实安装了一个<a href="https://github.com/jensgerdes/sonar-pmd">SonarQube的PMD插件</a>，且版本为3.2.1。从SonarQube PMD插件的GitHub页面看，版本3.2.1支持的PMD版本为6.9.0，确实不支持Java14, 而SonarQube的PMD插件从3.3.x版本才开始支持PMD 6.30.0版本，也就能够支持Java14。当把SonarQube的PMD插件升级为3.3.0后，问题解决了。再仔细分析客户端SonarQube扫描日志发现Maven SonarScanner插件会将SonarQube的PMD插件下载到本地缓存目录中，所以应该是Maven SonarScanner插件调用SonarQube PMD插件做PMD扫描。</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] --- sonar-maven-plugin:3.7.0.1746:sonar (default-cli) @ xxxx ---</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] SonarQube version: 7.9.4</span><br><span class="line">[INFO] Default locale: "en_CN", source code encoding: "UTF-8"</span><br><span class="line">[INFO] Load global settings</span><br><span class="line">[INFO] Load global settings (done) | time=1676ms</span><br><span class="line">[INFO] Server id: 9C01C42E-1505da3410fc976</span><br><span class="line">[INFO] User cache: /xxxx/.sonar/cache</span><br><span class="line">[INFO] Load/download plugins</span><br><span class="line">[INFO] Load plugins index</span><br><span class="line">[INFO] Load plugins index (done) | time=295ms</span><br><span class="line">[INFO] Load/download plugins (done) | time=501ms</span><br></pre></td></tr></tbody></table></figure>
-
-<p>搜索了下SonarQube本地缓存目录，确实发现了SonarQube PMD插件：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa</span><br><span class="line"></span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar</span><br><span class="line">Jan 18:58 sonar-pmd-plugin.jar_unzip</span><br></pre></td></tr></tbody></table></figure>
-
-<p>看了下SonarQube PMD插件的解压目录，它引用了PMD 6.30.0版本：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">/xxxx/.sonar/cache/5528f475b7c3651f5a42841b092164fa/sonar-pmd-plugin.jar_unzip/META-INF/lib</span><br><span class="line"></span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1241504 13 Jan 18:58 pmd-core-6.30.0.jar</span><br><span class="line">-rw-r--r--  1 mizha53  619956085  1141858 13 Jan 18:58 pmd-java-6.30.0.jar</span><br></pre></td></tr></tbody></table></figure>
-<p>到此，我们已经完全搞清楚SonarQube PMD扫描的调用顺序：Maven SonarScanner插件下载SonarQube PMD插件到本地缓存目录（如果不存在的话）, Maven SonarScanner插件调用SonarQube PMD插件，SonarQube PMD插件最终调用PMD完成扫描。但是SonarQube的插件仅仅是运行在客户端吗，扫描后的结果上传到服务端后如何处理，由谁来处理？答案还是SonarQube插件，SonarQube插件是对SonarQube的扩展，既可以运行在客户端也可以运行在服务端。接下来，我们就了解下SonarQube插件的原理。</p>
-<h1 id="SonarQube插件原理"><a href="#SonarQube插件原理" class="headerlink" title="SonarQube插件原理"></a>SonarQube插件原理</h1><h2 id="SonarQube架构"><a href="#SonarQube架构" class="headerlink" title="SonarQube架构"></a>SonarQube架构</h2><p><img src="/2021/01/17/sonar-plugin-principle/1.png" alt="SonarQube架构"></p>
-<ul>
-<li><p>SonarQube服务包含了三个进程：</p>
-<ul>
-<li>Web服务给开发人员或者经理浏览代码质量快照并配置SonarQube实例</li>
-<li>基于ElasticSearch的搜索服务支持从UI界面搜索信息</li>
-<li>计算引擎服务负责处理代码分析报告并将它们存储在SonarQube数据库中</li>
-</ul>
-</li>
-<li><p>SonarQube数据库用来存储：</p>
-<ul>
-<li>SonarQube实例的配置（安全，插件配置等）</li>
-<li>项目或视图的质量快照</li>
-</ul>
-</li>
-<li><p>安装在服务端的多个SonarQube插件，包括语言，SCM，集成，认证和管理插件</p>
-</li>
-<li><p>运行在构建或持续集成服务器上的一个多个SonarScanner用来分析项目</p>
-</li>
-<li><p>集成在不同IDE中的SonarLint插件，在开发人员的IDE中实时分析代码质量</p>
-</li>
-</ul>
-<h2 id="SonarQube插件"><a href="#SonarQube插件" class="headerlink" title="SonarQube插件"></a>SonarQube插件</h2><p>SonarQube在以下的四个技术栈中提供了扩展点：</p>
-<ul>
-<li>扫描器(Scanner)，执行源代码分析</li>
-<li>计算引擎，整合扫描器的结果</li>
-<li>Web应用</li>
-<li>SonarLint</li>
-</ul>
-<p>一个SonarQube插件可以对一个，多个或所有的技术栈实现扩展。例如，下面的SonarQube PMD插件实现了所有技术栈的扩展：<br><img src="/2021/01/17/sonar-plugin-principle/2.png" alt="SonarQube PMD插件扩展SonarQube"></p>
-<p>每一个扩展点都是一个Java类，而一个扩展点可以同时实现多个技术栈。例如，PmdSensor即扩展了SonarLint，又扩展了SonarQube Scanner，也就是Java类PmdSensor即运行在SonarLint中，也运行在SonarScanner中。”SonarLintSide”，“ScannerSide”，“ServerSide”和“ComputeEngineSide”是Java中用来标注扩展点的Java类。例如：</p>
-<figure class="highlight java"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">@ScannerSide</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PmdConfiguration</span> {</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PROPERTY_GENERATE_XML</span> <span class="operator">=</span> <span class="string">"sonar.pmd.generateXml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">PMD_RESULT_XML</span> <span class="operator">=</span> <span class="string">"pmd-result.xml"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Logger</span> <span class="variable">LOG</span> <span class="operator">=</span> Loggers.get(PmdConfiguration.class);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> FileSystem fileSystem;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Configuration settings;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PmdConfiguration</span><span class="params">(FileSystem fileSystem, Configuration settings)</span> {</span><br><span class="line">        <span class="built_in">this</span>.fileSystem = fileSystem;</span><br><span class="line">        <span class="built_in">this</span>.settings = settings;</span><br><span class="line">    }</span><br><span class="line">...</span><br></pre></td></tr></tbody></table></figure>
-
-<p>所以，由上面SonarQube插件的分析来看，SonarQube的插件具体运行在什么地方，就看它扩展了哪些技术栈。如果它扩展了扫描器(Scanner)，那么客户端的扫描器(Scanner)在执行代码扫描的时候就会下载这个插件到本地缓存目录并执行里面的Java类。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Code Quality</tag>
-        <tag>SonarQube</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Terraform如何调用Ansible配置虚拟机资源</title>
     <url>/2018/11/14/terraform-call-ansible/</url>
     <content><![CDATA[<p>Terraform（<a href="https://www.terraform.io/">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
@@ -3390,6 +3162,234 @@
       <tags>
         <tag>LLM</tag>
         <tag>AI Coding Agent</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Jenkins Job的并发执行</title>
+    <url>/2019/07/08/jenkins-concurrent-builds/</url>
+    <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
+<ul>
+<li>充分利用Slave资源。如果让一台VM Slave一次只处理一个CI请求，往往会浪费很多的资源（CPU，Memory，Storage）。</li>
+<li>持续集成的最佳实践要求快速地“Build Per Change Commit”，但是对于一些比较耗时的持续集成流水线，比如项目比较大，或者自动化测试的时间比较长，往往是前一个集成还没结束，新的change commit已经到来，如果不能并发执行，只能阻塞等待，导致commit的提交者不能及时得到反馈，从而使持续集成流水线在项目中失去了应有的作用，地位也会变得比较尴尬。此时，如果再一味地推进与持续集成流水线配套的一些策略，将会受到很大的阻力。</li>
+</ul>
+<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：<br>1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；<br>2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
+<p>为了支持Jenkins Job并发执行，首先需要设置Jenkins Slave的Build Executors的数量大于1：<br><img src="/2019/07/08/jenkins-concurrent-builds/1.png"></p>
+<p>当Jenkins Job有新的build请求时，只要匹配的Slave节点有空闲的Executor，即使已经有build在执行，新的build也会立刻被并发执行。如果匹配的Slave节点没有空闲的Executor，这个新的build请求将被放入待执行队列里等待调度。</p>
+<p>Free Style Job缺省并没有打开并发执行的功能。需要在Job的配置中打开选项“Execute concurrent builds if necessary”：<br><img src="/2019/07/08/jenkins-concurrent-builds/2.png"></p>
+<p>Pipeline2.0的Job缺省是并发执行模式。如果要禁止并发执行，可以通过添加以下代码：</p>
+<ul>
+<li><p>Scripted Pipeline</p>
+<p>在Jenkinsfile头部添加以下属性：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">properties(</span><br><span class="line">  [</span><br><span class="line">      disableConcurrentBuilds()</span><br><span class="line">  ]</span><br><span class="line">)</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>Declarative Pipeline</p>
+<p>在pipeline块中添加以下选项：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    options {</span><br><span class="line">        disableConcurrentBuilds()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="Jenkins-Job并发执行需要解决的问题"><a href="#Jenkins-Job并发执行需要解决的问题" class="headerlink" title="Jenkins Job并发执行需要解决的问题"></a>Jenkins Job并发执行需要解决的问题</h1><p>Jenkins Job的并发执行是一把双刃剑，用得好，所向披靡，能够充分利用既有资源服务更多的持续集成请求，用得不好，会出现很多预料不到的问题，而且有些问题并不能重复出现，给调试带来了很大的负担。Jenkins Job的并发执行主要面临的问题是资源使用的冲突。下图是一个常见的基于Pipeline2.0实现的一个Jenkins CI Job(yunzai-ci)：<br><img src="/2019/07/08/jenkins-concurrent-builds/3.png">按照流程顺序，逐一分析如下：</p>
+<ul>
+<li><p>在“Checkout Code”阶段，同一个Jenkins Job并发执行的build在同一个Slave上的Workspace会存在着冲突。对于这个问题，其实Jenkins已经提供了解决方案，细心的你一定会发现在Slave机子上同一个Job会存在着多个文件夹，比如“yunzai-ci”，“yunzai-ci@1”，“yunzai-ci@2”…，这就是同一个Job并发执行的build对应的不同的Workspace。Jenkins缺省是在Job的名字后面加上符号@和数字来命名不同的Workspace的，当并发执行的build数量大于Workspace的数量，Jenkins会根据命名规则自动创建一个新的Workspace，当并发执行的build数量小于Workspace数量，Jenkins会按顺序重用已有的Workspace。</p>
+<blockquote>
+<p>Workspace的分隔符@可以在启动Jenkins master时设置Java系统属性“hudson.slaves.WorkspaceList”来改变。比如，“hudson.slaves.WorkspaceList=-”将Workspace的分隔符改为中划线。</p>
+</blockquote>
+<p>Workspace的冲突解决了，但是又引入了一个潜在的效率问题。想象一下，如果项目的代码库比较大(几百兆，或者几个G)，那么在创建一个新的Workspace时，会重新从远处的代码仓库克隆代码，这将导致当前Jenkins job执行的时间被拉长。可以优化Jenkins Job，通过拷贝本地已有Workspace的代码来提升速度(Linux上可以使用Rsync，Window上可以使用Robocopy)，而不是直接从远程代码仓库去克隆代码。</p>
+</li>
+<li><p>在“Build/UT”阶段，会使用不同的自动构建工具和包管理工具，比如Maven, Gradle, Npm, Bower等等，构建出来的制品会上传到制品仓库(Artifactory或Nexus)。这里，自动构建工具的本地缓存，以及构建制品上传到制品仓库都可能存在冲突。比如Maven, 缺省的本地缓存是在当前用户的.m2目录下，Maven执行时会更新或者下载项目的依赖到本地缓存，或者安装当前构建的制品到本地缓存，当同一个Jenkins Job并发执行的build运行在同一个Jenkins Slave上时，会启动多个Maven进程同时执行，它们会下载同一个依赖包或者安装相同版本(Maven的snapshot版本或者其它原因导致两个build版本相同)的构建制品到到同一个缓存目录，这时就会经常出现写磁盘文件冲突的问题，而且这个问题不是每次都发生。当多个Maven进程同时上传相同版本的制品到制品仓库时，也会存在着冲突。<br>要解决这类型的冲突，需要具体情况，具体对待。对于Maven来说，可以通过属性”maven.repo.local”来为每个Maven进程指定不同的本地缓存目录，且保证每个Build的版本都是唯一的。这个解决方案同样存在着效率问题，每开一个新的Maven本地缓存目录都会增加build的执行时间，因为Maven要重新去下载项目的所有依赖，这时也可以通过拷贝本地已有的缓存目录来提升速度。</p>
+</li>
+<li><p>在“Code Static Check”阶段，如果使用的是SonarQube，则不会产生冲突，因为每一个并发执行的build都会在SonarQube服务端产生一个独立的分析，所以不会相互干扰。但如果是其它的静态代码分析服务器，可能就需要具体情况，具体对待。</p>
+</li>
+<li><p>在“自动化测试”阶段，由于资源有限(自动化测试机器有限，而且执行自动化测试用例也需要一定的时间)，所以不一定能够服务于并发执行的多个build。这时可以增加自动化测试机器(虚拟机)，同时进行测试分级，抽取出部分重要的测试用例放到Jenkins Job中去执行以降低测试执行的时间。可以把全量测试降级为以天为单位，比如每晚取最新的build去执行全量测试，并给出测试报告。</p>
+</li>
+</ul>
+<p>不同公司或组织的持续集成流水线可能和上文描述的不相同，为了能够并发执行Jenkins Job，需要逐一分析和解决每个阶段可能出现的资源冲突问题。</p>
+<h1 id="Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin"><a href="#Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin" class="headerlink" title="Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)"></a>Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)</h1><p>Jenkins Job缺省的并发行为是只要有足够可用的Jenkins Slave和Executor资源，启动的build数量是不限的。但实际情况是我们需要精确地控制某个Jenkins Job总的并发执行的build数量，同时也希望单个Jenkins Slave节点上同一个Jenkins Job并发执行的build数量，这样可以限制某个Jenkins Job的总体资源消耗，保证其它Jenkins Job也能均衡执行。借助于Jenkins插件“Throttle Concurrent Builds Plugin”可以达到这样的控制目的。“Throttle Concurrent Builds Plugin”支持系统级别的配置，也支持Job级别的配置：</p>
+<ul>
+<li><p>系统级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/4.png">系统级别的配置可以设置一个并发执行的类别，不同的Jenkins Job可以引用这个类别。<br>“Maximum Total Courrent Builds”用来设置Jenkins Job最大的并发数量。<br>“Maximum Concurrent Builds Per Node”用来设置同一个Jenkins Job在同一个Slave节点上最大的并发数量。</p>
+</li>
+<li><p>Free Style Job级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/5.png">在Job级别，可以选择“Throttle this project alone”，并且设置“Maximum Total Courrent Builds”和“Maximum Concurrent Builds Per Node”这两个值，也可以通过“Multi-Project Throttle Category”选择系统级别配置好的并发执行的类别。</p>
+</li>
+<li><p>Scripted Pipeline只支持使用系统级别配置好的并发执行类别：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">throttle(['test-cocurrent']) {</span><br><span class="line">  node('xxxx') {</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
+<li><p>对于Declarative Pipeline，目前“Throttle Concurrent Builds Plugin”还不支持，所以只能是前面讨论的缺省并发行为。</p>
+<blockquote>
+<p>对于插件“Throttle Concurrent Builds Plugin”的详细用法，<br>可以参考插件的Wiki: <a href="https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds">https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds+Plugin</a>和GitHub地址: <a href="https://github.com/jenkinsci/throttle-concurrent-builds-plugin">https://github.com/jenkinsci/throttle-concurrent-builds-plugin</a>。</p>
+</blockquote>
+</li>
+</ul>
+<h1 id="Jenkins-Job相同参数build的执行情况"><a href="#Jenkins-Job相同参数build的执行情况" class="headerlink" title="Jenkins Job相同参数build的执行情况"></a>Jenkins Job相同参数build的执行情况</h1><p>所谓相同参数build，就是指同一个Jenkins Job以相同的参数触发多个build。不论是Jenkins Job并发执行，还是非并发执行，只要有符合Jenkins Job执行的Slave和Executor资源而且并发策略允许，所有被触发的build都会被立刻执行。但如果没有足够的执行资源，或者并发策略不允许，而且已经有build在待执行队列里等待的情况下，再次触发与等待的build参数相同的build，行为就会有些区别，总结如下：</p>
+<table>
+<thead>
+<tr>
+<th>Job类型</th>
+<th>并发执行</th>
+<th>非并发执行</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Free Style Job</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+<tr>
+<td>Scripted Pipeline</td>
+<td>相同参数的build会重复加入到待执行队列</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+<tr>
+<td>Declarative Pipeline</td>
+<td>相同参数的build会重复加入到待执行队列</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+</tbody></table>
+<p>以上是根据实测得到的结果，并没有任何官方文档提供详细的说明，所以随着Jenkins版本的升级，其行为有可能会变化。</p>
+<h1 id="容器作为Slave节点会让并发执行变得容易吗？"><a href="#容器作为Slave节点会让并发执行变得容易吗？" class="headerlink" title="容器作为Slave节点会让并发执行变得容易吗？"></a>容器作为Slave节点会让并发执行变得容易吗？</h1><p>最近几年容器技术借助于Docker在IT领域里掀起了巨大的变革，容器编排平台Kubernetes的出现更是将容器化的应用推向高潮。在CI/CD领域也不例外，越来越多的组织开始尝试利用Docker容器作为CI Job执行的Slave节点，通过Kubernetes平台统一管理调度虚拟机资源，以期望更加细粒度地控制和使用计算资源。Docker容器作为Slave节点确实是实现了本地执行环境的隔离，但每次执行都会启动全新的容器，都得重新下载代码和构建工具的本地缓存，使得每次的构建都要花费更长的时间，所以还是要考虑如何提升效率。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从Git仓库中永久清理脏数据</title>
+    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
+    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
+<span id="more"></span>
+<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
+<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
+<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
+</li>
+<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
+<ul>
+<li>替换文件中的敏感信息</li>
+<li>删除文件或文件夹</li>
+</ul>
+<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
+<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
+<li><p>通过mirror的方式克隆代码仓库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+
+<p>比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
+</blockquote>
+<ul>
+<li><p>替换所有文件中的指定的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>需要打开强制推送到Git仓库的功能</p>
+</blockquote>
+</li>
+<li><p>替换指定文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
+<blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
+</blockquote>
+<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
+<ul>
+<li>获取指定文件在所有变更历史中对应的blob id号</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>从变更历史中删除指定的文件(Blob)</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
+</blockquote>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
       </tags>
   </entry>
   <entry>
