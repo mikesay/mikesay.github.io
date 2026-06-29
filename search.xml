@@ -229,6 +229,107 @@
       </tags>
   </entry>
   <entry>
+    <title>云计算巨头如何用“软件韧性”重构基础设施</title>
+    <url>/2026/06/19/cloud-base-resiliency/</url>
+    <content><![CDATA[<blockquote>
+<p><strong>“云计算厂商在构建平台时，更多依赖的是韧性思维（Resilience Thinking），而非在硬件层盲目追求极高的可靠性。”</strong></p>
+</blockquote>
+<p>这句话精准地击中了现代云计算最底层的商业与工程逻辑。这不仅是应用开发者的共识，更是 AWS、阿里云、微软 Azure 等巨头得以实现规模化盈利的基石。</p>
+<span id="more"></span>
+
+<p>如果云厂商试图在硬件层面追求绝对的可靠性——比如使用军工级抗震机架或昂贵的专用容错芯片——结果将是灾难性的：<strong>成本会高到无法商业化</strong>，且依然无法对抗地震、海啸或“挖掘机挖断光缆”这类物理世界的不可抗力。</p>
+<p>那么，云计算是如何做到 <strong>既便宜又可靠</strong> 的？<br>答案是：<strong>用“软件定义的韧性”屏蔽“硬件固有的缺陷”。</strong></p>
+<h2 id="一、-云厂商的工程哲学：商用硬件-智能软件"><a href="#一、-云厂商的工程哲学：商用硬件-智能软件" class="headerlink" title="一、 云厂商的工程哲学：商用硬件 + 智能软件"></a>一、 云厂商的工程哲学：商用硬件 + 智能软件</h2><p>云厂商的数据中心由无数商用级（Commodity）、廉价、标准化的硬件组装而成。他们的核心竞争力不在于硬件“不坏”，而在于<strong>当硬件“坏了”的时候，用户感知不到</strong>。</p>
+<p>以下是云厂商在基础设施层（IaaS）构建韧性的 5 个核心具体落地方式：</p>
+<h3 id="1-接入与流量控制层-Gateway-Traffic"><a href="#1-接入与流量控制层-Gateway-Traffic" class="headerlink" title="1. 接入与流量控制层 (Gateway &amp; Traffic)"></a>1. 接入与流量控制层 (Gateway &amp; Traffic)</h3><ul>
+<li><strong>硬件现状</strong>：单台负载均衡器（SLB）或边缘交换机可能因高温或网卡故障随时宕机。</li>
+<li><strong>韧性手段</strong>：<strong>Anycast BGP（任播）与分布式路由</strong>。</li>
+<li><strong>效果</strong>：当某个接入点失效，路由表会在毫秒级自动切换，将用户流量无缝引流至最近的健康节点，全程无感知。</li>
+</ul>
+<h3 id="2-控制面治理层-Control-Plane"><a href="#2-控制面治理层-Control-Plane" class="headerlink" title="2. 控制面治理层 (Control Plane)"></a>2. 控制面治理层 (Control Plane)</h3><ul>
+<li><strong>硬件现状</strong>：管理云资源的控制面服务器（如 K8s Master、控制台后端）可能突发 OOM（内存溢出）或硬件损坏。</li>
+<li><strong>韧性手段</strong>：<strong>解耦与无状态化 + Raft 协议</strong>。</li>
+<li><strong>效果</strong>：控制面全面分布式部署，跨机房多活。一台服务器倒下，新的 Leader 秒级选举产生，确保对外 API 持续可用。</li>
+</ul>
+<h3 id="3-计算编排层-Compute-ECS-VM"><a href="#3-计算编排层-Compute-ECS-VM" class="headerlink" title="3. 计算编排层 (Compute - ECS/VM)"></a>3. 计算编排层 (Compute - ECS/VM)</h3><ul>
+<li><strong>硬件现状</strong>：物理机的主板、内存条经常发生硬件报错（MCE），电源也可能突然损坏。</li>
+<li><strong>韧性手段</strong>：<strong>热迁移（Live Migration）与自动撤离</strong>。</li>
+<li><strong>效果</strong>：监控系统一旦侦测到物理机隐患，在不中断业务的前提下，将整台虚拟机毫秒级“搬家”到健康物理机上。</li>
+</ul>
+<h3 id="4-网络与内部总线-Networking"><a href="#4-网络与内部总线-Networking" class="headerlink" title="4. 网络与内部总线 (Networking)"></a>4. 网络与内部总线 (Networking)</h3><ul>
+<li><strong>硬件现状</strong>：内部高速交换机或光纤可能发生单路中断、老化或丢包。</li>
+<li><strong>韧性手段</strong>：<strong>Clos 架构（多路径网络）</strong>。</li>
+<li><strong>效果</strong>：任何两点间都有无数条冗余路径。单根光纤断裂，数据包瞬间动态重路由（Dynamic Re-routing），自动绕过故障点。</li>
+</ul>
+<h3 id="5-持久化存储层-Storage-OSS-EBS"><a href="#5-持久化存储层-Storage-OSS-EBS" class="headerlink" title="5. 持久化存储层 (Storage - OSS/EBS)"></a>5. 持久化存储层 (Storage - OSS/EBS)</h3><ul>
+<li><strong>硬件现状</strong>：硬盘是数据中心损坏率最高的部件，每天都有成百上千块硬盘报废。</li>
+<li><strong>韧性手段</strong>：<strong>三副本与纠删码（Erasure Coding）</strong>。</li>
+<li><strong>效果</strong>：数据写入时自动切片，分布在不同机架甚至不同机房。硬盘坏了？系统会自动利用剩余分片在后台“自愈”数据，完全不影响前端读写。</li>
+</ul>
+<h2 id="二、-认知的统一：这就解释了什么是“云原生”思维"><a href="#二、-认知的统一：这就解释了什么是“云原生”思维" class="headerlink" title="二、 认知的统一：这就解释了什么是“云原生”思维"></a>二、 认知的统一：这就解释了什么是“云原生”思维</h2><p>当云厂商用软件韧性构建了这套体系后，他们售卖的不再是“永不损坏的物理机”，而是 <strong>“允许局部瞬时故障，但保证整体高可用”</strong> 的云服务。</p>
+<p>这就倒逼了作为用户的我们，必须彻底改变思维模式：</p>
+<table>
+<thead>
+<tr>
+<th align="left">维度</th>
+<th align="left">传统 IT 思维 (Legacy)</th>
+<th align="left">云原生思维 (Cloud Native)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>底层假设</strong></td>
+<td align="left">硬件是可靠的，坏了是重大事故。</td>
+<td align="left"><strong>硬件是会坏的，故障才是常态。</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>硬件依赖</strong></td>
+<td align="left">依赖昂贵的高端存储和小机（Mainframe）。</td>
+<td align="left"><strong>依赖廉价商用硬件 + 软件容错。</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>应用架构</strong></td>
+<td align="left">应用假设底层环境绝对稳定。</td>
+<td align="left"><strong>应用假设底层随时可能发生抖动。</strong></td>
+</tr>
+</tbody></table>
+<h2 id="三、-现代云原生的“套娃式韧性设计”"><a href="#三、-现代云原生的“套娃式韧性设计”" class="headerlink" title="三、 现代云原生的“套娃式韧性设计”"></a>三、 现代云原生的“套娃式韧性设计”</h2><p>理解了上述逻辑，我们就能看清现代云原生体系的演进路径。这其实是一个精妙的 <strong>“三层重构循环”</strong>：</p>
+<ol>
+<li><strong>第一层</strong>：云厂商用<strong>软件韧性</strong>屏蔽底层物理硬件故障。</li>
+<li><strong>第二层</strong>：从不确定性的硬件中，提炼出相对标准、弹性的<strong>云资源</strong>。</li>
+<li><strong>第三层</strong>：用户的业务应用，再用<strong>韧性架构</strong>（如重试、降级、熔断）去屏蔽云资源的偶发性抖动。</li>
+</ol>
+<p>这就是现代云原生体系的 <strong>“套娃式韧性设计”</strong>（Nested Resilience）。</p>
+<p>如果你还在试图向云厂商购买一台“永不宕机”的云服务器，或者在云上试图全盘复刻传统物理机的高可用架构，而不去利用云原生的弹性和容灾特性，那么：<br><strong>你既没有享受到云计算带来的成本红利，也没有真正获得云原生的弹性优势。</strong></p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p><strong>接受失败是常态。</strong><br>放弃对单点绝对可靠的执念，通过分布式协同与软件智慧来解决单点不可靠的问题，这才是云计算真正的技术护城河，也是每一位现代架构师的必修课。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>架构</category>
+      </categories>
+      <tags>
+        <tag>Architecture</tag>
+        <tag>Cloud-Native</tag>
+        <tag>Stability/Aailability</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>云原生时代的应用稳定性范式转移：从“消灭故障”到“应用韧性自愈”</title>
     <url>/2026/06/17/cloudnative-appsys-stability-the-words/</url>
     <content><![CDATA[<p>在传统数据中心（IDC）时代，稳定性的潜台词是“消灭故障”。工程师们依赖昂贵的高规格硬件、冗余的物理线路，试图构建一个“永不宕机”的乌托邦。然而，在云原生时代，底层的商业与工程哲学发生了根本性逆转：故障是不可避免的，网络必定会抖动，商品资源底座随时可能产生局部抖动。<br>云原生应用的稳定性建设，本质上是一场思维范式的转移——从追求“绝对不坏的确定性”，走向“顺应故障、用软件定义韧性对冲风险的非确定性”。</p>
@@ -495,6 +596,97 @@
       </tags>
   </entry>
   <entry>
+    <title>Kind创建本地Kubernetes集群</title>
+    <url>/2021/10/10/create-kubernetes-kind/</url>
+    <content><![CDATA[<p>在<a href="https://www.mikesay.com/2021/10/06/create-kubernetes-minikube/">Minikube创建本地Kubernetes集群</a>一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用，而通过Hypervisor驱动创建的Kubernetes集群也需要一些额外的配置(端口转发)才能在VPN的情况下使用。Kind是另一款在Docker容器中创建并运行本地Kubernetes集群的工具，比Minikube的Docker驱动更全面，同时也无需额外的配置就可以在VPN的情况下使用。本文将简单介绍下Kind，并在Mac主机上用Kind创建一个本地Kubernetes集群。</p>
+<span id="more"></span>
+
+<h1 id="Kind介绍"><a href="#Kind介绍" class="headerlink" title="Kind介绍"></a>Kind介绍</h1><p>Kind(Kubernetes In Docker)是一个使用Docker容器“节点”运行本地Kubernetes集群的工具。kind 主要是为测试Kubernetes本身而设计的，但也可以用于本地开发或CI。</p>
+<h2 id="集群组件配置能力"><a href="#集群组件配置能力" class="headerlink" title="集群组件配置能力"></a>集群组件配置能力</h2><p>Kind提供了丰富的配置选项，有集群级别的，也有节点级别的。Kind缺省也是使用kubeadm创建和配置Kubernetes集群，通过Kubeadm Config Patches机制提供了针对Kubeadm的各种配置。详细可参考Kind<a href="https://kind.sigs.k8s.io/docs/user/configuration/">配置</a>这一节。</p>
+<h1 id="Kind架构"><a href="#Kind架构" class="headerlink" title="Kind架构"></a>Kind架构</h1><p><img src="/2021/10/10/create-kubernetes-kind/1.png"></p>
+<p>图中的节点就是一个Docker容器，所有Kubernetes集群的组件(Kube API Server，Kube Scheduler，Kube Controller Manager，Kube Proxy，CoreDNS，ETCD)以及用户Pod都以容器的方式运行在这个节点容器中。</p>
+<h1 id="创建Kubernetes集群"><a href="#创建Kubernetes集群" class="headerlink" title="创建Kubernetes集群"></a>创建Kubernetes集群</h1><p>通过以下命令和配置文件创建一个包含一个主节点和三个工作节点的Kubernetes集群。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kind create cluster --config mykind1.yaml</span><br></pre></td></tr></tbody></table></figure>
+
+<p>mykind1.yaml:</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">Cluster</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kind.x-k8s.io/v1alpha4</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">mykind1</span></span><br><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br><span class="line">  <span class="comment"># WARNING: It is _strongly_ recommended that you keep this the default</span></span><br><span class="line">  <span class="comment"># (127.0.0.1) for security reasons. However it is possible to change this.</span></span><br><span class="line">  <span class="attr">apiServerAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># By default the API server listens on a random open port.</span></span><br><span class="line">  <span class="comment"># You may choose a specific port but probably don't need to in most cases.</span></span><br><span class="line">  <span class="comment"># Using a random port makes it easier to spin up multiple clusters.</span></span><br><span class="line">  <span class="attr">apiServerPort:</span> <span class="number">6443</span></span><br><span class="line">  <span class="attr">podSubnet:</span> <span class="string">"10.244.0.0/16"</span></span><br><span class="line">  <span class="attr">serviceSubnet:</span> <span class="string">"10.96.0.0/12"</span></span><br><span class="line">  <span class="attr">kubeProxyMode:</span> <span class="string">"ipvs"</span></span><br><span class="line"><span class="attr">nodes:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">control-plane</span></span><br><span class="line">  <span class="attr">kubeadmConfigPatches:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">    kind: InitConfiguration</span></span><br><span class="line"><span class="string">    nodeRegistration:</span></span><br><span class="line"><span class="string">      kubeletExtraArgs:</span></span><br><span class="line"><span class="string">        node-labels: "ingress-ready=true"</span></span><br><span class="line"><span class="string">    kind: ClusterConfiguration</span></span><br><span class="line"><span class="string">    metadata:</span></span><br><span class="line"><span class="string">      name: config</span></span><br><span class="line"><span class="string">    apiServer:</span></span><br><span class="line"><span class="string">      certSANs:</span></span><br><span class="line"><span class="string">      - localhost</span></span><br><span class="line"><span class="string">      - 127.0.0.1</span></span><br><span class="line"><span class="string">      - kubernetes</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc.cluster.local</span></span><br><span class="line"><span class="string">      - kind</span></span><br><span class="line"><span class="string">      - 0.0.0.0</span></span><br><span class="line"><span class="string"></span>  <span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line">  <span class="attr">extraPortMappings:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>一些配置参数说明：</p>
+<ul>
+<li><p>禁用默认CNI（”kindnetd”），否则在创建出来的Kubernetes集群无法解析外网域名。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>为主节点添加标签”ingress-ready:true”。Kind提供的Nginx Ingress Controller的部署资源中会通过这个标签选择运行在主节点上。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kubeadmConfigPatches:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">  kind: InitConfiguration</span></span><br><span class="line"><span class="string">  nodeRegistration:</span></span><br><span class="line"><span class="string">    kubeletExtraArgs:</span></span><br><span class="line"><span class="string">      node-labels: "ingress-ready=true"</span></span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>将容器主节点的80，443端口映射到运行Kind的主机(这里是Mac主机)的80,443端口。Kind提供的Nginx Ingress Controller的服务资源会通过NodePort将服务通过容器主节点的80，443暴露出去，这样用户就可以通过访问本地主机的80，443端口访问运行在集群中的Nginx Ingress Controller。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line"><span class="attr">extraPortMappings:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>此处的hostPort指的是运行Kind的主机，也就是Mac主机。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="配置Kubernetes集群"><a href="#配置Kubernetes集群" class="headerlink" title="配置Kubernetes集群"></a>配置Kubernetes集群</h2><h3 id="安装网络插件Calico"><a href="#安装网络插件Calico" class="headerlink" title="安装网络插件Calico"></a>安装网络插件Calico</h3><ul>
+<li>下载Calico安装脚本</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">curl https://docs.projectcalico.org/manifests/calico.yaml -O</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>设置环境变量FELIX_IGNORELOOSERPF的值为true，禁用Calico检查。</li>
+</ul>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># Source: calico/templates/calico-node.yaml</span></span><br><span class="line"><span class="comment"># This manifest installs the calico-node container, as well</span></span><br><span class="line"><span class="comment"># as the CNI plugins and network config on</span></span><br><span class="line"><span class="comment"># each master and worker node in a Kubernetes cluster.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DaemonSet</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">updateStrategy:</span></span><br><span class="line">    <span class="attr">type:</span> <span class="string">RollingUpdate</span></span><br><span class="line">    <span class="attr">rollingUpdate:</span></span><br><span class="line">      <span class="attr">maxUnavailable:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="string">...</span></span><br><span class="line">      <span class="attr">initContainers:</span></span><br><span class="line">        <span class="string">....</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="comment"># Runs calico-node container on each Kubernetes node. This</span></span><br><span class="line">        <span class="comment"># container programs network policy and routes on each</span></span><br><span class="line">        <span class="comment"># host.</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">docker.io/calico/node:v3.20.1</span></span><br><span class="line">          <span class="attr">env:</span></span><br><span class="line">            <span class="comment"># Disable the Calico RPF check</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">FELIX_IGNORELOOSERPF</span></span><br><span class="line">              <span class="attr">value:</span> <span class="string">"true"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>详细参考<a href="https://docs.projectcalico.org/getting-started/kubernetes/self-managed-onprem/onpremises#install-calico-with-kubernetes-api-datastore-50-nodes-or-less">Calico官方安装文档</a>，以及博客文章<a href="https://alexbrand.dev/post/creating-a-kind-cluster-with-calico-networking/">Creating a Kind Cluster With Calico Networking</a>。</p>
+</blockquote>
+<h3 id="安装Ingress-Controller"><a href="#安装Ingress-Controller" class="headerlink" title="安装Ingress Controller"></a>安装Ingress Controller</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="安装METALLB"><a href="#安装METALLB" class="headerlink" title="安装METALLB"></a>安装METALLB</h3><p>MetalLB是裸机Kubernetes集群的负载均衡实现，使用标准路由协议。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">export</span> version=v0.12.1</span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/namespace.yaml</span><br><span class="line">kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=<span class="string">"<span class="subst">$(openssl rand -base64 128)</span>"</span> </span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/metallb.yaml</span><br><span class="line">kubectl apply -f metallb-configmap.yaml</span><br></pre></td></tr></tbody></table></figure>
+
+<p>metallb-configmap.yaml：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">metallb-system</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">config</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">config:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    address-pools:</span></span><br><span class="line"><span class="string">    - name: default</span></span><br><span class="line"><span class="string">      protocol: layer2</span></span><br><span class="line"><span class="string">      addresses:</span></span><br><span class="line"><span class="string">      - 172.18.255.150-172.18.255.250</span></span><br></pre></td></tr></tbody></table></figure>
+<p>从节点网段中选取一个IP地址范围设置在metallb-configmap.yaml中用来给LoadBalancer类型服务的IP地址。</p>
+<p>可以通过以下下命令获取node网段：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">$ docker network inspect -f <span class="string">'{{.IPAM.Config}}'</span> kind</span><br><span class="line"></span><br><span class="line">[{172.18.0.0/16  172.18.0.1 map[]} {fc00:f853:ccd:e793::/64  fc00:f853:ccd:e793::1 map[]}]</span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="Kind-vs-Minikube"><a href="#Kind-vs-Minikube" class="headerlink" title="Kind vs Minikube"></a>Kind vs Minikube</h1><ul>
+<li><p>Kind没有提供类似于Minikube的插件机制，方便用户快速地部署Kubernetes。</p>
+</li>
+<li><p>Kind并没有提供暂停一个集群的功能。</p>
+</li>
+<li><p>和Minikube相比，Kind比较轻量，就是使用Docker容器创建并运行Kubernetes集群，但比Minikube的Docker驱动更全面。个人认为如果能够把Kind集成到Minikube中作为Docker驱动的实现，应该能更有助于两个项目的发展，用户也不需要学习两个工具了。</p>
+</li>
+</ul>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Kind，它的架构以及使用，希望能够帮助读者对Kind有个框架性的了解，从而决定是否需要深入使用。对于Kind更详细的用法，可以参考<a href="https://kind.sigs.k8s.io/">官方文档</a>。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>Kind</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Minikube创建本地Kubernetes集群</title>
     <url>/2021/10/06/create-kubernetes-minikube/</url>
     <content><![CDATA[<p>在学习和使用Kubernetes的过程中，都希望能够快速创建一个本地的Kubernetes集群用作测试之用。之前一直使用docker公司的docker for mac创建的Kubernetes集群，但是经常出现启动不起来的问题，也没有详细的日志来定位问题，另外docker for mac创建的集群不支持改变系统组件的配置，比如修改API Server或Kubelet的参数，开启某些Alpaha版本的特性等。虽然Minikube已经存在很久，而且早于docker for mac，但是由于种种原因没能尝试，后经同事推荐，尝试了一下，确实蛮强大。本文将简单介绍下Minikube，以及在Mac主机上用Minikube创建和配置一个本地集群。</p>
@@ -699,198 +891,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Kind创建本地Kubernetes集群</title>
-    <url>/2021/10/10/create-kubernetes-kind/</url>
-    <content><![CDATA[<p>在<a href="https://www.mikesay.com/2021/10/06/create-kubernetes-minikube/">Minikube创建本地Kubernetes集群</a>一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用，而通过Hypervisor驱动创建的Kubernetes集群也需要一些额外的配置(端口转发)才能在VPN的情况下使用。Kind是另一款在Docker容器中创建并运行本地Kubernetes集群的工具，比Minikube的Docker驱动更全面，同时也无需额外的配置就可以在VPN的情况下使用。本文将简单介绍下Kind，并在Mac主机上用Kind创建一个本地Kubernetes集群。</p>
-<span id="more"></span>
-
-<h1 id="Kind介绍"><a href="#Kind介绍" class="headerlink" title="Kind介绍"></a>Kind介绍</h1><p>Kind(Kubernetes In Docker)是一个使用Docker容器“节点”运行本地Kubernetes集群的工具。kind 主要是为测试Kubernetes本身而设计的，但也可以用于本地开发或CI。</p>
-<h2 id="集群组件配置能力"><a href="#集群组件配置能力" class="headerlink" title="集群组件配置能力"></a>集群组件配置能力</h2><p>Kind提供了丰富的配置选项，有集群级别的，也有节点级别的。Kind缺省也是使用kubeadm创建和配置Kubernetes集群，通过Kubeadm Config Patches机制提供了针对Kubeadm的各种配置。详细可参考Kind<a href="https://kind.sigs.k8s.io/docs/user/configuration/">配置</a>这一节。</p>
-<h1 id="Kind架构"><a href="#Kind架构" class="headerlink" title="Kind架构"></a>Kind架构</h1><p><img src="/2021/10/10/create-kubernetes-kind/1.png"></p>
-<p>图中的节点就是一个Docker容器，所有Kubernetes集群的组件(Kube API Server，Kube Scheduler，Kube Controller Manager，Kube Proxy，CoreDNS，ETCD)以及用户Pod都以容器的方式运行在这个节点容器中。</p>
-<h1 id="创建Kubernetes集群"><a href="#创建Kubernetes集群" class="headerlink" title="创建Kubernetes集群"></a>创建Kubernetes集群</h1><p>通过以下命令和配置文件创建一个包含一个主节点和三个工作节点的Kubernetes集群。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kind create cluster --config mykind1.yaml</span><br></pre></td></tr></tbody></table></figure>
-
-<p>mykind1.yaml:</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">Cluster</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kind.x-k8s.io/v1alpha4</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">mykind1</span></span><br><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br><span class="line">  <span class="comment"># WARNING: It is _strongly_ recommended that you keep this the default</span></span><br><span class="line">  <span class="comment"># (127.0.0.1) for security reasons. However it is possible to change this.</span></span><br><span class="line">  <span class="attr">apiServerAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># By default the API server listens on a random open port.</span></span><br><span class="line">  <span class="comment"># You may choose a specific port but probably don't need to in most cases.</span></span><br><span class="line">  <span class="comment"># Using a random port makes it easier to spin up multiple clusters.</span></span><br><span class="line">  <span class="attr">apiServerPort:</span> <span class="number">6443</span></span><br><span class="line">  <span class="attr">podSubnet:</span> <span class="string">"10.244.0.0/16"</span></span><br><span class="line">  <span class="attr">serviceSubnet:</span> <span class="string">"10.96.0.0/12"</span></span><br><span class="line">  <span class="attr">kubeProxyMode:</span> <span class="string">"ipvs"</span></span><br><span class="line"><span class="attr">nodes:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">control-plane</span></span><br><span class="line">  <span class="attr">kubeadmConfigPatches:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">    kind: InitConfiguration</span></span><br><span class="line"><span class="string">    nodeRegistration:</span></span><br><span class="line"><span class="string">      kubeletExtraArgs:</span></span><br><span class="line"><span class="string">        node-labels: "ingress-ready=true"</span></span><br><span class="line"><span class="string">    kind: ClusterConfiguration</span></span><br><span class="line"><span class="string">    metadata:</span></span><br><span class="line"><span class="string">      name: config</span></span><br><span class="line"><span class="string">    apiServer:</span></span><br><span class="line"><span class="string">      certSANs:</span></span><br><span class="line"><span class="string">      - localhost</span></span><br><span class="line"><span class="string">      - 127.0.0.1</span></span><br><span class="line"><span class="string">      - kubernetes</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc.cluster.local</span></span><br><span class="line"><span class="string">      - kind</span></span><br><span class="line"><span class="string">      - 0.0.0.0</span></span><br><span class="line"><span class="string"></span>  <span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line">  <span class="attr">extraPortMappings:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>一些配置参数说明：</p>
-<ul>
-<li><p>禁用默认CNI（”kindnetd”），否则在创建出来的Kubernetes集群无法解析外网域名。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>为主节点添加标签”ingress-ready:true”。Kind提供的Nginx Ingress Controller的部署资源中会通过这个标签选择运行在主节点上。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kubeadmConfigPatches:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">  kind: InitConfiguration</span></span><br><span class="line"><span class="string">  nodeRegistration:</span></span><br><span class="line"><span class="string">    kubeletExtraArgs:</span></span><br><span class="line"><span class="string">      node-labels: "ingress-ready=true"</span></span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>将容器主节点的80，443端口映射到运行Kind的主机(这里是Mac主机)的80,443端口。Kind提供的Nginx Ingress Controller的服务资源会通过NodePort将服务通过容器主节点的80，443暴露出去，这样用户就可以通过访问本地主机的80，443端口访问运行在集群中的Nginx Ingress Controller。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line"><span class="attr">extraPortMappings:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>此处的hostPort指的是运行Kind的主机，也就是Mac主机。</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="配置Kubernetes集群"><a href="#配置Kubernetes集群" class="headerlink" title="配置Kubernetes集群"></a>配置Kubernetes集群</h2><h3 id="安装网络插件Calico"><a href="#安装网络插件Calico" class="headerlink" title="安装网络插件Calico"></a>安装网络插件Calico</h3><ul>
-<li>下载Calico安装脚本</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">curl https://docs.projectcalico.org/manifests/calico.yaml -O</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>设置环境变量FELIX_IGNORELOOSERPF的值为true，禁用Calico检查。</li>
-</ul>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># Source: calico/templates/calico-node.yaml</span></span><br><span class="line"><span class="comment"># This manifest installs the calico-node container, as well</span></span><br><span class="line"><span class="comment"># as the CNI plugins and network config on</span></span><br><span class="line"><span class="comment"># each master and worker node in a Kubernetes cluster.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DaemonSet</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">updateStrategy:</span></span><br><span class="line">    <span class="attr">type:</span> <span class="string">RollingUpdate</span></span><br><span class="line">    <span class="attr">rollingUpdate:</span></span><br><span class="line">      <span class="attr">maxUnavailable:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="string">...</span></span><br><span class="line">      <span class="attr">initContainers:</span></span><br><span class="line">        <span class="string">....</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="comment"># Runs calico-node container on each Kubernetes node. This</span></span><br><span class="line">        <span class="comment"># container programs network policy and routes on each</span></span><br><span class="line">        <span class="comment"># host.</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">docker.io/calico/node:v3.20.1</span></span><br><span class="line">          <span class="attr">env:</span></span><br><span class="line">            <span class="comment"># Disable the Calico RPF check</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">FELIX_IGNORELOOSERPF</span></span><br><span class="line">              <span class="attr">value:</span> <span class="string">"true"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>详细参考<a href="https://docs.projectcalico.org/getting-started/kubernetes/self-managed-onprem/onpremises#install-calico-with-kubernetes-api-datastore-50-nodes-or-less">Calico官方安装文档</a>，以及博客文章<a href="https://alexbrand.dev/post/creating-a-kind-cluster-with-calico-networking/">Creating a Kind Cluster With Calico Networking</a>。</p>
-</blockquote>
-<h3 id="安装Ingress-Controller"><a href="#安装Ingress-Controller" class="headerlink" title="安装Ingress Controller"></a>安装Ingress Controller</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="安装METALLB"><a href="#安装METALLB" class="headerlink" title="安装METALLB"></a>安装METALLB</h3><p>MetalLB是裸机Kubernetes集群的负载均衡实现，使用标准路由协议。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">export</span> version=v0.12.1</span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/namespace.yaml</span><br><span class="line">kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=<span class="string">"<span class="subst">$(openssl rand -base64 128)</span>"</span> </span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/metallb.yaml</span><br><span class="line">kubectl apply -f metallb-configmap.yaml</span><br></pre></td></tr></tbody></table></figure>
-
-<p>metallb-configmap.yaml：</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">metallb-system</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">config</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">config:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    address-pools:</span></span><br><span class="line"><span class="string">    - name: default</span></span><br><span class="line"><span class="string">      protocol: layer2</span></span><br><span class="line"><span class="string">      addresses:</span></span><br><span class="line"><span class="string">      - 172.18.255.150-172.18.255.250</span></span><br></pre></td></tr></tbody></table></figure>
-<p>从节点网段中选取一个IP地址范围设置在metallb-configmap.yaml中用来给LoadBalancer类型服务的IP地址。</p>
-<p>可以通过以下下命令获取node网段：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">$ docker network inspect -f <span class="string">'{{.IPAM.Config}}'</span> kind</span><br><span class="line"></span><br><span class="line">[{172.18.0.0/16  172.18.0.1 map[]} {fc00:f853:ccd:e793::/64  fc00:f853:ccd:e793::1 map[]}]</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="Kind-vs-Minikube"><a href="#Kind-vs-Minikube" class="headerlink" title="Kind vs Minikube"></a>Kind vs Minikube</h1><ul>
-<li><p>Kind没有提供类似于Minikube的插件机制，方便用户快速地部署Kubernetes。</p>
-</li>
-<li><p>Kind并没有提供暂停一个集群的功能。</p>
-</li>
-<li><p>和Minikube相比，Kind比较轻量，就是使用Docker容器创建并运行Kubernetes集群，但比Minikube的Docker驱动更全面。个人认为如果能够把Kind集成到Minikube中作为Docker驱动的实现，应该能更有助于两个项目的发展，用户也不需要学习两个工具了。</p>
-</li>
-</ul>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Kind，它的架构以及使用，希望能够帮助读者对Kind有个框架性的了解，从而决定是否需要深入使用。对于Kind更详细的用法，可以参考<a href="https://kind.sigs.k8s.io/">官方文档</a>。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>Kind</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>云计算巨头如何用“软件韧性”重构基础设施</title>
-    <url>/2026/06/19/cloud-base-resiliency/</url>
-    <content><![CDATA[<blockquote>
-<p><strong>“云计算厂商在构建平台时，更多依赖的是韧性思维（Resilience Thinking），而非在硬件层盲目追求极高的可靠性。”</strong></p>
-</blockquote>
-<p>这句话精准地击中了现代云计算最底层的商业与工程逻辑。这不仅是应用开发者的共识，更是 AWS、阿里云、微软 Azure 等巨头得以实现规模化盈利的基石。</p>
-<span id="more"></span>
-
-<p>如果云厂商试图在硬件层面追求绝对的可靠性——比如使用军工级抗震机架或昂贵的专用容错芯片——结果将是灾难性的：<strong>成本会高到无法商业化</strong>，且依然无法对抗地震、海啸或“挖掘机挖断光缆”这类物理世界的不可抗力。</p>
-<p>那么，云计算是如何做到 <strong>既便宜又可靠</strong> 的？<br>答案是：<strong>用“软件定义的韧性”屏蔽“硬件固有的缺陷”。</strong></p>
-<h2 id="一、-云厂商的工程哲学：商用硬件-智能软件"><a href="#一、-云厂商的工程哲学：商用硬件-智能软件" class="headerlink" title="一、 云厂商的工程哲学：商用硬件 + 智能软件"></a>一、 云厂商的工程哲学：商用硬件 + 智能软件</h2><p>云厂商的数据中心由无数商用级（Commodity）、廉价、标准化的硬件组装而成。他们的核心竞争力不在于硬件“不坏”，而在于<strong>当硬件“坏了”的时候，用户感知不到</strong>。</p>
-<p>以下是云厂商在基础设施层（IaaS）构建韧性的 5 个核心具体落地方式：</p>
-<h3 id="1-接入与流量控制层-Gateway-Traffic"><a href="#1-接入与流量控制层-Gateway-Traffic" class="headerlink" title="1. 接入与流量控制层 (Gateway &amp; Traffic)"></a>1. 接入与流量控制层 (Gateway &amp; Traffic)</h3><ul>
-<li><strong>硬件现状</strong>：单台负载均衡器（SLB）或边缘交换机可能因高温或网卡故障随时宕机。</li>
-<li><strong>韧性手段</strong>：<strong>Anycast BGP（任播）与分布式路由</strong>。</li>
-<li><strong>效果</strong>：当某个接入点失效，路由表会在毫秒级自动切换，将用户流量无缝引流至最近的健康节点，全程无感知。</li>
-</ul>
-<h3 id="2-控制面治理层-Control-Plane"><a href="#2-控制面治理层-Control-Plane" class="headerlink" title="2. 控制面治理层 (Control Plane)"></a>2. 控制面治理层 (Control Plane)</h3><ul>
-<li><strong>硬件现状</strong>：管理云资源的控制面服务器（如 K8s Master、控制台后端）可能突发 OOM（内存溢出）或硬件损坏。</li>
-<li><strong>韧性手段</strong>：<strong>解耦与无状态化 + Raft 协议</strong>。</li>
-<li><strong>效果</strong>：控制面全面分布式部署，跨机房多活。一台服务器倒下，新的 Leader 秒级选举产生，确保对外 API 持续可用。</li>
-</ul>
-<h3 id="3-计算编排层-Compute-ECS-VM"><a href="#3-计算编排层-Compute-ECS-VM" class="headerlink" title="3. 计算编排层 (Compute - ECS/VM)"></a>3. 计算编排层 (Compute - ECS/VM)</h3><ul>
-<li><strong>硬件现状</strong>：物理机的主板、内存条经常发生硬件报错（MCE），电源也可能突然损坏。</li>
-<li><strong>韧性手段</strong>：<strong>热迁移（Live Migration）与自动撤离</strong>。</li>
-<li><strong>效果</strong>：监控系统一旦侦测到物理机隐患，在不中断业务的前提下，将整台虚拟机毫秒级“搬家”到健康物理机上。</li>
-</ul>
-<h3 id="4-网络与内部总线-Networking"><a href="#4-网络与内部总线-Networking" class="headerlink" title="4. 网络与内部总线 (Networking)"></a>4. 网络与内部总线 (Networking)</h3><ul>
-<li><strong>硬件现状</strong>：内部高速交换机或光纤可能发生单路中断、老化或丢包。</li>
-<li><strong>韧性手段</strong>：<strong>Clos 架构（多路径网络）</strong>。</li>
-<li><strong>效果</strong>：任何两点间都有无数条冗余路径。单根光纤断裂，数据包瞬间动态重路由（Dynamic Re-routing），自动绕过故障点。</li>
-</ul>
-<h3 id="5-持久化存储层-Storage-OSS-EBS"><a href="#5-持久化存储层-Storage-OSS-EBS" class="headerlink" title="5. 持久化存储层 (Storage - OSS/EBS)"></a>5. 持久化存储层 (Storage - OSS/EBS)</h3><ul>
-<li><strong>硬件现状</strong>：硬盘是数据中心损坏率最高的部件，每天都有成百上千块硬盘报废。</li>
-<li><strong>韧性手段</strong>：<strong>三副本与纠删码（Erasure Coding）</strong>。</li>
-<li><strong>效果</strong>：数据写入时自动切片，分布在不同机架甚至不同机房。硬盘坏了？系统会自动利用剩余分片在后台“自愈”数据，完全不影响前端读写。</li>
-</ul>
-<h2 id="二、-认知的统一：这就解释了什么是“云原生”思维"><a href="#二、-认知的统一：这就解释了什么是“云原生”思维" class="headerlink" title="二、 认知的统一：这就解释了什么是“云原生”思维"></a>二、 认知的统一：这就解释了什么是“云原生”思维</h2><p>当云厂商用软件韧性构建了这套体系后，他们售卖的不再是“永不损坏的物理机”，而是 <strong>“允许局部瞬时故障，但保证整体高可用”</strong> 的云服务。</p>
-<p>这就倒逼了作为用户的我们，必须彻底改变思维模式：</p>
-<table>
-<thead>
-<tr>
-<th align="left">维度</th>
-<th align="left">传统 IT 思维 (Legacy)</th>
-<th align="left">云原生思维 (Cloud Native)</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>底层假设</strong></td>
-<td align="left">硬件是可靠的，坏了是重大事故。</td>
-<td align="left"><strong>硬件是会坏的，故障才是常态。</strong></td>
-</tr>
-<tr>
-<td align="left"><strong>硬件依赖</strong></td>
-<td align="left">依赖昂贵的高端存储和小机（Mainframe）。</td>
-<td align="left"><strong>依赖廉价商用硬件 + 软件容错。</strong></td>
-</tr>
-<tr>
-<td align="left"><strong>应用架构</strong></td>
-<td align="left">应用假设底层环境绝对稳定。</td>
-<td align="left"><strong>应用假设底层随时可能发生抖动。</strong></td>
-</tr>
-</tbody></table>
-<h2 id="三、-现代云原生的“套娃式韧性设计”"><a href="#三、-现代云原生的“套娃式韧性设计”" class="headerlink" title="三、 现代云原生的“套娃式韧性设计”"></a>三、 现代云原生的“套娃式韧性设计”</h2><p>理解了上述逻辑，我们就能看清现代云原生体系的演进路径。这其实是一个精妙的 <strong>“三层重构循环”</strong>：</p>
-<ol>
-<li><strong>第一层</strong>：云厂商用<strong>软件韧性</strong>屏蔽底层物理硬件故障。</li>
-<li><strong>第二层</strong>：从不确定性的硬件中，提炼出相对标准、弹性的<strong>云资源</strong>。</li>
-<li><strong>第三层</strong>：用户的业务应用，再用<strong>韧性架构</strong>（如重试、降级、熔断）去屏蔽云资源的偶发性抖动。</li>
-</ol>
-<p>这就是现代云原生体系的 <strong>“套娃式韧性设计”</strong>（Nested Resilience）。</p>
-<p>如果你还在试图向云厂商购买一台“永不宕机”的云服务器，或者在云上试图全盘复刻传统物理机的高可用架构，而不去利用云原生的弹性和容灾特性，那么：<br><strong>你既没有享受到云计算带来的成本红利，也没有真正获得云原生的弹性优势。</strong></p>
-<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p><strong>接受失败是常态。</strong><br>放弃对单点绝对可靠的执念，通过分布式协同与软件智慧来解决单点不可靠的问题，这才是云计算真正的技术护城河，也是每一位现代架构师的必修课。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>架构</category>
-      </categories>
-      <tags>
-        <tag>Architecture</tag>
-        <tag>Cloud-Native</tag>
-        <tag>Stability/Aailability</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>创建自签名TLS/SSL证书和私钥</title>
     <url>/2018/12/30/create-self-signed-ssl/</url>
     <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
@@ -1000,98 +1000,6 @@
       <tags>
         <tag>System Management</tag>
         <tag>TLS/SSL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>创建容器化的Azure DevOps Agent</title>
-    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
-    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
-<span id="more"></span>
-
-<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
-<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
-</blockquote>
-<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
-<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
-</li>
-<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
-</li>
-</ol>
-<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>环境变量说明：</p>
-<table>
-<thead>
-<tr>
-<th>变量名</th>
-<th>必需</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>AZP_URL</td>
-<td>是</td>
-<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
-</tr>
-<tr>
-<td>AZP_TOKEN</td>
-<td>是</td>
-<td>前面申请的有足够权限的Personal Access Token</td>
-</tr>
-<tr>
-<td>AZP_AGENT_NAME</td>
-<td>是</td>
-<td>显示在Agent Pool中的Agent名字</td>
-</tr>
-<tr>
-<td>AZP_POOL</td>
-<td>是</td>
-<td>Agent pool的名字</td>
-</tr>
-<tr>
-<td>AZP_AGENTPACKAGE_URL</td>
-<td>否</td>
-<td>显式指定Azure Agent包的下载地址</td>
-</tr>
-</tbody></table>
-<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
-<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
-<p>getaddrinfo ENOTFOUND …</p>
-<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Azure DevOps</tag>
-        <tag>CI/CD</tag>
       </tags>
   </entry>
   <entry>
@@ -1217,6 +1125,220 @@
       </categories>
       <tags>
         <tag>CI/CD</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建容器化的Azure DevOps Agent</title>
+    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
+    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
+<span id="more"></span>
+
+<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
+<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
+</blockquote>
+<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
+<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
+</li>
+<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
+</li>
+</ol>
+<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>环境变量说明：</p>
+<table>
+<thead>
+<tr>
+<th>变量名</th>
+<th>必需</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AZP_URL</td>
+<td>是</td>
+<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
+</tr>
+<tr>
+<td>AZP_TOKEN</td>
+<td>是</td>
+<td>前面申请的有足够权限的Personal Access Token</td>
+</tr>
+<tr>
+<td>AZP_AGENT_NAME</td>
+<td>是</td>
+<td>显示在Agent Pool中的Agent名字</td>
+</tr>
+<tr>
+<td>AZP_POOL</td>
+<td>是</td>
+<td>Agent pool的名字</td>
+</tr>
+<tr>
+<td>AZP_AGENTPACKAGE_URL</td>
+<td>否</td>
+<td>显式指定Azure Agent包的下载地址</td>
+</tr>
+</tbody></table>
+<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
+<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
+<p>getaddrinfo ENOTFOUND …</p>
+<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Azure DevOps</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从Git仓库中永久清理脏数据</title>
+    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
+    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
+<span id="more"></span>
+<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
+<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
+<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
+</li>
+<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
+<ul>
+<li>替换文件中的敏感信息</li>
+<li>删除文件或文件夹</li>
+</ul>
+<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
+<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
+<li><p>通过mirror的方式克隆代码仓库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+
+<p>比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
+</blockquote>
+<ul>
+<li><p>替换所有文件中的指定的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>需要打开强制推送到Git仓库的功能</p>
+</blockquote>
+</li>
+<li><p>替换指定文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
+<blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
+</blockquote>
+<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
+<ul>
+<li>获取指定文件在所有变更历史中对应的blob id号</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>从变更历史中删除指定的文件(Blob)</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
+</blockquote>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
       </tags>
   </entry>
   <entry>
@@ -1408,6 +1530,130 @@
       </tags>
   </entry>
   <entry>
+    <title>什么是GitOps?</title>
+    <url>/2019/07/21/gitops/</url>
+    <content><![CDATA[<p>[原文] <a href="https://www.weave.works/technologies/gitops/">https://www.weave.works/technologies/gitops/</a></p>
+<p>您是否听说过GitOps并且也想知道它到底是什么？ 本文，我们将介绍GitOps工作流的原理和模式，以及如何实现它们以便在生产环境中规模化运行Kubernetes。 我们还将描述GitOps与基础架构代码（IAC)，配置管理工具之间的差异，当然还将向您展示如何将GitOps最佳实践作为您自己的开发环境的一部分。</p>
+<span id="more"></span>
+
+<h1 id="GitOps是什么"><a href="#GitOps是什么" class="headerlink" title="GitOps是什么?"></a>GitOps是什么?</h1><p><img src="/2019/07/21/gitops/1.png"></p>
+<p><strong>GitOps</strong> Kubernetes集群管理和应用程序交付的一种方法。它是用Git作为声明式基础架构和应用程序的单一事实来源。通过将Git作为交付管道的中心，开发可以通过拉取请求(Pull Request)来加速和简化Kubernetes应用程序的部署和运维任务。</p>
+<p><strong>一种构建云原生应用的操作模式</strong></p>
+<p>GitOps可以概括为以下两点:</p>
+<ol>
+<li>Kubernetes和其它云原生技术的一种操作模式，提供一组统一部署，管理和监控容器化集群和应用程序的最佳实践。</li>
+<li>面向开发者的管理应用程序的经验，将端到端的CI/CD管道和Git工作流应用于运维和开发。</li>
+</ol>
+<h1 id="GitOps的主要优点"><a href="#GitOps的主要优点" class="headerlink" title="GitOps的主要优点"></a>GitOps的主要优点</h1><p>当Git中有变更发生时，自动化交付管道会自动变更你的基础架构。然而GitOps概念远不止于此 - 它使用工具将整个应用程序的实际生产状态与源码管理工具中的代码进行比较，当你的集群与实际状态不符时，给出提醒。</p>
+<p>通过应用GitOps最佳实践，你的基础架构和应用程序会有一个“事实来源”，这将提高开发团队的速度并提高系统可靠性。</p>
+<p>采用GitOps最佳实践的好处是深远的，并提供：</p>
+<ol>
+<li><p><strong>提高生产力</strong><br>自动化的持续部署加上集成的反馈控制回路提升了平均部署时间。你的团队每天能够提交30到100倍的更多变更，将总体开发输出提高2到3倍。</p>
+</li>
+<li><p><strong>增强开发体验</strong><br>推送代码而不是容器。开发不需要深入了解Kubernetes就可以使用熟悉的工具(比如Git)快速地更新Kubernetes应用和添加新的功能。新入职的开发能够在几天内而不是几个月内快速地提升开发效率。</p>
+</li>
+<li><p><strong>提高稳定性</strong><br>当你使用Git工作流管理你的集群时，你不需要通过Kubernetes就能够自动获取便于审核的集群的所有变更日志。通过审核跟踪谁在何时变更了你的集群能够满足SOC 2合规性并能确保稳定性。 </p>
+</li>
+<li><p><strong>高可用性</strong><br>借助Git恢复/回滚和分叉功能，你将获得稳定并可重复的回滚功能。因为你通过Git描述了整个系统，你将有一个单一的事实来源用来从崩溃中恢复，从而将你的恢复时间(MTTR)从几小时降到几分钟。</p>
+</li>
+<li><p><strong>一致性和标准化</strong><br>由于GitOps提供了统一的模型用来变更基础架构，应用以及Kubernetes add-on，你可以在整个组织中实现一致的端到端的工作流。不仅你的持续集成和持续交付管道通过拉取请求(Pull Request)驱动，你的操作任务通过Git也完全可以重现。</p>
+</li>
+<li><p><strong>更健壮的安全保证</strong><br>Git的强正确性以及安全保证(背后是健壮的用于追踪和管理变更的加密技术)，以及签名变更以证明作者身份和来源的能力是安全定义集群目标状态的关键。</p>
+</li>
+</ol>
+<h1 id="GitOps是满足云原生的持续交付"><a href="#GitOps是满足云原生的持续交付" class="headerlink" title="GitOps是满足云原生的持续交付"></a>GitOps是满足云原生的持续交付</h1><p>GitOps是从DevOpsSite Reliability Engineering(站点可靠性工程)的想法中逐渐演变出来的，这些想法始于<a href="https://martinfowler.com/articles/continuousIntegration.html">2016念Martin Fowler对持续集成的全面概述</a></p>
+<h2 id="自由选择所需的工具"><a href="#自由选择所需的工具" class="headerlink" title="自由选择所需的工具"></a>自由选择所需的工具</h2><p>作为CI/CD管道的一个工作流，GitOps被<a href="https://martinfowler.com/articles/continuousIntegration.html">描述为开发过程的圣杯</a>。由于没有单一的工具能够完成CI/CD管道中所有的工作，GitOps可以让你为每个部分选择最佳的工具。你可以从开源生态系统选择一组工具，也可以从闭源中选择一组工具，你甚至可以根据你的具体情况，组合使用它们。创建CI/CD管道最困难的部分是将所有的工具组合在一起。</p>
+<p>无论你选择什么工具来构建交付管道，通过Git(或任何版本管理系统)应用GitOps的最佳实践都应该是你流程中不可或缺的组成部分。这样做可以轻松地过渡到持续交付。不论是从技术角度还是从文化角度都应该如此。</p>
+<h1 id="GitOps的原则"><a href="#GitOps的原则" class="headerlink" title="GitOps的原则"></a>GitOps的原则</h1><p>开始使用GitOps工作流管理你的集群，必须具备以下条件：</p>
+<p><strong>1. 整个系统以声明方式描述</strong><br>Kubernetes只是众多现代云原生工具的一个例子，它们是可“声明的”，可以被视为代码。可声明意味着配置是由一组事实而不是一组指令来保证的。将你的应用的声明版本管理到Git，你只有一个事实来源。你可以轻松地部署和回滚Kubernetes的应用。更重要的是，当灾难发生时，你可以快速可靠地重现集群的基础架构。</p>
+<p><strong>2. 在Git中管理规范的目标系统状态版本</strong><br>通过将你系统的声明存储在版本管理系统中，并作为你的规范性事实来源，你可以从一个地方获取和驱动所有的内容。这简化了回滚操作，你可以使用“Git Revert”来回滚到之前的应用程序状态。借助Git出色的安全保障，你可以使用SSH密钥对提交进行签名，从而对代码的作者和来源实施强有力的安全保障。 </p>
+<p><strong>3. 批准的更改可以自动应用于系统</strong><br>一旦将声明的状态保存在Git中，下一步就是允许对该状态的任何更改都能够被自动应用于你的系统。有意义的是，你不需要集群的账号来更改你的系统。借助于GitOps，状态定义存在于这个隔离环境之外。这使你可以解耦做什么与如何做。</p>
+<p><strong>4. 软件代理确保差异的正确性并报警</strong><br>一旦你的系统状态被声明并保存在版本控制系统中，每当实际状态与期望状态不符，软件代理就可以通知你。代理的使用还可以确保你的整个系统是自修复的。通过自修复，不仅仅是指节点或pod失败时(Kubernetes会处理这类失败)，而是在更广泛的意义上，比如人为错误的情况。在这种情况下，软件代理充当了你的操作的反馈和控制闭环。</p>
+<h1 id="Git赋能基础架构即代码-IAC-工具"><a href="#Git赋能基础架构即代码-IAC-工具" class="headerlink" title="Git赋能基础架构即代码(IAC)工具"></a>Git赋能基础架构即代码(IAC)工具</h1><p>Kubernetes只是众多现代云原生工具的一个例子，它们是可“声明的”，可以被视为代码。可声明意味着配置是由一组事实而不是一组指令来保证的。例如，“有十个redis服务器”，而不是“启动十个redis服务器”，并且提示我可行。</p>
+<p>借助声明式工具，你的整个配置文件可以在Git中进行版本管理。通过使用Git作为事实来源，你可以轻松地部署和回滚Kubernetes的应用。更重要的是，当灾难发生时，你可以从Git中快速可靠地重现集群的基础架构。</p>
+<h2 id="IAC工具-vs-GitOps"><a href="#IAC工具-vs-GitOps" class="headerlink" title="IAC工具 vs. GitOps"></a>IAC工具 vs. GitOps</h2><p>作为能够按要求创建服务器的基础架构即代码工具已经存在相当长的一段时间了。这些工具产生了保持基础架构及代码配置版本化，可备份化以及可重现的概念。</p>
+<p>但是现在由于Kubernetes几乎完全是声明性的，结合不可变容器，可以将这些概念中的一些扩展到管理应用程序及其操作系统。</p>
+<p>能够管理和比较基础架构和应用程序的当前状态，以便借助使用Git完整的审计跟踪，你能测试，部署，回滚和前滚，这是GitOps理念及其最佳实践内容。这是可行的，因为Kubernetes几乎完全通过声明性配置进行管理，以及容器也是不可变的。</p>
+<p>在Weaveworks，我们使用Terraform和Ansible来创建服务器。我们将那些配置文件保存在Git中进行版本管理。IAC工具及其相关的配置文件构成了我们GitOps工作流的核心部分，如果发生灾难，可以做到近乎实时的集群恢复。通过<a href="http://www.weave.works/technologies/gitops-frequently-asked-questions">GitOps FAQ</a>了解更多的基础架构及代码与GitOps的区别。</p>
+<h2 id="我的系统与事实来源出现差异该如何？"><a href="#我的系统与事实来源出现差异该如何？" class="headerlink" title="我的系统与事实来源出现差异该如何？"></a>我的系统与事实来源出现差异该如何？</h2><p>声明式工具允许你在Git中描述期望的真实状态。但是在实际系统中的真实状态可能会有问题，这可能与版本管理系统中描述的状态有差别。</p>
+<ul>
+<li>你如何知道实际系统达到了期望状态？  </li>
+<li>当有差异时，你能得到通知吗？  </li>
+<li>有什么机制类似于“煤矿中的金丝雀”在你遇到麻烦时通知你？</li>
+<li>你如何触发集群与版本管理系统之前的同步？</li>
+</ul>
+<p>这里有现成的技术.</p>
+<p>IAC工具，比如Chef，Puppet和Ansible支持“差异警告”功能。这有助于运维人员知道何时应该采取行动将实际系统收敛到期望状态（通过配置脚本定义的）。甚至最近，最佳实践是部署不可变镜像（比如容器），以便尽可能减少差异。</p>
+<p>在“GitOps”模型中，在一组用来比较期望状态和实际状态的“比较”和“同步”工具（<a href="https://github.com/weaveworks/kubediff">kubediff</a>, 以及 terradiff 和ansiblediff）的辅助下，我们使用Git解决差异和收敛。</p>
+<h2 id="GitOps构建在不可变基础架构之上"><a href="#GitOps构建在不可变基础架构之上" class="headerlink" title="GitOps构建在不可变基础架构之上"></a>GitOps构建在不可变基础架构之上</h2><p>GitOps充分利用不断发展的不可变基础架构和声明式容器编排。在Weaveworks，我们一天部署多次。为了降低部署后变更的风险，无论是有意的还是偶然的“配置偏差”，我们必须维护一个可重现且可靠的部署过程。</p>
+<p>我们整个系统的期望状态（也就是“事实来源”）是在Git中描述的。我们使用容器实现不可变性，以及Terraform和Ansible等不同的云原生工具来自动化和管理我们的配置。这些工具与容器以及Kubernetes声明性的本质一起提供了在发生灾难时完整恢复所需要的东西。</p>
+<h2 id="与IAC工具协作"><a href="#与IAC工具协作" class="headerlink" title="与IAC工具协作"></a>与IAC工具协作</h2><p>当你将GitOps原则应用于“所有方面”时，除了报警规则和仪表盘之外包括机器配置，应用程序和服务，所有这些都保存在版本管理系统中。</p>
+<p>除非通过Git，否则不需要访问正在运行的系统。任何一组更改都可以是原子性的，并且能够做相应地比较。Git记录也不仅仅是审计日志，还是可用于在任何快照之前来回滚动的事物日志。</p>
+<h1 id="Weave-Cloud的持续交付和GitOps工作流"><a href="#Weave-Cloud的持续交付和GitOps工作流" class="headerlink" title="Weave Cloud的持续交付和GitOps工作流"></a>Weave Cloud的持续交付和GitOps工作流</h1><p>在我们的产品<a href="https://cloud.weave.works/signup">Weave Cloud</a>中, GitOps的核心机制已经内置于CI/CD的工具中了，关键部分是持续部署(CD)，<a href="https://github.com/weaveworks/flux/blob/master/site/introduction.md#automated-git-cluster-synchronisation">支持Git-cluster同步</a>。</p>
+<p>Weave Cloud是专门为版本控制系统和声明式应用程序栈设计的。团队中的每个开发人员都可能熟悉Git且能够创建拉取请求(Pull Request)。现在，他们也能够使用Git加速并简化Kubernetes应用的部署。</p>
+<p>以下是以典型的创建和更新一个新功能的开发流程：</p>
+<ol>
+<li>推送一个新功能的拉取请求(Pull Request)到GitHub进行审核。</li>
+<li>代码被同事审核并批准后，被合并到Git。</li>
+<li>Git合并触发CI流水线，通过一系列测试后，新构建出来的镜像被存储到镜像仓库里。</li>
+<li>Weave Cloud的“Deployment Automator” 检测到镜像仓库中有新的镜像，从仓库中拉取新的镜像并跟新配置仓库中的YAML文件。</li>
+<li>Weave Cloud的“Deployment Synchronizer” (运行在集群中)，检测到集群有更新，它从配置仓库中拉取变更后的清单并将新的功能部署到生产环境中。</li>
+</ol>
+<p><strong>支持GitOps的CI/CD管道：</strong></p>
+<p><img src="/2019/07/21/gitops/1.png"></p>
+<h2 id="使用Operator模式实现的Kubernetes控制器"><a href="#使用Operator模式实现的Kubernetes控制器" class="headerlink" title="使用Operator模式实现的Kubernetes控制器"></a>使用Operator模式实现的Kubernetes控制器</h2><p>Weave Cloud实现了以自定义的控制器用来监听和同步你的Kubernetes集群。控制器是使用Operator模式实现的，有两个层面的意义：首先，它更安全；其次，它能够自动处理复杂的易错的任务，比如必须手动更新YAML清单。</p>
+<p>通过使用Operator模式，代理会代表集群监控自定义资源变更事件，以便部署这些变更。代理负责同步Git与集群，并且为你的团队提供了一种实现持续部署的简单方法。</p>
+<h2 id="拉-vs-推管道"><a href="#拉-vs-推管道" class="headerlink" title="拉 vs 推管道"></a>拉 vs 推管道</h2><p><strong>推管道</strong><br>目前大部分CI/CD工具使用推模型。基于推模型的管道意味着代码从CI系统开始，通过一系列的脚本或者手动使用“kubectl”将变更推到Kubernetes集群。</p>
+<p>你不希望使用CI系统触发部署或者通过命令行手动部署，原因是可能在集群之外泄露账号。虽然可以保护你的CI/CD脚本和命令行，但你是在集群信任域之外工作。这通常不是好的做法，这也是为什么CI系统能被为生产环境攻击的载体。</p>
+<p>具有集群外部读/写权限的推式的管道：<br><img src="/2019/07/21/gitops/2.png"></p>
+<p>在Weave Cloud中，在集群内部保存账号并拉取镜像：<br><img src="/2019/07/21/gitops/3.png"></p>
+<p><strong>Weave Cloud拉管道</strong><br>Weave Cloud使用由两个关键组件组成的拉取策略：一个是监测镜像仓库的”Deployment Automator”和一个集群中以维持其状态的”Deployment Synchronizer”。</p>
+<p>在我们拉取管道模式的中心是清单（或配置仓库）的单一事实来源。开发将他们的更新代码推送到代码仓库，CI工具获取更改并最终构建出Docker镜像。Weave Cloud的“Deployment Automator”检测到新的镜像，从镜像仓库中拉取新的镜像并更新配置仓库中的YAML配置。“Deployment Synchronizer”检测到集群已经过期，并从配置仓库中拉取更改的清单，并将新的镜像部署到集群。</p>
+<p><strong>安装在集群中的Weave Cloud部署代理</strong><br>使用群集内部的Deployment Synchronizer，你的群集账号不会在生产环境之外公开。 一旦Weave Cloud代理安装到你的集群并且与你的Git仓库已连接，你的生产环境中的任何更改都将通过具有完全回滚的Git拉请求(Pull Request)以及Git提供的方便审计日志完成。<br><img src="/2019/07/21/gitops/4.png"></p>
+<p><strong>可观察性是部署的催化剂</strong><br>通过Kubernetes，GitOps可以通过拉取请求(Pull Request)管理基础架构和应用程序。但是GitOps工作流和可观察性如何协同工作？</p>
+<p>通过GitOps工作流和实时可观察性，你的开发团队可以在部署任何新功能之前做出关键决策。由于在发布之前你可以在正在运行的集群中实时观察即将发布的服务，这意味着你能够自信，快速地部署并交付更高质量的功能。</p>
+<p>可观察性可以被视为Kubernetes<a href="https://continuousdelivery.com/">持续交付</a>周期的主要驱动因素之一，因为它描述了任何给定时间的系统实际运行状态。观察运行系统以便理解和控制它。新功能和修复被推送到Git并触发部署管道，何时准备发布可以通过实时观察正在运行的集群。此时，根据此反馈，开发人员可以返回到管道的开始，或者部署并发布到产品集群中。</p>
+<p>GitOps是面向发布的操作和功能模型。你向客户交付新功能的速度有多快，部分取决你的团队在此周期中通过各阶段的速度。<br><img src="/2019/07/21/gitops/5.png"></p>
+<p>使用GitOps工作流和可观察性的开发人员需要回答这些问题：</p>
+<ol>
+<li>如果自动发布一个变更，我们如何知道它确实有效？</li>
+<li>如何确定我们的变更实际是在驱动改进？</li>
+<li>在复杂的分布式系统中，我们如何理解，诊断问题并处理事件？</li>
+</ol>
+<p>通过Weave Cloud，可观察工作负载仪表盘已集成到部署和发布流程中。在承诺将部署发布到准备环境或生产环境之前，你可以看到部署是否成功。这不仅帮助你更快地识别问题，而且由于可观察性工作负载仪表盘是实时的并且内置于部署过程中，你可以自信的一天多次地部署你的服务并确信部署没有重大缺陷。<br><img src="/2019/07/21/gitops/6.png"></p>
+<h1 id="GitOps的优点"><a href="#GitOps的优点" class="headerlink" title="GitOps的优点"></a>GitOps的优点</h1><p><strong>更快的部署</strong><br>通过采用GitOps的最佳实践，开发人员可以使用熟悉的工具比如Git来快速地管理Kubernetes应用的更新和新功能。通过持续的推送功能更新，企业变得更加敏捷，能够更快地反应客户需求，并在市场中更具竞争力。</p>
+<p><strong>更好的操作</strong><br>使用GitOps，你拥有一个完整的端到端的管道。不仅你的持续集成和持续交付管道都是由拉取请求(Pull Request)驱动，而且你的操作任务也可以通过Git完全重现。</p>
+<p>如果你正在使用Weave Cloud，可以安全地部署到正在运行的集群中，不会将敏感的账号泄露在集群之外。</p>
+<p><strong>更健壮的安全保证</strong><br>Git的强正确性以及安全保证(背后是健壮的用于追踪和管理变更的加密技术)，以及对变更的签名从而证明作者身份和来源的能力是正确和安全地定义集群目标状态的关键。如果发生安全漏洞，可以独立于脆弱的系统使用不可变和可审计的事实来源重新创建新的系统，从而减少停机时间并允许更好的事件响应。</p>
+<p>打包软件和发布到生产环境的职责分离也体现了最小特权的安全原则，减少脆弱影响并提供了更小的攻击面。</p>
+<p><strong>使得合规和审核更容易</strong><br>由于以安全的方式追踪和和记录更改，因此合规性和审计变得微不足道。使用kubediff，terradiff和ansiblediff可以将集群的可信任状态定义与实际运行的集群进行比较，从而确保可追踪和审核的变更与实际相符。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>GitOps</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Git安装与配置</title>
     <url>/2020/12/31/git-install-configure/</url>
     <content><![CDATA[<p><a href="https://git-scm.com/">Git</a>是目前使用最广泛的分布式版本管理系统。相对于集中式代码管理系统，例如Subversion, Perforce等，来说，它有着无法比拟的优势，比如轻量级的分支管理，适合不同场景的分支合并策略，离线状态下的版本管理和变更历史查询等，而这些优势也正好符合了当前敏捷和精益的软件开发方法。本文将介绍如何在Linux，Mac和Windows系统中安装并配置Git。</p>
@@ -1551,130 +1797,6 @@
       </categories>
       <tags>
         <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>什么是GitOps?</title>
-    <url>/2019/07/21/gitops/</url>
-    <content><![CDATA[<p>[原文] <a href="https://www.weave.works/technologies/gitops/">https://www.weave.works/technologies/gitops/</a></p>
-<p>您是否听说过GitOps并且也想知道它到底是什么？ 本文，我们将介绍GitOps工作流的原理和模式，以及如何实现它们以便在生产环境中规模化运行Kubernetes。 我们还将描述GitOps与基础架构代码（IAC)，配置管理工具之间的差异，当然还将向您展示如何将GitOps最佳实践作为您自己的开发环境的一部分。</p>
-<span id="more"></span>
-
-<h1 id="GitOps是什么"><a href="#GitOps是什么" class="headerlink" title="GitOps是什么?"></a>GitOps是什么?</h1><p><img src="/2019/07/21/gitops/1.png"></p>
-<p><strong>GitOps</strong> Kubernetes集群管理和应用程序交付的一种方法。它是用Git作为声明式基础架构和应用程序的单一事实来源。通过将Git作为交付管道的中心，开发可以通过拉取请求(Pull Request)来加速和简化Kubernetes应用程序的部署和运维任务。</p>
-<p><strong>一种构建云原生应用的操作模式</strong></p>
-<p>GitOps可以概括为以下两点:</p>
-<ol>
-<li>Kubernetes和其它云原生技术的一种操作模式，提供一组统一部署，管理和监控容器化集群和应用程序的最佳实践。</li>
-<li>面向开发者的管理应用程序的经验，将端到端的CI/CD管道和Git工作流应用于运维和开发。</li>
-</ol>
-<h1 id="GitOps的主要优点"><a href="#GitOps的主要优点" class="headerlink" title="GitOps的主要优点"></a>GitOps的主要优点</h1><p>当Git中有变更发生时，自动化交付管道会自动变更你的基础架构。然而GitOps概念远不止于此 - 它使用工具将整个应用程序的实际生产状态与源码管理工具中的代码进行比较，当你的集群与实际状态不符时，给出提醒。</p>
-<p>通过应用GitOps最佳实践，你的基础架构和应用程序会有一个“事实来源”，这将提高开发团队的速度并提高系统可靠性。</p>
-<p>采用GitOps最佳实践的好处是深远的，并提供：</p>
-<ol>
-<li><p><strong>提高生产力</strong><br>自动化的持续部署加上集成的反馈控制回路提升了平均部署时间。你的团队每天能够提交30到100倍的更多变更，将总体开发输出提高2到3倍。</p>
-</li>
-<li><p><strong>增强开发体验</strong><br>推送代码而不是容器。开发不需要深入了解Kubernetes就可以使用熟悉的工具(比如Git)快速地更新Kubernetes应用和添加新的功能。新入职的开发能够在几天内而不是几个月内快速地提升开发效率。</p>
-</li>
-<li><p><strong>提高稳定性</strong><br>当你使用Git工作流管理你的集群时，你不需要通过Kubernetes就能够自动获取便于审核的集群的所有变更日志。通过审核跟踪谁在何时变更了你的集群能够满足SOC 2合规性并能确保稳定性。 </p>
-</li>
-<li><p><strong>高可用性</strong><br>借助Git恢复/回滚和分叉功能，你将获得稳定并可重复的回滚功能。因为你通过Git描述了整个系统，你将有一个单一的事实来源用来从崩溃中恢复，从而将你的恢复时间(MTTR)从几小时降到几分钟。</p>
-</li>
-<li><p><strong>一致性和标准化</strong><br>由于GitOps提供了统一的模型用来变更基础架构，应用以及Kubernetes add-on，你可以在整个组织中实现一致的端到端的工作流。不仅你的持续集成和持续交付管道通过拉取请求(Pull Request)驱动，你的操作任务通过Git也完全可以重现。</p>
-</li>
-<li><p><strong>更健壮的安全保证</strong><br>Git的强正确性以及安全保证(背后是健壮的用于追踪和管理变更的加密技术)，以及签名变更以证明作者身份和来源的能力是安全定义集群目标状态的关键。</p>
-</li>
-</ol>
-<h1 id="GitOps是满足云原生的持续交付"><a href="#GitOps是满足云原生的持续交付" class="headerlink" title="GitOps是满足云原生的持续交付"></a>GitOps是满足云原生的持续交付</h1><p>GitOps是从DevOpsSite Reliability Engineering(站点可靠性工程)的想法中逐渐演变出来的，这些想法始于<a href="https://martinfowler.com/articles/continuousIntegration.html">2016念Martin Fowler对持续集成的全面概述</a></p>
-<h2 id="自由选择所需的工具"><a href="#自由选择所需的工具" class="headerlink" title="自由选择所需的工具"></a>自由选择所需的工具</h2><p>作为CI/CD管道的一个工作流，GitOps被<a href="https://martinfowler.com/articles/continuousIntegration.html">描述为开发过程的圣杯</a>。由于没有单一的工具能够完成CI/CD管道中所有的工作，GitOps可以让你为每个部分选择最佳的工具。你可以从开源生态系统选择一组工具，也可以从闭源中选择一组工具，你甚至可以根据你的具体情况，组合使用它们。创建CI/CD管道最困难的部分是将所有的工具组合在一起。</p>
-<p>无论你选择什么工具来构建交付管道，通过Git(或任何版本管理系统)应用GitOps的最佳实践都应该是你流程中不可或缺的组成部分。这样做可以轻松地过渡到持续交付。不论是从技术角度还是从文化角度都应该如此。</p>
-<h1 id="GitOps的原则"><a href="#GitOps的原则" class="headerlink" title="GitOps的原则"></a>GitOps的原则</h1><p>开始使用GitOps工作流管理你的集群，必须具备以下条件：</p>
-<p><strong>1. 整个系统以声明方式描述</strong><br>Kubernetes只是众多现代云原生工具的一个例子，它们是可“声明的”，可以被视为代码。可声明意味着配置是由一组事实而不是一组指令来保证的。将你的应用的声明版本管理到Git，你只有一个事实来源。你可以轻松地部署和回滚Kubernetes的应用。更重要的是，当灾难发生时，你可以快速可靠地重现集群的基础架构。</p>
-<p><strong>2. 在Git中管理规范的目标系统状态版本</strong><br>通过将你系统的声明存储在版本管理系统中，并作为你的规范性事实来源，你可以从一个地方获取和驱动所有的内容。这简化了回滚操作，你可以使用“Git Revert”来回滚到之前的应用程序状态。借助Git出色的安全保障，你可以使用SSH密钥对提交进行签名，从而对代码的作者和来源实施强有力的安全保障。 </p>
-<p><strong>3. 批准的更改可以自动应用于系统</strong><br>一旦将声明的状态保存在Git中，下一步就是允许对该状态的任何更改都能够被自动应用于你的系统。有意义的是，你不需要集群的账号来更改你的系统。借助于GitOps，状态定义存在于这个隔离环境之外。这使你可以解耦做什么与如何做。</p>
-<p><strong>4. 软件代理确保差异的正确性并报警</strong><br>一旦你的系统状态被声明并保存在版本控制系统中，每当实际状态与期望状态不符，软件代理就可以通知你。代理的使用还可以确保你的整个系统是自修复的。通过自修复，不仅仅是指节点或pod失败时(Kubernetes会处理这类失败)，而是在更广泛的意义上，比如人为错误的情况。在这种情况下，软件代理充当了你的操作的反馈和控制闭环。</p>
-<h1 id="Git赋能基础架构即代码-IAC-工具"><a href="#Git赋能基础架构即代码-IAC-工具" class="headerlink" title="Git赋能基础架构即代码(IAC)工具"></a>Git赋能基础架构即代码(IAC)工具</h1><p>Kubernetes只是众多现代云原生工具的一个例子，它们是可“声明的”，可以被视为代码。可声明意味着配置是由一组事实而不是一组指令来保证的。例如，“有十个redis服务器”，而不是“启动十个redis服务器”，并且提示我可行。</p>
-<p>借助声明式工具，你的整个配置文件可以在Git中进行版本管理。通过使用Git作为事实来源，你可以轻松地部署和回滚Kubernetes的应用。更重要的是，当灾难发生时，你可以从Git中快速可靠地重现集群的基础架构。</p>
-<h2 id="IAC工具-vs-GitOps"><a href="#IAC工具-vs-GitOps" class="headerlink" title="IAC工具 vs. GitOps"></a>IAC工具 vs. GitOps</h2><p>作为能够按要求创建服务器的基础架构即代码工具已经存在相当长的一段时间了。这些工具产生了保持基础架构及代码配置版本化，可备份化以及可重现的概念。</p>
-<p>但是现在由于Kubernetes几乎完全是声明性的，结合不可变容器，可以将这些概念中的一些扩展到管理应用程序及其操作系统。</p>
-<p>能够管理和比较基础架构和应用程序的当前状态，以便借助使用Git完整的审计跟踪，你能测试，部署，回滚和前滚，这是GitOps理念及其最佳实践内容。这是可行的，因为Kubernetes几乎完全通过声明性配置进行管理，以及容器也是不可变的。</p>
-<p>在Weaveworks，我们使用Terraform和Ansible来创建服务器。我们将那些配置文件保存在Git中进行版本管理。IAC工具及其相关的配置文件构成了我们GitOps工作流的核心部分，如果发生灾难，可以做到近乎实时的集群恢复。通过<a href="http://www.weave.works/technologies/gitops-frequently-asked-questions">GitOps FAQ</a>了解更多的基础架构及代码与GitOps的区别。</p>
-<h2 id="我的系统与事实来源出现差异该如何？"><a href="#我的系统与事实来源出现差异该如何？" class="headerlink" title="我的系统与事实来源出现差异该如何？"></a>我的系统与事实来源出现差异该如何？</h2><p>声明式工具允许你在Git中描述期望的真实状态。但是在实际系统中的真实状态可能会有问题，这可能与版本管理系统中描述的状态有差别。</p>
-<ul>
-<li>你如何知道实际系统达到了期望状态？  </li>
-<li>当有差异时，你能得到通知吗？  </li>
-<li>有什么机制类似于“煤矿中的金丝雀”在你遇到麻烦时通知你？</li>
-<li>你如何触发集群与版本管理系统之前的同步？</li>
-</ul>
-<p>这里有现成的技术.</p>
-<p>IAC工具，比如Chef，Puppet和Ansible支持“差异警告”功能。这有助于运维人员知道何时应该采取行动将实际系统收敛到期望状态（通过配置脚本定义的）。甚至最近，最佳实践是部署不可变镜像（比如容器），以便尽可能减少差异。</p>
-<p>在“GitOps”模型中，在一组用来比较期望状态和实际状态的“比较”和“同步”工具（<a href="https://github.com/weaveworks/kubediff">kubediff</a>, 以及 terradiff 和ansiblediff）的辅助下，我们使用Git解决差异和收敛。</p>
-<h2 id="GitOps构建在不可变基础架构之上"><a href="#GitOps构建在不可变基础架构之上" class="headerlink" title="GitOps构建在不可变基础架构之上"></a>GitOps构建在不可变基础架构之上</h2><p>GitOps充分利用不断发展的不可变基础架构和声明式容器编排。在Weaveworks，我们一天部署多次。为了降低部署后变更的风险，无论是有意的还是偶然的“配置偏差”，我们必须维护一个可重现且可靠的部署过程。</p>
-<p>我们整个系统的期望状态（也就是“事实来源”）是在Git中描述的。我们使用容器实现不可变性，以及Terraform和Ansible等不同的云原生工具来自动化和管理我们的配置。这些工具与容器以及Kubernetes声明性的本质一起提供了在发生灾难时完整恢复所需要的东西。</p>
-<h2 id="与IAC工具协作"><a href="#与IAC工具协作" class="headerlink" title="与IAC工具协作"></a>与IAC工具协作</h2><p>当你将GitOps原则应用于“所有方面”时，除了报警规则和仪表盘之外包括机器配置，应用程序和服务，所有这些都保存在版本管理系统中。</p>
-<p>除非通过Git，否则不需要访问正在运行的系统。任何一组更改都可以是原子性的，并且能够做相应地比较。Git记录也不仅仅是审计日志，还是可用于在任何快照之前来回滚动的事物日志。</p>
-<h1 id="Weave-Cloud的持续交付和GitOps工作流"><a href="#Weave-Cloud的持续交付和GitOps工作流" class="headerlink" title="Weave Cloud的持续交付和GitOps工作流"></a>Weave Cloud的持续交付和GitOps工作流</h1><p>在我们的产品<a href="https://cloud.weave.works/signup">Weave Cloud</a>中, GitOps的核心机制已经内置于CI/CD的工具中了，关键部分是持续部署(CD)，<a href="https://github.com/weaveworks/flux/blob/master/site/introduction.md#automated-git-cluster-synchronisation">支持Git-cluster同步</a>。</p>
-<p>Weave Cloud是专门为版本控制系统和声明式应用程序栈设计的。团队中的每个开发人员都可能熟悉Git且能够创建拉取请求(Pull Request)。现在，他们也能够使用Git加速并简化Kubernetes应用的部署。</p>
-<p>以下是以典型的创建和更新一个新功能的开发流程：</p>
-<ol>
-<li>推送一个新功能的拉取请求(Pull Request)到GitHub进行审核。</li>
-<li>代码被同事审核并批准后，被合并到Git。</li>
-<li>Git合并触发CI流水线，通过一系列测试后，新构建出来的镜像被存储到镜像仓库里。</li>
-<li>Weave Cloud的“Deployment Automator” 检测到镜像仓库中有新的镜像，从仓库中拉取新的镜像并跟新配置仓库中的YAML文件。</li>
-<li>Weave Cloud的“Deployment Synchronizer” (运行在集群中)，检测到集群有更新，它从配置仓库中拉取变更后的清单并将新的功能部署到生产环境中。</li>
-</ol>
-<p><strong>支持GitOps的CI/CD管道：</strong></p>
-<p><img src="/2019/07/21/gitops/1.png"></p>
-<h2 id="使用Operator模式实现的Kubernetes控制器"><a href="#使用Operator模式实现的Kubernetes控制器" class="headerlink" title="使用Operator模式实现的Kubernetes控制器"></a>使用Operator模式实现的Kubernetes控制器</h2><p>Weave Cloud实现了以自定义的控制器用来监听和同步你的Kubernetes集群。控制器是使用Operator模式实现的，有两个层面的意义：首先，它更安全；其次，它能够自动处理复杂的易错的任务，比如必须手动更新YAML清单。</p>
-<p>通过使用Operator模式，代理会代表集群监控自定义资源变更事件，以便部署这些变更。代理负责同步Git与集群，并且为你的团队提供了一种实现持续部署的简单方法。</p>
-<h2 id="拉-vs-推管道"><a href="#拉-vs-推管道" class="headerlink" title="拉 vs 推管道"></a>拉 vs 推管道</h2><p><strong>推管道</strong><br>目前大部分CI/CD工具使用推模型。基于推模型的管道意味着代码从CI系统开始，通过一系列的脚本或者手动使用“kubectl”将变更推到Kubernetes集群。</p>
-<p>你不希望使用CI系统触发部署或者通过命令行手动部署，原因是可能在集群之外泄露账号。虽然可以保护你的CI/CD脚本和命令行，但你是在集群信任域之外工作。这通常不是好的做法，这也是为什么CI系统能被为生产环境攻击的载体。</p>
-<p>具有集群外部读/写权限的推式的管道：<br><img src="/2019/07/21/gitops/2.png"></p>
-<p>在Weave Cloud中，在集群内部保存账号并拉取镜像：<br><img src="/2019/07/21/gitops/3.png"></p>
-<p><strong>Weave Cloud拉管道</strong><br>Weave Cloud使用由两个关键组件组成的拉取策略：一个是监测镜像仓库的”Deployment Automator”和一个集群中以维持其状态的”Deployment Synchronizer”。</p>
-<p>在我们拉取管道模式的中心是清单（或配置仓库）的单一事实来源。开发将他们的更新代码推送到代码仓库，CI工具获取更改并最终构建出Docker镜像。Weave Cloud的“Deployment Automator”检测到新的镜像，从镜像仓库中拉取新的镜像并更新配置仓库中的YAML配置。“Deployment Synchronizer”检测到集群已经过期，并从配置仓库中拉取更改的清单，并将新的镜像部署到集群。</p>
-<p><strong>安装在集群中的Weave Cloud部署代理</strong><br>使用群集内部的Deployment Synchronizer，你的群集账号不会在生产环境之外公开。 一旦Weave Cloud代理安装到你的集群并且与你的Git仓库已连接，你的生产环境中的任何更改都将通过具有完全回滚的Git拉请求(Pull Request)以及Git提供的方便审计日志完成。<br><img src="/2019/07/21/gitops/4.png"></p>
-<p><strong>可观察性是部署的催化剂</strong><br>通过Kubernetes，GitOps可以通过拉取请求(Pull Request)管理基础架构和应用程序。但是GitOps工作流和可观察性如何协同工作？</p>
-<p>通过GitOps工作流和实时可观察性，你的开发团队可以在部署任何新功能之前做出关键决策。由于在发布之前你可以在正在运行的集群中实时观察即将发布的服务，这意味着你能够自信，快速地部署并交付更高质量的功能。</p>
-<p>可观察性可以被视为Kubernetes<a href="https://continuousdelivery.com/">持续交付</a>周期的主要驱动因素之一，因为它描述了任何给定时间的系统实际运行状态。观察运行系统以便理解和控制它。新功能和修复被推送到Git并触发部署管道，何时准备发布可以通过实时观察正在运行的集群。此时，根据此反馈，开发人员可以返回到管道的开始，或者部署并发布到产品集群中。</p>
-<p>GitOps是面向发布的操作和功能模型。你向客户交付新功能的速度有多快，部分取决你的团队在此周期中通过各阶段的速度。<br><img src="/2019/07/21/gitops/5.png"></p>
-<p>使用GitOps工作流和可观察性的开发人员需要回答这些问题：</p>
-<ol>
-<li>如果自动发布一个变更，我们如何知道它确实有效？</li>
-<li>如何确定我们的变更实际是在驱动改进？</li>
-<li>在复杂的分布式系统中，我们如何理解，诊断问题并处理事件？</li>
-</ol>
-<p>通过Weave Cloud，可观察工作负载仪表盘已集成到部署和发布流程中。在承诺将部署发布到准备环境或生产环境之前，你可以看到部署是否成功。这不仅帮助你更快地识别问题，而且由于可观察性工作负载仪表盘是实时的并且内置于部署过程中，你可以自信的一天多次地部署你的服务并确信部署没有重大缺陷。<br><img src="/2019/07/21/gitops/6.png"></p>
-<h1 id="GitOps的优点"><a href="#GitOps的优点" class="headerlink" title="GitOps的优点"></a>GitOps的优点</h1><p><strong>更快的部署</strong><br>通过采用GitOps的最佳实践，开发人员可以使用熟悉的工具比如Git来快速地管理Kubernetes应用的更新和新功能。通过持续的推送功能更新，企业变得更加敏捷，能够更快地反应客户需求，并在市场中更具竞争力。</p>
-<p><strong>更好的操作</strong><br>使用GitOps，你拥有一个完整的端到端的管道。不仅你的持续集成和持续交付管道都是由拉取请求(Pull Request)驱动，而且你的操作任务也可以通过Git完全重现。</p>
-<p>如果你正在使用Weave Cloud，可以安全地部署到正在运行的集群中，不会将敏感的账号泄露在集群之外。</p>
-<p><strong>更健壮的安全保证</strong><br>Git的强正确性以及安全保证(背后是健壮的用于追踪和管理变更的加密技术)，以及对变更的签名从而证明作者身份和来源的能力是正确和安全地定义集群目标状态的关键。如果发生安全漏洞，可以独立于脆弱的系统使用不可变和可审计的事实来源重新创建新的系统，从而减少停机时间并允许更好的事件响应。</p>
-<p>打包软件和发布到生产环境的职责分离也体现了最小特权的安全原则，减少脆弱影响并提供了更小的攻击面。</p>
-<p><strong>使得合规和审核更容易</strong><br>由于以安全的方式追踪和和记录更改，因此合规性和审计变得微不足道。使用kubediff，terradiff和ansiblediff可以将集群的可信任状态定义与实际运行的集群进行比较，从而确保可追踪和审核的变更与实际相符。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>GitOps</tag>
       </tags>
   </entry>
   <entry>
@@ -2112,128 +2234,6 @@
       </tags>
   </entry>
   <entry>
-    <title>从Git仓库中永久清理脏数据</title>
-    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
-    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
-<span id="more"></span>
-<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
-<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
-<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
-</li>
-<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
-<ul>
-<li>替换文件中的敏感信息</li>
-<li>删除文件或文件夹</li>
-</ul>
-<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
-<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
-<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
-<li><p>通过mirror的方式克隆代码仓库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-
-<p>比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
-</blockquote>
-</li>
-</ul>
-<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
-</blockquote>
-<ul>
-<li><p>替换所有文件中的指定的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>需要打开强制推送到Git仓库的功能</p>
-</blockquote>
-</li>
-<li><p>替换指定文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
-<blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
-</blockquote>
-<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
-<ul>
-<li>获取指定文件在所有变更历史中对应的blob id号</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>从变更历史中删除指定的文件(Blob)</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
-</blockquote>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Jenkins构建GitHub合并请求(Pull Request)</title>
     <url>/2020/01/30/jenkins-github-pullrequest/</url>
     <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
@@ -2542,211 +2542,6 @@
         <tag>CI/CD</tag>
         <tag>Jenkins</tag>
         <tag>GitLab</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>VS Code + Continue + Ollama：全栈私有化 AI 辅助编程环境搭建指南</title>
-    <url>/2026/04/09/local-opensource-ai-assistant-coding-setup/</url>
-    <content><![CDATA[<p>在上一篇文章<a href="https://www.mikesay.com/2026/04/08/vibe-coding/#more?t=1775724599864">《AI辅助编程：从“复制粘贴”到“氛围编程 (Vibe Coding)”》</a>中，我们探讨了AI如何改变开发者的心智模型。所谓的 <strong>氛围编程 (Vibe Coding)</strong>，本质上是让开发者从繁琐的语法细节中抽离，通过自然语言驱动 AI 完成复杂的逻辑构建。  </p>
-<span id="more"></span>
-
-<p>要实现这种“行云流水”的体验，一个成熟的 <strong>AI Coding Agent</strong> 必须具备以下核心能力：  </p>
-<ul>
-<li><strong>LLM 语义理解</strong>：深度理解代码意图，而非简单的字符补全。</li>
-<li><strong>项目结构解读</strong>：具备 RAG 能力，能扫描工程目录并建立上下文索引（@Codebase）。</li>
-<li><strong>多文件编辑与生成</strong>：能够自动创建文件并跨文件协同重构。</li>
-<li><strong>内联编辑 (Inline Edit)</strong>：支持代码行间的 Diff 对比与一键采纳。</li>
-<li><strong>工具调用 (Tool Use)</strong>：自动运行终端命令或读取系统文件。</li>
-</ul>
-<h1 id="1-商业战场的博弈：能力强大但“金钱”驱动"><a href="#1-商业战场的博弈：能力强大但“金钱”驱动" class="headerlink" title="1. 商业战场的博弈：能力强大但“金钱”驱动"></a>1. 商业战场的博弈：能力强大但“金钱”驱动</h1><p>目前市场上的商业级 AI 编程工具主要由 SaaS 服务驱动，依托闭源大模型提供服务。  </p>
-<table>
-<thead>
-<tr>
-<th align="left">AI Coding Agent</th>
-<th align="left">License</th>
-<th align="left">CLI</th>
-<th align="left">VS Code</th>
-<th align="left">其他 IDE</th>
-<th align="left">Ollama 支持</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>GitHub Copilot</strong></td>
-<td align="left">Commercial</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">JetBrains, Vim</td>
-<td align="left">✅</td>
-</tr>
-<tr>
-<td align="left"><strong>Claude Code</strong></td>
-<td align="left">Commercial</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">Terminal</td>
-<td align="left">✅</td>
-</tr>
-<tr>
-<td align="left"><strong>Cursor</strong></td>
-<td align="left">Commercial</td>
-<td align="left">❌</td>
-<td align="left">✅</td>
-<td align="left">Standalone</td>
-<td align="left">✅</td>
-</tr>
-<tr>
-<td align="left"><strong>Droid</strong></td>
-<td align="left">Commercial</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">Slack</td>
-<td align="left">✅</td>
-</tr>
-</tbody></table>
-<ul>
-<li><strong>优势</strong>：依托云端顶级模型，不占用本地资源，响应逻辑强。</li>
-<li><strong>缺点</strong>：按月订阅收费；代码隐私存在风险；如果不是合理使用会造成额度浪费。</li>
-</ul>
-<h1 id="2-极客的选择：在-Apple-Silicon-Mac-上构建私有“大脑”"><a href="#2-极客的选择：在-Apple-Silicon-Mac-上构建私有“大脑”" class="headerlink" title="2. 极客的选择：在 Apple Silicon Mac 上构建私有“大脑”"></a>2. 极客的选择：在 Apple Silicon Mac 上构建私有“大脑”</h1><p>如果你手中有一台搭载 Apple 芯片（M1/M2/M3/M4 系列）的 Mac，其独特的统一内存架构（Unified Memory）将是运行中大型本地模型的“性能怪兽”。相比于按月付费的 SaaS 订阅，利用开源工具搭建本地工作台，不仅能榨干芯片的每一点算力，更能为你的代码资产提供物理级的数据隔离与安全防护。  </p>
-<blockquote>
-<p>注：本文实测环境基于 MacBook Pro (M3 Chip)，但在其他 Apple Silicon 机型上同样具备极佳参考价值。  </p>
-</blockquote>
-<h2 id="1-底层引擎的选择：为什么是-Ollama？"><a href="#1-底层引擎的选择：为什么是-Ollama？" class="headerlink" title="(1) 底层引擎的选择：为什么是 Ollama？"></a>(1) 底层引擎的选择：为什么是 Ollama？</h2><p>在本地运行 LLM 的工具链中，虽然有 LM Studio, vLLM 等选择，但 <strong>Ollama</strong> 依然是目前的最佳实践：  </p>
-<ul>
-<li><strong>极致的本地化体验</strong>：一行命令 <code>ollama run</code> 即可部署，完全不依赖外部网络。</li>
-<li><strong>资源调度优化</strong>：针对 Apple Silicon 的 GPU 进行了深度优化，加载 32B 模型也能实现极低延迟。</li>
-<li><strong>标准的 API 接口</strong>：提供兼容 OpenAI 格式的本地 HTTP 接口，让前端 Agent 插件（如 Continue）能够无缝对接。</li>
-</ul>
-<h2 id="2-交互层的对比：AI-Coding-Agent-哪家强？"><a href="#2-交互层的对比：AI-Coding-Agent-哪家强？" class="headerlink" title="(2) 交互层的对比：AI Coding Agent 哪家强？"></a>(2) 交互层的对比：AI Coding Agent 哪家强？</h2><p>在开源社区中，有几个备受瞩目的 AI Coding Agent 方案，我们对其进行了横向对比：  </p>
-<table>
-<thead>
-<tr>
-<th align="left">开源 Agent 项目</th>
-<th align="left">License</th>
-<th align="left">CLI</th>
-<th align="left">VS Code</th>
-<th align="left">核心特色与推荐理由</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>OpenCode</strong></td>
-<td align="left">Open Source</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left">轻量极客风，对 NeoVim 用户极其友好。</td>
-</tr>
-<tr>
-<td align="left"><strong>Aider</strong></td>
-<td align="left">Open Source</td>
-<td align="left">✅</td>
-<td align="left">🛠️</td>
-<td align="left"><strong>终端交互战神</strong>。擅长复杂重构，支持 Git 自动提交变更。</td>
-</tr>
-<tr>
-<td align="left"><strong>Cline</strong></td>
-<td align="left">Open Source</td>
-<td align="left">✅</td>
-<td align="left">✅</td>
-<td align="left"><strong>功能激进</strong>。支持 Agent 模式直接执行终端指令和读写文件。</td>
-</tr>
-<tr>
-<td align="left"><strong>Continue</strong></td>
-<td align="left"><strong>Open Source</strong></td>
-<td align="left"><strong>✅</strong></td>
-<td align="left"><strong>✅</strong></td>
-<td align="left"><strong>全能选手</strong>。插件生态成熟，上下文索引强大，能完美适配 Ollama。</td>
-</tr>
-</tbody></table>
-<p><strong>最终选择：Continue</strong><br>经过权衡，我最终选择了 <strong>Continue</strong>。它的优势在于高度的自定义自由度，能够灵活配置不同的本地模型（Chat 用大模型，补全用小模型），且其 UI 交互与 <strong>GitHub Copilot Chat</strong> 高度一致，是目前手搓 AI 工作台的“满分”底座。  </p>
-<h3 id="Continue-与-GitHub-Copilot-Chat-的详细比较"><a href="#Continue-与-GitHub-Copilot-Chat-的详细比较" class="headerlink" title="Continue 与 GitHub Copilot Chat 的详细比较"></a>Continue 与 GitHub Copilot Chat 的详细比较</h3><p>我们可以从以下三个维度来拆解它们的关系：  </p>
-<ol>
-<li><strong>核心功能的“平替”</strong>：在侧边栏对话 (<code>Cmd+L</code>)、内联编辑 (<code>Cmd+I</code>) 和代码自动补全上，Continue 完全复刻了 Copilot Chat 的核心体验。  </li>
-<li><strong>Continue 的“降维打击”</strong>：Copilot 只能用 OpenAI 的模型，而 Continue 让你实现“模型自由”——用 <strong>Qwen 30B</strong> 搞深度思考，用 <strong>DeepSeek 16B</strong> 做代码重写。同时，它的 <code>@</code> 体系（如 <code>@Codebase</code>）提供了 Copilot 难以触及的精准本地上下文。  </li>
-<li><strong>与 Cursor/Cline 的区别</strong>：不同于魔改整个 IDE 的 Cursor 或频繁执行系统指令的 Cline，Continue 保持了插件的纯粹性，不改变你的 IDE 习惯，仅作为超强增强包存在。</li>
-</ol>
-<h1 id="3-落地实践：手把手配置你的-AI-工作台"><a href="#3-落地实践：手把手配置你的-AI-工作台" class="headerlink" title="3. 落地实践：手把手配置你的 AI 工作台"></a>3. 落地实践：手把手配置你的 AI 工作台</h1><p>在 Mac M3 环境下，我们将使用 <strong>Ollama</strong> 作为后端，结合 <strong>Qwen3 Coder 30B</strong>（高性能大模型）与 <strong>DeepSeek Coder V2 16B</strong>。  </p>
-<h2 id="1-安装-Ollama-与模型准备"><a href="#1-安装-Ollama-与模型准备" class="headerlink" title="(1) 安装 Ollama 与模型准备"></a>(1) 安装 Ollama 与模型准备</h2><p>首先，通过 Homebrew 安装 Ollama 并将其设为后台服务。  </p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># 安装 Ollama</span></span><br><span class="line">brew install ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将 Ollama 设为 brew service 后台运行</span></span><br><span class="line">brew services start ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载并运行模型进行测试</span></span><br><span class="line">ollama run qwen3-coder:30b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载备用模型及向量索引模型</span></span><br><span class="line">ollama pull deepseek-coder-v2:16b</span><br><span class="line">ollama pull nomic-embed-text  </span><br></pre></td></tr></tbody></table></figure>
-<h2 id="2-安装-VS-Code-Continue-插件并配置"><a href="#2-安装-VS-Code-Continue-插件并配置" class="headerlink" title="(2) 安装 VS Code Continue 插件并配置"></a>(2) 安装 VS Code Continue 插件并配置</h2><p>安装Continue插件后，修改配置文件 <code>~/.continue/config.yaml</code> 如下：  </p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Local</span> <span class="string">Ollama</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">version:</span> <span class="number">1.0</span><span class="number">.0</span></span><br><span class="line"><span class="attr">schema:</span> <span class="string">v1</span></span><br><span class="line"></span><br><span class="line"><span class="attr">models:</span></span><br><span class="line">  <span class="comment"># Primary Model (Default for Chat and Edit)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Coder</span> <span class="string">30B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Secondary Model (Available in dropdown)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">DeepSeek</span> <span class="string">Coder</span> <span class="string">V2</span> <span class="string">16B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">deepseek-coder-v2:16b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Dedicated Autocomplete Model</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Autocomplete</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">autocomplete</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Embeddings Model (for @codebase)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Nomic</span> <span class="string">Embed</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">nomic-embed-text</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">embed</span></span><br><span class="line"></span><br><span class="line"><span class="attr">context:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">currentFile</span> </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">file</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">folder</span>   </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">open</span>        </span><br><span class="line">    <span class="attr">params:</span></span><br><span class="line">      <span class="attr">onlyPinned:</span> <span class="literal">false</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">code</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">terminal</span>    </span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="3-开启-Vibe-Coding：实战演练"><a href="#3-开启-Vibe-Coding：实战演练" class="headerlink" title="(3) 开启 Vibe Coding：实战演练"></a>(3) 开启 Vibe Coding：实战演练</h2><p>配置完成后，你可以通过Continue的侧边栏或快捷键进入“氛围编程”模式。核心技巧在于利用 <strong>@ 符号</strong> 精确喂给 AI 上下文，以及让它跨越当前文件去创造新内容。  </p>
-<p><strong>实战场景示例：使用 Vibe Coding 创建一个简单的命令行工具</strong><br>我们以创建一个简单的命令行工具为例，目标是让 AI 帮你完成从项目初始化到代码生成的全过程，无需你懂任何编程知识。</p>
-<ul>
-<li><p><strong>第一步：初始化项目</strong><br>在 Continue 侧边栏（<code>Cmd + L</code>）中输入：  </p>
-<blockquote>
-<p>帮我创建一个空的命令行工具项目，使用python语言作为主编程语言，使用 <code>uv</code> 管理项目和依赖，项目名称叫 <code>my_cli</code>，这一步不要生成代码。  </p>
-</blockquote>
-<p>AI 会自动运行 <code>uv init my_cli_tool</code> 命令，并生成项目目录结构和 <code>pyproject.toml</code> 文件。  </p>
-</li>
-<li><p><strong>第二步：生成主程序文件</strong><br>在 Continue 侧边栏中输入：  </p>
-<blockquote>
-<p>@my_cli 编辑 <code>main.py</code> 文件，修改功能为打印‘Hello, World!。自动将代码应用到main.py里。  </p>
-</blockquote>
-<p>AI 会自动编辑 <code>main.py</code> 文件，生成一个完整的命令行程序，你可以点击“应用”按钮保存更改。  </p>
-<p>你可能会遇到生成的代码有问题，所以在Continue侧边栏中继续输入：  </p>
-<blockquote>
-<p>@my_cli 修复代码main.py中的问题  </p>
-</blockquote>
-<p>AI会自动修复有问题的代码。  </p>
-</li>
-<li><p><strong>第三步：内联编辑与修改</strong><br>打开 <code>main.py</code> 文件，选中main函数中的代码，按下 <code>Cmd + I</code> 唤起内联编辑框，输入：  </p>
-<blockquote>
-<p>修改这个程序，让它在运行时提示用户输入名字，并打印‘Hello, [名字]!’。  </p>
-</blockquote>
-<p>AI 会自动更新程序代码，增加用户输入功能，并生成相应逻辑。  </p>
-</li>
-<li><p><strong>第四步：生成测试文件</strong><br>在 Continue 侧边栏中输入：  </p>
-<blockquote>
-<p>请创建并编辑 <code>test_main.py</code> 文件，生成一个基本的测试文件，测试 <code>main</code> 函数是否能正常运行。  </p>
-</blockquote>
-<p>AI 会生成一个完整的测试文件，包含基本的测试用例，方便你验证程序功能。  </p>
-</li>
-<li><p><strong>第五步：一键调试</strong><br>在 Continue 侧边栏输入：</p>
-<blockquote>
-<p>@Terminal 帮我调试代码，要求覆盖单元测试和主程序运行。  </p>
-</blockquote>
-<p>AI 将自动执行测试并运行代码，如遇报错，会循序渐进地引导你修复。  </p>
-</li>
-<li><p><strong>第六步：生成打包配置</strong><br>在 Continue 侧边栏输入：</p>
-<blockquote>
-<p>@my_cli 为该 Python 项目生成打包配置并测试安装。  </p>
-</blockquote>
-<p>AI 会自动完成配置编写、安装测试，并根据结果进行迭代优化。  </p>
-</li>
-<li><p><strong>第七步：配置 CI/CD 流水线</strong><br>在 Continue 侧边栏输入：</p>
-<blockquote>
-<p>@my_cli 基于 GitHub Actions 生成流水线，将 Python 包发布至内部 Artifactory。  </p>
-</blockquote>
-<p>AI 将分步引导你完成自动化部署环境的搭建。</p>
-</li>
-</ul>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>借助 Continue 与 Ollama，我们利用 Mac 本地算力构建了一个全封闭的 AI 开发环境。这不仅解决了云端 AI 潜在的隐私泄露风险，还通过本地化部署获得了零延迟的反馈体验。<br>所谓的“氛围编程(Vibe Coding)”，核心在于开发者意图的无缝传递。只需简单的指令描述，AI 就能在你的项目范围内快速生成、调试代码，大幅缩短从构思到上线的工作流。  </p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>AI辅助编程</category>
-      </categories>
-      <tags>
-        <tag>LLM</tag>
-        <tag>AI Coding Agent</tag>
       </tags>
   </entry>
   <entry>
@@ -3594,6 +3389,211 @@
       <tags>
         <tag>Code Quality</tag>
         <tag>SonarQube</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>VS Code + Continue + Ollama：全栈私有化 AI 辅助编程环境搭建指南</title>
+    <url>/2026/04/09/local-opensource-ai-assistant-coding-setup/</url>
+    <content><![CDATA[<p>在上一篇文章<a href="https://www.mikesay.com/2026/04/08/vibe-coding/#more?t=1775724599864">《AI辅助编程：从“复制粘贴”到“氛围编程 (Vibe Coding)”》</a>中，我们探讨了AI如何改变开发者的心智模型。所谓的 <strong>氛围编程 (Vibe Coding)</strong>，本质上是让开发者从繁琐的语法细节中抽离，通过自然语言驱动 AI 完成复杂的逻辑构建。  </p>
+<span id="more"></span>
+
+<p>要实现这种“行云流水”的体验，一个成熟的 <strong>AI Coding Agent</strong> 必须具备以下核心能力：  </p>
+<ul>
+<li><strong>LLM 语义理解</strong>：深度理解代码意图，而非简单的字符补全。</li>
+<li><strong>项目结构解读</strong>：具备 RAG 能力，能扫描工程目录并建立上下文索引（@Codebase）。</li>
+<li><strong>多文件编辑与生成</strong>：能够自动创建文件并跨文件协同重构。</li>
+<li><strong>内联编辑 (Inline Edit)</strong>：支持代码行间的 Diff 对比与一键采纳。</li>
+<li><strong>工具调用 (Tool Use)</strong>：自动运行终端命令或读取系统文件。</li>
+</ul>
+<h1 id="1-商业战场的博弈：能力强大但“金钱”驱动"><a href="#1-商业战场的博弈：能力强大但“金钱”驱动" class="headerlink" title="1. 商业战场的博弈：能力强大但“金钱”驱动"></a>1. 商业战场的博弈：能力强大但“金钱”驱动</h1><p>目前市场上的商业级 AI 编程工具主要由 SaaS 服务驱动，依托闭源大模型提供服务。  </p>
+<table>
+<thead>
+<tr>
+<th align="left">AI Coding Agent</th>
+<th align="left">License</th>
+<th align="left">CLI</th>
+<th align="left">VS Code</th>
+<th align="left">其他 IDE</th>
+<th align="left">Ollama 支持</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>GitHub Copilot</strong></td>
+<td align="left">Commercial</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">JetBrains, Vim</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td align="left"><strong>Claude Code</strong></td>
+<td align="left">Commercial</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">Terminal</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td align="left"><strong>Cursor</strong></td>
+<td align="left">Commercial</td>
+<td align="left">❌</td>
+<td align="left">✅</td>
+<td align="left">Standalone</td>
+<td align="left">✅</td>
+</tr>
+<tr>
+<td align="left"><strong>Droid</strong></td>
+<td align="left">Commercial</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">Slack</td>
+<td align="left">✅</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>优势</strong>：依托云端顶级模型，不占用本地资源，响应逻辑强。</li>
+<li><strong>缺点</strong>：按月订阅收费；代码隐私存在风险；如果不是合理使用会造成额度浪费。</li>
+</ul>
+<h1 id="2-极客的选择：在-Apple-Silicon-Mac-上构建私有“大脑”"><a href="#2-极客的选择：在-Apple-Silicon-Mac-上构建私有“大脑”" class="headerlink" title="2. 极客的选择：在 Apple Silicon Mac 上构建私有“大脑”"></a>2. 极客的选择：在 Apple Silicon Mac 上构建私有“大脑”</h1><p>如果你手中有一台搭载 Apple 芯片（M1/M2/M3/M4 系列）的 Mac，其独特的统一内存架构（Unified Memory）将是运行中大型本地模型的“性能怪兽”。相比于按月付费的 SaaS 订阅，利用开源工具搭建本地工作台，不仅能榨干芯片的每一点算力，更能为你的代码资产提供物理级的数据隔离与安全防护。  </p>
+<blockquote>
+<p>注：本文实测环境基于 MacBook Pro (M3 Chip)，但在其他 Apple Silicon 机型上同样具备极佳参考价值。  </p>
+</blockquote>
+<h2 id="1-底层引擎的选择：为什么是-Ollama？"><a href="#1-底层引擎的选择：为什么是-Ollama？" class="headerlink" title="(1) 底层引擎的选择：为什么是 Ollama？"></a>(1) 底层引擎的选择：为什么是 Ollama？</h2><p>在本地运行 LLM 的工具链中，虽然有 LM Studio, vLLM 等选择，但 <strong>Ollama</strong> 依然是目前的最佳实践：  </p>
+<ul>
+<li><strong>极致的本地化体验</strong>：一行命令 <code>ollama run</code> 即可部署，完全不依赖外部网络。</li>
+<li><strong>资源调度优化</strong>：针对 Apple Silicon 的 GPU 进行了深度优化，加载 32B 模型也能实现极低延迟。</li>
+<li><strong>标准的 API 接口</strong>：提供兼容 OpenAI 格式的本地 HTTP 接口，让前端 Agent 插件（如 Continue）能够无缝对接。</li>
+</ul>
+<h2 id="2-交互层的对比：AI-Coding-Agent-哪家强？"><a href="#2-交互层的对比：AI-Coding-Agent-哪家强？" class="headerlink" title="(2) 交互层的对比：AI Coding Agent 哪家强？"></a>(2) 交互层的对比：AI Coding Agent 哪家强？</h2><p>在开源社区中，有几个备受瞩目的 AI Coding Agent 方案，我们对其进行了横向对比：  </p>
+<table>
+<thead>
+<tr>
+<th align="left">开源 Agent 项目</th>
+<th align="left">License</th>
+<th align="left">CLI</th>
+<th align="left">VS Code</th>
+<th align="left">核心特色与推荐理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>OpenCode</strong></td>
+<td align="left">Open Source</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left">轻量极客风，对 NeoVim 用户极其友好。</td>
+</tr>
+<tr>
+<td align="left"><strong>Aider</strong></td>
+<td align="left">Open Source</td>
+<td align="left">✅</td>
+<td align="left">🛠️</td>
+<td align="left"><strong>终端交互战神</strong>。擅长复杂重构，支持 Git 自动提交变更。</td>
+</tr>
+<tr>
+<td align="left"><strong>Cline</strong></td>
+<td align="left">Open Source</td>
+<td align="left">✅</td>
+<td align="left">✅</td>
+<td align="left"><strong>功能激进</strong>。支持 Agent 模式直接执行终端指令和读写文件。</td>
+</tr>
+<tr>
+<td align="left"><strong>Continue</strong></td>
+<td align="left"><strong>Open Source</strong></td>
+<td align="left"><strong>✅</strong></td>
+<td align="left"><strong>✅</strong></td>
+<td align="left"><strong>全能选手</strong>。插件生态成熟，上下文索引强大，能完美适配 Ollama。</td>
+</tr>
+</tbody></table>
+<p><strong>最终选择：Continue</strong><br>经过权衡，我最终选择了 <strong>Continue</strong>。它的优势在于高度的自定义自由度，能够灵活配置不同的本地模型（Chat 用大模型，补全用小模型），且其 UI 交互与 <strong>GitHub Copilot Chat</strong> 高度一致，是目前手搓 AI 工作台的“满分”底座。  </p>
+<h3 id="Continue-与-GitHub-Copilot-Chat-的详细比较"><a href="#Continue-与-GitHub-Copilot-Chat-的详细比较" class="headerlink" title="Continue 与 GitHub Copilot Chat 的详细比较"></a>Continue 与 GitHub Copilot Chat 的详细比较</h3><p>我们可以从以下三个维度来拆解它们的关系：  </p>
+<ol>
+<li><strong>核心功能的“平替”</strong>：在侧边栏对话 (<code>Cmd+L</code>)、内联编辑 (<code>Cmd+I</code>) 和代码自动补全上，Continue 完全复刻了 Copilot Chat 的核心体验。  </li>
+<li><strong>Continue 的“降维打击”</strong>：Copilot 只能用 OpenAI 的模型，而 Continue 让你实现“模型自由”——用 <strong>Qwen 30B</strong> 搞深度思考，用 <strong>DeepSeek 16B</strong> 做代码重写。同时，它的 <code>@</code> 体系（如 <code>@Codebase</code>）提供了 Copilot 难以触及的精准本地上下文。  </li>
+<li><strong>与 Cursor/Cline 的区别</strong>：不同于魔改整个 IDE 的 Cursor 或频繁执行系统指令的 Cline，Continue 保持了插件的纯粹性，不改变你的 IDE 习惯，仅作为超强增强包存在。</li>
+</ol>
+<h1 id="3-落地实践：手把手配置你的-AI-工作台"><a href="#3-落地实践：手把手配置你的-AI-工作台" class="headerlink" title="3. 落地实践：手把手配置你的 AI 工作台"></a>3. 落地实践：手把手配置你的 AI 工作台</h1><p>在 Mac M3 环境下，我们将使用 <strong>Ollama</strong> 作为后端，结合 <strong>Qwen3 Coder 30B</strong>（高性能大模型）与 <strong>DeepSeek Coder V2 16B</strong>。  </p>
+<h2 id="1-安装-Ollama-与模型准备"><a href="#1-安装-Ollama-与模型准备" class="headerlink" title="(1) 安装 Ollama 与模型准备"></a>(1) 安装 Ollama 与模型准备</h2><p>首先，通过 Homebrew 安装 Ollama 并将其设为后台服务。  </p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># 安装 Ollama</span></span><br><span class="line">brew install ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将 Ollama 设为 brew service 后台运行</span></span><br><span class="line">brew services start ollama</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载并运行模型进行测试</span></span><br><span class="line">ollama run qwen3-coder:30b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载备用模型及向量索引模型</span></span><br><span class="line">ollama pull deepseek-coder-v2:16b</span><br><span class="line">ollama pull nomic-embed-text  </span><br></pre></td></tr></tbody></table></figure>
+<h2 id="2-安装-VS-Code-Continue-插件并配置"><a href="#2-安装-VS-Code-Continue-插件并配置" class="headerlink" title="(2) 安装 VS Code Continue 插件并配置"></a>(2) 安装 VS Code Continue 插件并配置</h2><p>安装Continue插件后，修改配置文件 <code>~/.continue/config.yaml</code> 如下：  </p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Local</span> <span class="string">Ollama</span> <span class="string">Config</span></span><br><span class="line"><span class="attr">version:</span> <span class="number">1.0</span><span class="number">.0</span></span><br><span class="line"><span class="attr">schema:</span> <span class="string">v1</span></span><br><span class="line"></span><br><span class="line"><span class="attr">models:</span></span><br><span class="line">  <span class="comment"># Primary Model (Default for Chat and Edit)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Coder</span> <span class="string">30B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Secondary Model (Available in dropdown)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">DeepSeek</span> <span class="string">Coder</span> <span class="string">V2</span> <span class="string">16B</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">deepseek-coder-v2:16b</span></span><br><span class="line">    <span class="attr">contextLength:</span> <span class="number">32768</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">chat</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">edit</span></span><br><span class="line">    <span class="attr">apiBase:</span> <span class="string">http://localhost:11434</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Dedicated Autocomplete Model</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Qwen3</span> <span class="string">Autocomplete</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">qwen3-coder:30b</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">autocomplete</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Embeddings Model (for @codebase)</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Nomic</span> <span class="string">Embed</span></span><br><span class="line">    <span class="attr">provider:</span> <span class="string">ollama</span></span><br><span class="line">    <span class="attr">model:</span> <span class="string">nomic-embed-text</span></span><br><span class="line">    <span class="attr">roles:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">embed</span></span><br><span class="line"></span><br><span class="line"><span class="attr">context:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">currentFile</span> </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">file</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">folder</span>   </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">open</span>        </span><br><span class="line">    <span class="attr">params:</span></span><br><span class="line">      <span class="attr">onlyPinned:</span> <span class="literal">false</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">code</span>        </span><br><span class="line">  <span class="bullet">-</span> <span class="attr">provider:</span> <span class="string">terminal</span>    </span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="3-开启-Vibe-Coding：实战演练"><a href="#3-开启-Vibe-Coding：实战演练" class="headerlink" title="(3) 开启 Vibe Coding：实战演练"></a>(3) 开启 Vibe Coding：实战演练</h2><p>配置完成后，你可以通过Continue的侧边栏或快捷键进入“氛围编程”模式。核心技巧在于利用 <strong>@ 符号</strong> 精确喂给 AI 上下文，以及让它跨越当前文件去创造新内容。  </p>
+<p><strong>实战场景示例：使用 Vibe Coding 创建一个简单的命令行工具</strong><br>我们以创建一个简单的命令行工具为例，目标是让 AI 帮你完成从项目初始化到代码生成的全过程，无需你懂任何编程知识。</p>
+<ul>
+<li><p><strong>第一步：初始化项目</strong><br>在 Continue 侧边栏（<code>Cmd + L</code>）中输入：  </p>
+<blockquote>
+<p>帮我创建一个空的命令行工具项目，使用python语言作为主编程语言，使用 <code>uv</code> 管理项目和依赖，项目名称叫 <code>my_cli</code>，这一步不要生成代码。  </p>
+</blockquote>
+<p>AI 会自动运行 <code>uv init my_cli_tool</code> 命令，并生成项目目录结构和 <code>pyproject.toml</code> 文件。  </p>
+</li>
+<li><p><strong>第二步：生成主程序文件</strong><br>在 Continue 侧边栏中输入：  </p>
+<blockquote>
+<p>@my_cli 编辑 <code>main.py</code> 文件，修改功能为打印‘Hello, World!。自动将代码应用到main.py里。  </p>
+</blockquote>
+<p>AI 会自动编辑 <code>main.py</code> 文件，生成一个完整的命令行程序，你可以点击“应用”按钮保存更改。  </p>
+<p>你可能会遇到生成的代码有问题，所以在Continue侧边栏中继续输入：  </p>
+<blockquote>
+<p>@my_cli 修复代码main.py中的问题  </p>
+</blockquote>
+<p>AI会自动修复有问题的代码。  </p>
+</li>
+<li><p><strong>第三步：内联编辑与修改</strong><br>打开 <code>main.py</code> 文件，选中main函数中的代码，按下 <code>Cmd + I</code> 唤起内联编辑框，输入：  </p>
+<blockquote>
+<p>修改这个程序，让它在运行时提示用户输入名字，并打印‘Hello, [名字]!’。  </p>
+</blockquote>
+<p>AI 会自动更新程序代码，增加用户输入功能，并生成相应逻辑。  </p>
+</li>
+<li><p><strong>第四步：生成测试文件</strong><br>在 Continue 侧边栏中输入：  </p>
+<blockquote>
+<p>请创建并编辑 <code>test_main.py</code> 文件，生成一个基本的测试文件，测试 <code>main</code> 函数是否能正常运行。  </p>
+</blockquote>
+<p>AI 会生成一个完整的测试文件，包含基本的测试用例，方便你验证程序功能。  </p>
+</li>
+<li><p><strong>第五步：一键调试</strong><br>在 Continue 侧边栏输入：</p>
+<blockquote>
+<p>@Terminal 帮我调试代码，要求覆盖单元测试和主程序运行。  </p>
+</blockquote>
+<p>AI 将自动执行测试并运行代码，如遇报错，会循序渐进地引导你修复。  </p>
+</li>
+<li><p><strong>第六步：生成打包配置</strong><br>在 Continue 侧边栏输入：</p>
+<blockquote>
+<p>@my_cli 为该 Python 项目生成打包配置并测试安装。  </p>
+</blockquote>
+<p>AI 会自动完成配置编写、安装测试，并根据结果进行迭代优化。  </p>
+</li>
+<li><p><strong>第七步：配置 CI/CD 流水线</strong><br>在 Continue 侧边栏输入：</p>
+<blockquote>
+<p>@my_cli 基于 GitHub Actions 生成流水线，将 Python 包发布至内部 Artifactory。  </p>
+</blockquote>
+<p>AI 将分步引导你完成自动化部署环境的搭建。</p>
+</li>
+</ul>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>借助 Continue 与 Ollama，我们利用 Mac 本地算力构建了一个全封闭的 AI 开发环境。这不仅解决了云端 AI 潜在的隐私泄露风险，还通过本地化部署获得了零延迟的反馈体验。<br>所谓的“氛围编程(Vibe Coding)”，核心在于开发者意图的无缝传递。只需简单的指令描述，AI 就能在你的项目范围内快速生成、调试代码，大幅缩短从构思到上线的工作流。  </p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>AI辅助编程</category>
+      </categories>
+      <tags>
+        <tag>LLM</tag>
+        <tag>AI Coding Agent</tag>
       </tags>
   </entry>
   <entry>
