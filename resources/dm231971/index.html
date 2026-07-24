@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Description">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+  <style>
+    /* Force cover background to stretch 100% full screen */
+    section.cover {
+      background-size: cover !important;
+      background-position: center center !important;
+      background-repeat: no-no-repeat !important;
+      min-height: 100vh !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    window.$docsify = {
+      // 1. Initial fallback name
+      name: '<b>抽象谬误<br>为何人工智能能够模拟但不能实例化意识</b>',
+      repo: '',
+
+      // 2. Enable navbar, sidebar, and coverpage
+      loadSidebar: true,
+      loadNavbar: true,
+      coverpage: true,
+      subMaxLevel: 3,
+      auto2top: true,
+
+      sidebarDisplayLevel: 0,
+
+      // Tell Docsify which paths have localized coverpages
+      coverpage: ['/zh-CN/', '/en/'],
+      onlyCover: false,
+      
+      // Set fallback language if a page doesn't exist
+      fallbackLanguages: ['zh-CN', 'en'],
+      
+      // 3. Set root alias to redirect "/" directly to "/zh-CN/"
+      alias: {
+        '/' : '/zh-CN/',
+        '/README' : '/zh-CN/'
+      },
+
+      // 4. Dynamic Title Switcher & Link Handler
+      plugins: [
+        function(hook, vm) {
+          // 1. Force root URL to redirect to /zh-CN/ on first load
+          hook.init(function() {
+            if (!window.location.hash || window.location.hash === '#/') {
+              window.location.hash = '#/zh-CN/';
+            }
+          });
+
+          // 2. Handle sidebar title text & click navigation dynamically
+          hook.afterEach(function(html, next) {
+            var isEnglish = vm.route.path.indexOf('/en/') === 0;
+
+            var titleText = isEnglish
+              ? '<b>The Fallacy of Abstraction<br>Why AI Can Simulate But Not Instantiate Consciousness</b>'
+              : '<b>抽象谬误<br>为何人工智能能够模拟但不能实例化意识</b>';
+
+            var nameEl = document.querySelector('.app-name-link') || document.querySelector('.app-name');
+            if (nameEl) {
+              nameEl.innerHTML = titleText;
+
+              // Override click event to guarantee language persistence
+              nameEl.onclick = function(e) {
+                e.preventDefault(); // Prevent default link jump
+
+                // Re-check language at click time
+                var currentlyEnglish = vm.route.path.indexOf('/en/') === 0;
+                var targetRoute = currentlyEnglish ? '#/en/' : '#/zh-CN/';
+
+                // Update route hash if different
+                if (window.location.hash !== targetRoute) {
+                  window.location.hash = targetRoute;
+                }
+
+                // Smooth scroll to top to bring the correct cover back into view
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              };
+            }
+
+            next(html);
+          });
+        }
+      ],
+      
+      // 完整配置参数
+      search: {
+        maxAge: 86400000, // 过期时间，单位毫秒，默认一天
+        paths: 'auto', // or 'auto'
+        placeholder: '搜索',
+
+        noData: '没有结果!',
+
+        // 搜索标题的最大层级, 1 - 6
+        depth: 6,
+
+        hideOtherSidebarContent: false, // 是否隐藏其他侧边栏内容
+
+        // 避免搜索索引冲突
+        // 同一域下的多个网站之间
+        namespace: 'dm231971',
+
+        // 使用不同的索引作为路径前缀（namespaces）
+        // 注意：仅适用于 paths: 'auto' 模式
+        //
+        // 初始化索引时，我们从侧边栏查找第一个路径
+        // 如果它与列表中的前缀匹配，我们将切换到相应的索引
+        pathNamespaces: ['/']
+      },
+
+      pagination: {
+          previousText: {
+            '/zh-CN/': '上一章节',
+            '/en/': 'PREVIOUS'
+          },
+          nextText: {
+            '/zh-CN/': '下一章节',
+            '/en/': 'NEXT'
+          },
+          crossChapter: true,
+          crossChapterText: true,
+        }
+    }
+  </script>
+  <!-- Docsify v4 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/emoji.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <script src="//unpkg.com/docsify-pagination/dist/docsify-pagination.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-php.min.js"></script>
+  <!-- ADD THIS SINGLE LINE TO ENABLE COLLAPSING: -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/docsify-sidebar-collapse.min.js"></script>
+</body>
+</html>
