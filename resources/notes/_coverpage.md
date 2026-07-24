@@ -1,7 +1,6 @@
 <!-- _coverpage.md -->
-
-![logo](/_media/site.png)
-
-# 守希的随笔
+# 守希的笔记
 Cloud, DevOps
 - 作者：守希
+
+![](_media/cover.jpg)

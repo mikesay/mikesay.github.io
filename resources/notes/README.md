@@ -1,2 +1,2 @@
 
-![cover](/_media/cover.jpeg)
+![cover](/_media/main.jpg)
