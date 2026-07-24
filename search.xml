@@ -1,129 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</title>
-    <url>/2021/09/06/aliyun-coredns-issue-tracking/</url>
-    <content><![CDATA[<p>最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。</p>
-<span id="more"></span>
-
-<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>通过以下命令在Pod中通过域名访问某个服务时，有时能正常访问，有时访问不了。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};<span class="keyword">do</span> curl http://&lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-<p>错误大致为:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Couldn<span class="string">'t resolve host xxxx</span></span><br></pre></td></tr></tbody></table></figure>
-<p>从错误信息来看，是域名解析出了问题。用nslookup命令去检查域名解析，发现解析确实不稳定。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};nslookup &lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h1><h2 id="ACK集群的结构介绍"><a href="#ACK集群的结构介绍" class="headerlink" title="ACK集群的结构介绍"></a>ACK集群的结构介绍</h2><p>在详细排查问题之前，先了解下阿里云ACK集群的结构。<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">阿里云容器服务Kubernetes版（Alibaba Cloud Container Service for Kubernetes，简称容器服务ACK）</a>包含了专有版Kubernetes（Dedicated Kubernetes）、托管版Kubernetes（Managed Kubernetes）、Serverless Kubernetes三种形态。本文讨论的是托管版ACK，结构如下：</p>
-<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/1.png"></p>
-<p>集群的详细信息：<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/2.jpeg"></p>
-<ul>
-<li>Pod网络类型是Flannel，CIDR: 172.20.0.0/16。每个工作节点的最大的Pod数量为64 (ECS-1 CIDR: 172.20.0.192/26, ECS-2 CIDR: 172.20.0.128/26 …)</li>
-<li>Service CIDR: 172.21.0.0/20</li>
-<li>系统组件CoreDNS目前有两个Pod，分别运行在两个工作节点上</li>
-</ul>
-<h2 id="检查前的准备"><a href="#检查前的准备" class="headerlink" title="检查前的准备"></a>检查前的准备</h2><p>分别在CoreDNS Pods所在的两个工作节点上各启动一个测试Pod：Pod(Busybox)，Service(Nginx) + Pod(Nginx)。  </p>
-<blockquote>
-<p>将测试Pods分散在不同的工作节点上，并调度到CoreDNS Pods所在的工作节点中，这样既能测试同一节点上的CoreDNS访问，也能测试跨节点的CoreDNS访问。</p>
-</blockquote>
-<ul>
-<li>在ECS-1主机上启动Pod(Busybox)</li>
-</ul>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.1.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">yauritux/busybox-curl:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">args:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">sh</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">"sleep 36000"</span></span><br><span class="line"><span class="string">```</span>  </span><br><span class="line">  </span><br><span class="line"><span class="string">&gt;</span> <span class="string">通过nodeSelector绑定到ECS-1主机（10.0.1.121）上。</span></span><br><span class="line"></span><br><span class="line"><span class="string">+</span> <span class="string">在ECS-2主机上启动Service(Nginx)</span> <span class="string">+</span> <span class="string">Pod(Nginx)</span></span><br><span class="line"><span class="string">```yaml</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.2.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">nginx:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">ports:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">              <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">              <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/instance:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>通过nodeSelector绑定到ECS-2主机（10.0.2.121）上。</p>
-</blockquote>
-<h2 id="检查系统组件CoreDNS"><a href="#检查系统组件CoreDNS" class="headerlink" title="检查系统组件CoreDNS"></a>检查系统组件CoreDNS</h2><blockquote>
-<p>参考官方文档 <a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">Debugging DNS Resolution</a></p>
-</blockquote>
-<h3 id="检查CoreDNS-Pod是否正在运行"><a href="#检查CoreDNS-Pod是否正在运行" class="headerlink" title="检查CoreDNS Pod是否正在运行"></a>检查CoreDNS Pod是否正在运行</h3><p>执行命令<code>kubectl get pods</code>验证CoreDNS Pod正在运行。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl get pods -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
-
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME                           READY   STATUS    RESTARTS   AGE</span><br><span class="line">pod/coredns-849698df86-j9474   1/1     Running   0          9d</span><br><span class="line">pod/coredns-849698df86-xl5g9   1/1     Running   0          9d</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果没有看到CoreDNS Pod正在运行，可能在你当前的环境里缺省没有安装CoreDNS插件，你可能需要手动安装它。如果看到CoreDNS Pod失败，执行命令<code>kubectl describe pod</code>检查CoreDNS Pod的事件。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl describe pod -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="检查CoreDNS-Pod是否有运行时错误"><a href="#检查CoreDNS-Pod是否有运行时错误" class="headerlink" title="检查CoreDNS Pod是否有运行时错误"></a>检查CoreDNS Pod是否有运行时错误</h3><p>运行状态正常的Pod并不代表没有错误，有时程序会处理异常以保证服务的可用性。所以需要执行命令<code>kubectl logs</code>检查Pod的日志是否有任何可疑或异常的消息。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs -l k8s-app=kube-dns -n=kube-system</span><br></pre></td></tr></tbody></table></figure>
-
-<p>正常的CoreDNS日志实例：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br><span class="line"></span><br><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="检查CoreDNS服务"><a href="#检查CoreDNS服务" class="headerlink" title="检查CoreDNS服务"></a>检查CoreDNS服务</h3><p>执行命令<code>kubect get svc -l k8s-app=kube-dns -n=kube-system</code>检查CoreDNS服务是否存在。如果服务不存在，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>进行排查。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)                  AGE</span><br><span class="line">service/kube-dns   ClusterIP   172.21.0.10   &lt;none&gt;        53/UDP,53/TCP,9153/TCP   450d</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="检查CoreDNS-endpoints对象是否存在"><a href="#检查CoreDNS-endpoints对象是否存在" class="headerlink" title="检查CoreDNS endpoints对象是否存在"></a>检查CoreDNS endpoints对象是否存在</h3><p>执行命令<code>kubectl get endpoints</code>检查CoreDNS endpoints是否存在。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME       ENDPOINTS                                                       AGE</span><br><span class="line">kube-dns   172.20.0.146:53,172.20.0.205:53,172.20.0.146:9153 + 3 more...   458d</span><br></pre></td></tr></tbody></table></figure>
-<p>如果没有检查到endpoints，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>文档中的endpoints段落。</p>
-<h3 id="检查DNS查询是否被CoreDNS处理"><a href="#检查DNS查询是否被CoreDNS处理" class="headerlink" title="检查DNS查询是否被CoreDNS处理"></a>检查DNS查询是否被CoreDNS处理</h3><p>首先，修改CoreDNS的配置添加日志插件。</p>
-<p>执行以下命令打开CoreDNS的配置：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl edit cm coredns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
-<p>在Corefile段落添加<code>log</code>：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: ConfigMap</span><br><span class="line">data:</span><br><span class="line">  Corefile: |-</span><br><span class="line">    .:53 {</span><br><span class="line">      <span class="built_in">log</span></span><br><span class="line">      autopath @kubernetes</span><br><span class="line">      cache 30</span><br><span class="line">      errors</span><br><span class="line">      forward . /etc/resolv.conf</span><br><span class="line">      health</span><br><span class="line">      kubernetes cluster.local in-addr.arpa ip6.arpa {</span><br><span class="line">        pods verified</span><br><span class="line">        fallthrough in-addr.arpa ip6.arpa</span><br><span class="line">      }</span><br><span class="line">      loadbalance</span><br><span class="line">      loop</span><br><span class="line">      prometheus :9153</span><br><span class="line">      ready</span><br><span class="line">      reload</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
-<p>其次，执行以下命令打开CoreDNS Pods日志：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs --<span class="built_in">tail</span> 20 -f -l k8s-app=kube-dns -n kube-system | grep -E <span class="string">"\"A IN nginx.default.svc.cluster.local"</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>通过grep命令仅提取域名nginx.default.svc.cluster.local的DNS查询日志，后面我们将查询这个域名。</p>
-</blockquote>
-<p>接下来，执行以下命令进入Pod(Busybox)：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- sh</span><br></pre></td></tr></tbody></table></figure>
-<p>在Pod(Busybox)中，重复查询域名nginx.default.svc.cluster.local多次，例如100次：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>检查CoreDNS Pods日志，看是否有同样次数的域名解析日志：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] 172.20.0.219:48418 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000179197s</span><br><span class="line">[INFO] 172.20.0.219:59640 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000067985s</span><br><span class="line">[INFO] 172.20.0.219:34682 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000072317s</span><br><span class="line">[INFO] 172.20.0.219:37560 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000075455s</span><br><span class="line">[INFO] 172.20.0.219:59156 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.00006403s</span><br><span class="line">......</span><br></pre></td></tr></tbody></table></figure>
-<p>如果域名解析的次数少于查询的次数，说明有些解析请求没有被CoreDNS获取，客户端<code>nslookup</code>命令就会出现有时解析成功，有时解析失败的情况。这也证明了前面描述的域名解析不稳定的问题。</p>
-<h3 id="直接调用CoreDNS的Pod-IP解析域名"><a href="#直接调用CoreDNS的Pod-IP解析域名" class="headerlink" title="直接调用CoreDNS的Pod IP解析域名"></a>直接调用CoreDNS的Pod IP解析域名</h3><p>直接使用CoreDNS Pod IP可以避免CoreDNS服务到CoreDNS Pod的代理解析。如果检查下来问题仍旧存在，说明从CoreDNS服务到CoreDNS Pod的代理解析没有问题，否则需要详细检查kube-proxy的状态。</p>
-<p>Pod(Busybox)缺省使用CoreDNS服务IP调用CoreDNS解析域名。执行以下命令可以查看Pod(Busybox)中的DNS配置：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- <span class="built_in">cat</span> /etc/resolv.conf</span><br></pre></td></tr></tbody></table></figure>
-
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nameserver 172.21.0.10</span><br><span class="line">search default.svc.cluster.local svc.cluster.local cluster.local</span><br><span class="line">options ndots:5</span><br></pre></td></tr></tbody></table></figure>
-<p>172.21.0.10是CoreDNS的服务IP。</p>
-<p>编辑Pod(Busybox)中的<code>/etc/resolv.conf</code>将nameserver换成同一节点上的CoreDNS Pod IP（172.20.0.205），执行以下命令检查Nginx服务域名的解析情况：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
-<p>测试下来发现使用同一个节点上的CoreDNS Pod解析域名正常且稳定。</p>
-<p>将Pod(Busybox)的nameserver换成另一个节点上的CoreDNS Pod IP（172.20.0.146），再执行上面同样的测试发现域名解析都失败了。 这个测试说明Pod(Busybox)可以访问同一节点上的CoreDNS Pod，但是不能访问另一个节点上的CoreDNS Pod，也就是跨节点的Pod之间无法访问。接下来就需要检查跨节点Pod之间的路由信息是否正确了。</p>
-<h2 id="检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息"><a href="#检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息" class="headerlink" title="检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息"></a>检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息</h2><ul>
-<li><p>Pod(Busybox)里的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/3.png"><br>从Pod(Busybox)出来的流量会通过红色的路由规则进入到节点ECS-1。</p>
-</li>
-<li><p>VPC里跨节点之间的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/4.png"><br>红框中的系统路由规则使两个节点之间路由可达。</p>
-<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/5.png"><br>蓝框中的路由规则使流量从ECS-1路由到ECS-2中。</p>
-</li>
-<li><p>ECS-2的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/6.png"><br>红色路由规则使得流量从ECS-2路由到网桥接口cni0，最终由cni0根据目的Pod IP地址进入CoreDNS Pod（172.20.0.146）。</p>
-</li>
-</ul>
-<p>从路由分析下来看，跨节点Pod之前相互访问没有问题。接下来就需要检查施加在工作节点上的安全组规则，看流量是否被禁止了。</p>
-<h2 id="检查安全组"><a href="#检查安全组" class="headerlink" title="检查安全组"></a>检查安全组</h2><p>通过这个检查，最终发现工作节点上的安全组并不是当前集群对应的安全组，从而导致所有跨节点之前的Pod访问流量被禁止了。安全组用错的原因是在新建ACK集群时并没有创建新的节点而是选择了已经存在的节点。</p>
-<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>找到问题后，解决方案就简单了，也就是将所有的工作节点的安全组全部换成当前集群的安全组。</p>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>对于这次的问题定位和解决花费了一定的精力，而且这个问题未来也可能再次出现。所以，我们可以将跨节点Pod之间的网络连通性纳入到监控系统中，这样可以保证下次同样的问题出现时，能够通过监控系统快速的发现和定位问题。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>AliCloud</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>阿里云通过RAM角色管理多云账号下的资源</title>
     <url>/2021/01/05/aliyun-ram-role-multi-accounts/</url>
     <content><![CDATA[<p>云计算经过十几年的发展已经变得很成熟，无论是传统企业还是初创企业都将云计算平台作为其数字化策略的支撑平台。在国内，阿里云是使用最广泛的公有云平台，很多本土企业和外资企业在华的分支机构都是首选阿里云来构建和运行他们的数字化方案。为了能够高效地使用阿里云，同时又能对接阿里云产品服务团队，在这些公司里逐渐地出现了一个新的角色或团队来统一规划、管理阿里云平台，我们就暂且称这个团队为云团队。大部分公司云团队往往需要管理多个阿里云账号，而在不同的账号里的用户创建、登录、登出的操作往往会变的很麻烦。本文介绍通过切换身份的方式扮演<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">RAM角色</a>来管理多云账号下的资源。</p>
@@ -360,6 +237,129 @@
       </tags>
   </entry>
   <entry>
+    <title>记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</title>
+    <url>/2021/09/06/aliyun-coredns-issue-tracking/</url>
+    <content><![CDATA[<p>最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。</p>
+<span id="more"></span>
+
+<h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>通过以下命令在Pod中通过域名访问某个服务时，有时能正常访问，有时访问不了。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};<span class="keyword">do</span> curl http://&lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+<p>错误大致为:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Couldn<span class="string">'t resolve host xxxx</span></span><br></pre></td></tr></tbody></table></figure>
+<p>从错误信息来看，是域名解析出了问题。用nslookup命令去检查域名解析，发现解析确实不稳定。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> {1..100};nslookup &lt;service name&gt;.&lt;namespace&gt;.svc.cluster.local;<span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h1><h2 id="ACK集群的结构介绍"><a href="#ACK集群的结构介绍" class="headerlink" title="ACK集群的结构介绍"></a>ACK集群的结构介绍</h2><p>在详细排查问题之前，先了解下阿里云ACK集群的结构。<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">阿里云容器服务Kubernetes版（Alibaba Cloud Container Service for Kubernetes，简称容器服务ACK）</a>包含了专有版Kubernetes（Dedicated Kubernetes）、托管版Kubernetes（Managed Kubernetes）、Serverless Kubernetes三种形态。本文讨论的是托管版ACK，结构如下：</p>
+<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/1.png"></p>
+<p>集群的详细信息：<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/2.jpeg"></p>
+<ul>
+<li>Pod网络类型是Flannel，CIDR: 172.20.0.0/16。每个工作节点的最大的Pod数量为64 (ECS-1 CIDR: 172.20.0.192/26, ECS-2 CIDR: 172.20.0.128/26 …)</li>
+<li>Service CIDR: 172.21.0.0/20</li>
+<li>系统组件CoreDNS目前有两个Pod，分别运行在两个工作节点上</li>
+</ul>
+<h2 id="检查前的准备"><a href="#检查前的准备" class="headerlink" title="检查前的准备"></a>检查前的准备</h2><p>分别在CoreDNS Pods所在的两个工作节点上各启动一个测试Pod：Pod(Busybox)，Service(Nginx) + Pod(Nginx)。  </p>
+<blockquote>
+<p>将测试Pods分散在不同的工作节点上，并调度到CoreDNS Pods所在的工作节点中，这样既能测试同一节点上的CoreDNS访问，也能测试跨节点的CoreDNS访问。</p>
+</blockquote>
+<ul>
+<li>在ECS-1主机上启动Pod(Busybox)</li>
+</ul>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">busybox</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.1.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">busybox</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">yauritux/busybox-curl:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">args:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">sh</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">-c</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">"sleep 36000"</span></span><br><span class="line"><span class="string">```</span>  </span><br><span class="line">  </span><br><span class="line"><span class="string">&gt;</span> <span class="string">通过nodeSelector绑定到ECS-1主机（10.0.1.121）上。</span></span><br><span class="line"></span><br><span class="line"><span class="string">+</span> <span class="string">在ECS-2主机上启动Service(Nginx)</span> <span class="string">+</span> <span class="string">Pod(Nginx)</span></span><br><span class="line"><span class="string">```yaml</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">ClusterFirst</span></span><br><span class="line">      <span class="attr">nodeSelector:</span></span><br><span class="line">        <span class="attr">kubernetes.io/os:</span> <span class="string">linux</span></span><br><span class="line">        <span class="attr">kubernetes.io/hostname:</span> <span class="string">cn-shanghai.10.0.2.121</span></span><br><span class="line">      <span class="attr">terminationGracePeriodSeconds:</span> <span class="number">300</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">nginx:latest</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">IfNotPresent</span></span><br><span class="line">          <span class="attr">ports:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">              <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">              <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/name:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/instance:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">ClusterIP</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>通过nodeSelector绑定到ECS-2主机（10.0.2.121）上。</p>
+</blockquote>
+<h2 id="检查系统组件CoreDNS"><a href="#检查系统组件CoreDNS" class="headerlink" title="检查系统组件CoreDNS"></a>检查系统组件CoreDNS</h2><blockquote>
+<p>参考官方文档 <a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">Debugging DNS Resolution</a></p>
+</blockquote>
+<h3 id="检查CoreDNS-Pod是否正在运行"><a href="#检查CoreDNS-Pod是否正在运行" class="headerlink" title="检查CoreDNS Pod是否正在运行"></a>检查CoreDNS Pod是否正在运行</h3><p>执行命令<code>kubectl get pods</code>验证CoreDNS Pod正在运行。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl get pods -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
+
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME                           READY   STATUS    RESTARTS   AGE</span><br><span class="line">pod/coredns-849698df86-j9474   1/1     Running   0          9d</span><br><span class="line">pod/coredns-849698df86-xl5g9   1/1     Running   0          9d</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果没有看到CoreDNS Pod正在运行，可能在你当前的环境里缺省没有安装CoreDNS插件，你可能需要手动安装它。如果看到CoreDNS Pod失败，执行命令<code>kubectl describe pod</code>检查CoreDNS Pod的事件。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl describe pod -l k8s-app=kube-dns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="检查CoreDNS-Pod是否有运行时错误"><a href="#检查CoreDNS-Pod是否有运行时错误" class="headerlink" title="检查CoreDNS Pod是否有运行时错误"></a>检查CoreDNS Pod是否有运行时错误</h3><p>运行状态正常的Pod并不代表没有错误，有时程序会处理异常以保证服务的可用性。所以需要执行命令<code>kubectl logs</code>检查Pod的日志是否有任何可疑或异常的消息。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs -l k8s-app=kube-dns -n=kube-system</span><br></pre></td></tr></tbody></table></figure>
+
+<p>正常的CoreDNS日志实例：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br><span class="line"></span><br><span class="line">.:53</span><br><span class="line">[INFO] plugin/reload: Running configuration MD5 = 3be31de8f5d9c8e0b5a82d2b6bd5251b</span><br><span class="line">CoreDNS-1.6.7</span><br><span class="line">linux/amd64, go1.13.6, da7f65b</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="检查CoreDNS服务"><a href="#检查CoreDNS服务" class="headerlink" title="检查CoreDNS服务"></a>检查CoreDNS服务</h3><p>执行命令<code>kubect get svc -l k8s-app=kube-dns -n=kube-system</code>检查CoreDNS服务是否存在。如果服务不存在，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>进行排查。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)                  AGE</span><br><span class="line">service/kube-dns   ClusterIP   172.21.0.10   &lt;none&gt;        53/UDP,53/TCP,9153/TCP   450d</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="检查CoreDNS-endpoints对象是否存在"><a href="#检查CoreDNS-endpoints对象是否存在" class="headerlink" title="检查CoreDNS endpoints对象是否存在"></a>检查CoreDNS endpoints对象是否存在</h3><p>执行命令<code>kubectl get endpoints</code>检查CoreDNS endpoints是否存在。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">NAME       ENDPOINTS                                                       AGE</span><br><span class="line">kube-dns   172.20.0.146:53,172.20.0.205:53,172.20.0.146:9153 + 3 more...   458d</span><br></pre></td></tr></tbody></table></figure>
+<p>如果没有检查到endpoints，参考<a href="https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/">调试服务</a>文档中的endpoints段落。</p>
+<h3 id="检查DNS查询是否被CoreDNS处理"><a href="#检查DNS查询是否被CoreDNS处理" class="headerlink" title="检查DNS查询是否被CoreDNS处理"></a>检查DNS查询是否被CoreDNS处理</h3><p>首先，修改CoreDNS的配置添加日志插件。</p>
+<p>执行以下命令打开CoreDNS的配置：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl edit cm coredns -n kube-system</span><br></pre></td></tr></tbody></table></figure>
+<p>在Corefile段落添加<code>log</code>：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: ConfigMap</span><br><span class="line">data:</span><br><span class="line">  Corefile: |-</span><br><span class="line">    .:53 {</span><br><span class="line">      <span class="built_in">log</span></span><br><span class="line">      autopath @kubernetes</span><br><span class="line">      cache 30</span><br><span class="line">      errors</span><br><span class="line">      forward . /etc/resolv.conf</span><br><span class="line">      health</span><br><span class="line">      kubernetes cluster.local in-addr.arpa ip6.arpa {</span><br><span class="line">        pods verified</span><br><span class="line">        fallthrough in-addr.arpa ip6.arpa</span><br><span class="line">      }</span><br><span class="line">      loadbalance</span><br><span class="line">      loop</span><br><span class="line">      prometheus :9153</span><br><span class="line">      ready</span><br><span class="line">      reload</span><br><span class="line">    }</span><br></pre></td></tr></tbody></table></figure>
+<p>其次，执行以下命令打开CoreDNS Pods日志：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl logs --<span class="built_in">tail</span> 20 -f -l k8s-app=kube-dns -n kube-system | grep -E <span class="string">"\"A IN nginx.default.svc.cluster.local"</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>通过grep命令仅提取域名nginx.default.svc.cluster.local的DNS查询日志，后面我们将查询这个域名。</p>
+</blockquote>
+<p>接下来，执行以下命令进入Pod(Busybox)：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- sh</span><br></pre></td></tr></tbody></table></figure>
+<p>在Pod(Busybox)中，重复查询域名nginx.default.svc.cluster.local多次，例如100次：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>检查CoreDNS Pods日志，看是否有同样次数的域名解析日志：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">[INFO] 172.20.0.219:48418 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000179197s</span><br><span class="line">[INFO] 172.20.0.219:59640 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000067985s</span><br><span class="line">[INFO] 172.20.0.219:34682 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000072317s</span><br><span class="line">[INFO] 172.20.0.219:37560 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.000075455s</span><br><span class="line">[INFO] 172.20.0.219:59156 - 4 <span class="string">"A IN nginx.default.svc.cluster.local. udp 49 false 512"</span> NOERROR qr,aa,rd 96 0.00006403s</span><br><span class="line">......</span><br></pre></td></tr></tbody></table></figure>
+<p>如果域名解析的次数少于查询的次数，说明有些解析请求没有被CoreDNS获取，客户端<code>nslookup</code>命令就会出现有时解析成功，有时解析失败的情况。这也证明了前面描述的域名解析不稳定的问题。</p>
+<h3 id="直接调用CoreDNS的Pod-IP解析域名"><a href="#直接调用CoreDNS的Pod-IP解析域名" class="headerlink" title="直接调用CoreDNS的Pod IP解析域名"></a>直接调用CoreDNS的Pod IP解析域名</h3><p>直接使用CoreDNS Pod IP可以避免CoreDNS服务到CoreDNS Pod的代理解析。如果检查下来问题仍旧存在，说明从CoreDNS服务到CoreDNS Pod的代理解析没有问题，否则需要详细检查kube-proxy的状态。</p>
+<p>Pod(Busybox)缺省使用CoreDNS服务IP调用CoreDNS解析域名。执行以下命令可以查看Pod(Busybox)中的DNS配置：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl <span class="built_in">exec</span> -it pod/busybox-757d9599bd-hdhhq -- <span class="built_in">cat</span> /etc/resolv.conf</span><br></pre></td></tr></tbody></table></figure>
+
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nameserver 172.21.0.10</span><br><span class="line">search default.svc.cluster.local svc.cluster.local cluster.local</span><br><span class="line">options ndots:5</span><br></pre></td></tr></tbody></table></figure>
+<p>172.21.0.10是CoreDNS的服务IP。</p>
+<p>编辑Pod(Busybox)中的<code>/etc/resolv.conf</code>将nameserver换成同一节点上的CoreDNS Pod IP（172.20.0.205），执行以下命令检查Nginx服务域名的解析情况：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 100); <span class="keyword">do</span> nslookup nginx.default.svc.cluster.local; <span class="keyword">done</span></span><br></pre></td></tr></tbody></table></figure>
+<p>测试下来发现使用同一个节点上的CoreDNS Pod解析域名正常且稳定。</p>
+<p>将Pod(Busybox)的nameserver换成另一个节点上的CoreDNS Pod IP（172.20.0.146），再执行上面同样的测试发现域名解析都失败了。 这个测试说明Pod(Busybox)可以访问同一节点上的CoreDNS Pod，但是不能访问另一个节点上的CoreDNS Pod，也就是跨节点的Pod之间无法访问。接下来就需要检查跨节点Pod之间的路由信息是否正确了。</p>
+<h2 id="检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息"><a href="#检查从Pod-Busybox-到不同节点上的CoreDNS-Pod（172-20-0-146）的路由信息" class="headerlink" title="检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息"></a>检查从Pod(Busybox)到不同节点上的CoreDNS Pod（172.20.0.146）的路由信息</h2><ul>
+<li><p>Pod(Busybox)里的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/3.png"><br>从Pod(Busybox)出来的流量会通过红色的路由规则进入到节点ECS-1。</p>
+</li>
+<li><p>VPC里跨节点之间的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/4.png"><br>红框中的系统路由规则使两个节点之间路由可达。</p>
+<p><img src="/2021/09/06/aliyun-coredns-issue-tracking/5.png"><br>蓝框中的路由规则使流量从ECS-1路由到ECS-2中。</p>
+</li>
+<li><p>ECS-2的路由信息<br><img src="/2021/09/06/aliyun-coredns-issue-tracking/6.png"><br>红色路由规则使得流量从ECS-2路由到网桥接口cni0，最终由cni0根据目的Pod IP地址进入CoreDNS Pod（172.20.0.146）。</p>
+</li>
+</ul>
+<p>从路由分析下来看，跨节点Pod之前相互访问没有问题。接下来就需要检查施加在工作节点上的安全组规则，看流量是否被禁止了。</p>
+<h2 id="检查安全组"><a href="#检查安全组" class="headerlink" title="检查安全组"></a>检查安全组</h2><p>通过这个检查，最终发现工作节点上的安全组并不是当前集群对应的安全组，从而导致所有跨节点之前的Pod访问流量被禁止了。安全组用错的原因是在新建ACK集群时并没有创建新的节点而是选择了已经存在的节点。</p>
+<h1 id="问题解决"><a href="#问题解决" class="headerlink" title="问题解决"></a>问题解决</h1><p>找到问题后，解决方案就简单了，也就是将所有的工作节点的安全组全部换成当前集群的安全组。</p>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>对于这次的问题定位和解决花费了一定的精力，而且这个问题未来也可能再次出现。所以，我们可以将跨节点Pod之间的网络连通性纳入到监控系统中，这样可以保证下次同样的问题出现时，能够通过监控系统快速的发现和定位问题。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>AliCloud</tag>
+        <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>云计算巨头如何用“软件韧性”重构基础设施</title>
     <url>/2026/06/19/cloud-base-resiliency/</url>
     <content><![CDATA[<blockquote>
@@ -432,272 +432,6 @@
 <p>这就是现代云原生体系的 <strong>“套娃式韧性设计”</strong>（Nested Resilience）。</p>
 <p>如果你还在试图向云厂商购买一台“永不宕机”的云服务器，或者在云上试图全盘复刻传统物理机的高可用架构，而不去利用云原生的弹性和容灾特性，那么：<br><strong>你既没有享受到云计算带来的成本红利，也没有真正获得云原生的弹性优势。</strong></p>
 <h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p><strong>接受失败是常态。</strong><br>放弃对单点绝对可靠的执念，通过分布式协同与软件智慧来解决单点不可靠的问题，这才是云计算真正的技术护城河，也是每一位现代架构师的必修课。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>架构</category>
-      </categories>
-      <tags>
-        <tag>Architecture</tag>
-        <tag>Cloud-Native</tag>
-        <tag>Stability/Aailability</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>云原生时代的应用稳定性范式转移：从“消灭故障”到“应用韧性自愈”</title>
-    <url>/2026/06/17/cloudnative-appsys-stability-the-words/</url>
-    <content><![CDATA[<p>在传统数据中心（IDC）时代，稳定性的潜台词是“消灭故障”。工程师们依赖昂贵的高规格硬件、冗余的物理线路，试图构建一个“永不宕机”的乌托邦。然而，在云原生时代，底层的商业与工程哲学发生了根本性逆转：故障是不可避免的，网络必定会抖动，商品资源底座随时可能产生局部抖动。<br>云原生应用的稳定性建设，本质上是一场思维范式的转移——从追求“绝对不坏的确定性”，走向“顺应故障、用软件定义韧性对冲风险的非确定性”。</p>
-<span id="more"></span>
-
-<h1 id="一、-概念解耦：稳定性六星阵"><a href="#一、-概念解耦：稳定性六星阵" class="headerlink" title="一、 概念解耦：稳定性六星阵"></a>一、 概念解耦：稳定性六星阵</h1><p>为了在团队中对齐规范，我们必须首先厘清影响现代分布式系统的六个核心标尺。它们不是孤立的指标，而是一套相辅相成的“六星矩阵”。</p>
-<pre><code class="language-plaintext">        [可用性 (Availability)] ── 用户视角（体验稳定）
-                  ▲
-                  │ (一体两面)
-                  ▼
-        [稳定性 (Stability)] ── 工程师视角（系统稳定）
-              ╱       ╲
-            ╱           ╲  (双子星驱动)
-          ▼               ▼
-  【先天可靠性】       【运行时韧性】
-  (Reliability)        (Resiliency)
-        ▲                 ▲
-        │                 │ (基础设施武器支撑)
-  [可扩展性]           [弹 性]
-(Scalability)       (Elasticity)
-</code></pre>
-<h2 id="1-稳定性-Stability-vs-可用性-Availability-：一体两面"><a href="#1-稳定性-Stability-vs-可用性-Availability-：一体两面" class="headerlink" title="1. 稳定性 (Stability) vs 可用性 (Availability)：一体两面"></a>1. 稳定性 (Stability) vs 可用性 (Availability)：一体两面</h2><p>这两者是同一枚硬币的正反面：</p>
-<ul>
-<li>稳定性 (Stability) 是工程师视角：它向内看，关注的是技术栈的底层原色。如服务器的 CPU 使用率、微服务的延迟（Latency）、数据库的锁等待。它是系统层面的健康表征。  </li>
-<li>可用性 (Availability) 是用户视角：它向外看，关注的是业务体验的连续性。如“页面能否正常打开？”、“订单能否成功提交？”。即使用户访问的某台底层云主机已经宕机，只要上层通过重定向让用户无感知，在用户眼里，应用就是“高可用”的。</li>
-</ul>
-<h2 id="2-可扩展性-Scalability-vs-弹性-Elasticity-：基础设施武器"><a href="#2-可扩展性-Scalability-vs-弹性-Elasticity-：基础设施武器" class="headerlink" title="2. 可扩展性 (Scalability) vs 弹性 (Elasticity)：基础设施武器"></a>2. 可扩展性 (Scalability) vs 弹性 (Elasticity)：基础设施武器</h2><p>这是云平台赋予架构师与 SRE 的两把核心武器，也是系统高可用与低成本的硬核支撑。</p>
-<ul>
-<li>可扩展性 (Scalability - 边界容量)：属于结构与静态设计范畴。它决定了系统在面对洪峰时，通过线性增加云资源（Scale-Out），理论上最大能变多大。它代表了系统的上限和边界。  </li>
-<li>弹性 (Elasticity - 动态速度)：属于动态与运营范畴。它强调的是容量调整的效率与主动性。系统能否在运行时根据外部负载的起伏，自动化、自适应地在几分钟内实时增减计算资源。</li>
-</ul>
-<h2 id="3-可靠性-Reliability-vs-韧性-Resiliency-：稳定性的双子星"><a href="#3-可靠性-Reliability-vs-韧性-Resiliency-：稳定性的双子星" class="headerlink" title="3. 可靠性 (Reliability) vs 韧性 (Resiliency)：稳定性的双子星"></a>3. 可靠性 (Reliability) vs 韧性 (Resiliency)：稳定性的双子星</h2><p>这两者是驱动系统稳定性的核心内生能力，我们可以用人体医学做类比：</p>
-<ul>
-<li>【先天可靠性】（Reliability - 先天体质）  <ul>
-<li>核心本质：这是一种确定性的事前预防能力。它回答了核心问题：“我们如何确保系统在正常或预期的负载下不发生中断？”。</li>
-<li>目标与手段：旨在最大化平均故障间隔时间（MTBF）。通过代码层面的防御性编程、合理的容量规划、以及选用经过云厂商 SLA 承诺的标准云服务规格，让系统在常态下“不生病”。</li>
-</ul>
-</li>
-<li>【运行时韧性】（Resiliency - 免疫自愈）  <ul>
-<li>核心本质：这是一种不确定性的事后动态抗风险能力。它默认了“故障必然发生”的现实，回答了核心问题：“当某些组件不可避免地损坏或过载时，我们的系统如何活下来？”</li>
-<li>目标与手段：旨在最小化平均恢复时间（MTTR）。它通过构建“故障发生 → 自动侦测 → 容错响应 → 弹性自愈”的运行时闭环，在级联故障（Cascading Failures）吞噬全盘前强行隔离故障点。</li>
-</ul>
-</li>
-</ul>
-<h1 id="二、-纵深防御：空间五层架构与时间生命周期的双轴落地矩阵"><a href="#二、-纵深防御：空间五层架构与时间生命周期的双轴落地矩阵" class="headerlink" title="二、 纵深防御：空间五层架构与时间生命周期的双轴落地矩阵"></a>二、 纵深防御：空间五层架构与时间生命周期的双轴落地矩阵</h1><p>在云原生时代，要将稳定性建设真正对齐团队规范，SRE 与架构师必须构建一个双轴交叉的落地矩阵：在时间轴（应用生命周期）筑起质量大门，在空间轴（五层技术栈）精细化选型。<br>同时，我们必须摒弃传统盲目选用大规格、高配置云资源套现安全感的过度设计思维（这极不利于成本控制），在每一个交汇点上，将【先天可靠性】与【运行时韧性】进行一正一反的配对，并在运维手册（Runbook）中明确自动化要求。  </p>
-<p>【时间维度：应用生命周期 (SDLC)】  </p>
-<pre><code class="language-plaintext"> 需求与设计  ──►  编码与开发  ──►  测试与验证  ──►  部署与发布  ──►  运维与监控 (SRE核心)
-       │               │               │               │               │
-┌──────┴───────────────┴───────────────┴───────────────┴───────────────┴──────┐
-│  1. 接入与流量控制层 (Gateway &amp; Traffic)                                       │
-│  2. 微服务治理层 (Service Governance)                                         │  【空间维度】
-│  3. 应用与计算编排层 (Application &amp; Compute)                                   │  云原生五层架构
-│  4. 分布式消息与事件层 (Messaging &amp; Middleware)                                │
-│  5. 持久化存储与数据层 (Data &amp; Persistent Storage)                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-</code></pre>
-<h2 id="1-时间轴：应用生命周期（SDLC）5-阶段的工程落地表"><a href="#1-时间轴：应用生命周期（SDLC）5-阶段的工程落地表" class="headerlink" title="1. 时间轴：应用生命周期（SDLC）5 阶段的工程落地表"></a>1. 时间轴：应用生命周期（SDLC）5 阶段的工程落地表</h2><table>
-<thead>
-<tr>
-<th>阶段</th>
-<th>潜在可靠性风险</th>
-<th>应对方案与最佳实践：【先天可靠性】(体质建设)</th>
-<th>应对方案与最佳实践：【运行时韧性】(免疫自愈)</th>
-<th>运维手册 (Runbook) 与自动化要求</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>1. 需求与架构设计</td>
-<td>• 单点故障 (SPOF) <br>• 级联雪崩 <br>• 容量预估不足</td>
-<td>• 拒绝过度设计：不盲目配置超大规格云实例，基于 FMEA 做性价比水位选型。 <br>• 冗余设计：确保关键服务跨可用区（Multi-AZ）多副本部署。</td>
-<td>• 容错前置：在架构蓝图阶段，强制引入网关限流、微服务熔断、降级与隔舱（Bulkhead）机制。</td>
-<td>• 架构图和五层强弱依赖关系拓扑图保持最新。 <br>• 制定特殊重保时期的标准、极致降级预案手册。</td>
-</tr>
-<tr>
-<td>2. 编码与开发</td>
-<td>• 资源泄露（内存/句柄）<br> • 异常未捕获导致闪退 <br>• 并发死锁与冲突</td>
-<td>• 代码质量：严格执行静态代码分析（如 SonarQube），推行防御性编程。<br> • 规范统一：提供统一的公共组件库与错误码规范，重点审计资源释放路径。</td>
-<td>• 内嵌容错：消费者消费消息必须内嵌幂等逻辑；服务间调用内嵌超时控制、客户端侧熔断与错误回退（Fallback）逻辑。</td>
-<td>• 编写高频开发错误（如死锁、OOM、连接池耗尽）的排查与恢复指南。</td>
-</tr>
-<tr>
-<td>3. 测试与验证</td>
-<td>• 异常分支测试盲区 <br>• 线下压力无法暴露线上问题 <br>• 极限瓶颈未知</td>
-<td>• 基准验证：构建高覆盖率的自动化单元测试与集成测试矩阵。 <br>• 极限探测：引入五层全链路压测，使用等比例生产数据压测寻找各层云原生系统极限水位线。</td>
-<td>• 韧性检验：通过混沌工程（Chaos Engineering）主动在各层注入延迟、网络抖动、实例过载故障。 <br>• 闭环验证：不看系统会不会坏，专测“监控侦测-&gt;自动响应-&gt;弹性自愈”的闭环有效性。</td>
-<td>• 建立混沌工程故障注入红线手册。<br> • 制定全链路压测标准操作规程（SOP）及压测熔断红线。</td>
-</tr>
-<tr>
-<td>4. 部署与发布</td>
-<td>• 新 Bug 全量扩散 <br> • 生产配置与密钥错误 <br> • 回滚困难导致故障拉长</td>
-<td>• 环境一致性：强制推行基础设施即代码（IaC），配置版本化，禁止手动修改云产品参数。<br> • 质量大门：发布工具链强制推行金丝雀（Canary）发布或蓝绿部署，前置自动化冒烟测试。</td>
-<td>• 动态隔离：发布期间若监控系统快速侦测到新版本异常，流量网关必须能动态隔离故障点，自动切走异常流量。 • 自愈回滚：联动发布工具链触发自动化或一键（One-Click）极速回滚。</td>
-<td>• 每项变更强制附带上线检查单（Checklist）。<br> • 明确记录针对该版本的一键回滚命令与验证步骤。</td>
-</tr>
-<tr>
-<td>5. 运维与监控 (SRE核心)</td>
-<td>• 内部死循环导致监控盲区 <br>• 告警疲劳导致漏报 • 排查缺乏标准依赖经验</td>
-<td>• 白盒监控：打通可观测性三要素（Metrics、Traces、Logs），消除运行时的健康检查盲区。<br> • 管理指标：建立严格的 SLI/SLO 管理机制，用错误预算（Error Budget）科学指导业务变更。</td>
-<td>• 闭环自愈：推动运维手册（Runbook）向完全自动化触发演进。<br> • 弹性联动：当监控侦测到超预期过载时，系统自动开启过载限流，同时自动联动计算编排层迅速向外伸展并补齐云端算力。</td>
-<td>• 告警 1:1 匹配自动化处理逻辑或 Runbook 处理链接。<br> • 推动传统 Runbook 向“无人值守”的弹性自愈演进。</td>
-</tr>
-</tbody></table>
-<h2 id="2-空间轴：云原生应用系统五层架构的技术栈落地表"><a href="#2-空间轴：云原生应用系统五层架构的技术栈落地表" class="headerlink" title="2. 空间轴：云原生应用系统五层架构的技术栈落地表"></a>2. 空间轴：云原生应用系统五层架构的技术栈落地表</h2><p>在云厂商的加持下，底层基础设施的稳定与高可用由云厂商整体托管并承诺。正向的“可靠性体质”变得极其容易开箱即用。我们作为应用方，稳定性建设的重点落在如何在五层技术栈中，充分使用并驱动云计算内置的弹性、扩展与韧性能力：  </p>
-<table>
-<thead>
-<tr>
-<th>技术架构层</th>
-<th>核心技术组件</th>
-<th>应对方案与最佳实践：【先天可靠性】(体质建设)</th>
-<th>应对方案与最佳实践：【运行时韧性】(免疫自愈)</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>1. 接入与流量控制层 (Gateway &amp; Traffic)</td>
-<td>ALB/NLB 负载均衡、API 网关、云原生网关、CDN</td>
-<td>• 多活拓扑：在网关层部署跨可用区（Multi-AZ）的多活云负载均衡集群。<br> • 边缘校验：利用网关进行严格的 API 契约校验（Schema Validation），将畸形 Payload 拒之门外，保护后端。</td>
-<td>• 主动熔断与过载丢弃 (Load Shedding)：当后端响应耗时堆积时，网关必须具备自动侦测能力，秒级响应并开启熔断保护，主动拦截并拒绝 30% 非核心请求（如推荐、红点），死保核心交易。</td>
-</tr>
-<tr>
-<td>2. 微服务治理层 (Service Governance)</td>
-<td>注册中心、RPC 框架（Dubbo/Spring Cloud）、Service Mesh</td>
-<td>• 轻量协议：使用高性能 RPC 轻量级传输协议。<br> • 静态强隔离：开发期严格审查微服务间强弱依赖，对微服务线程池、连接数进行科学的静态规格底线配置，确保常规运行互不干扰。</td>
-<td>• 动态隔舱 (Bulkhead) 与错误回退 (Fallback)：当某微服务因故障发生内存泄露时，治理层通过隔离舱机制将其调用链限制在特定 Pod 内，阻止其拖垮整条调用链，同时触发客户端侧熔断，回退至 Fallback 默认值。</td>
-</tr>
-<tr>
-<td>3. 应用与计算编排层 (Application &amp; Compute)</td>
-<td>Kubernetes (ACK/EKS)、容器运行时、Serverless 平台</td>
-<td>• 渐进交付：强制推行金丝雀（Canary）灰度发布，在研发早期拦截 Regression Bug。<br> • 防单点部署：配置 Pod 拓扑分布约束（Topology Spread），强制将相同服务副本打散在不同云机架和云 AZ 中。</td>
-<td>• 联动弹性自愈：当监控侦测到业务流量暴涨、计算节点饱和度触及红线时，编排层（如 K8s HPA）无需人工介入，动态联动底层云平台的扩展与弹性能力，在数分钟内自动拉起大批新 Pod 并完成流量注入，快速补齐容量。</td>
-</tr>
-<tr>
-<td>4. 分布式消息与事件层 (Messaging &amp; Middleware)</td>
-<td>云消息队列（RocketMQ、Kafka、RabbitMQ）</td>
-<td>• 防错设计：消费者代码强制实现幂等性设计（Idempotence），无论因分布式网络重试导致消息被投递了多少次，均能通过状态机或去重表保证有且仅有一次业务生效。</td>
-<td>• 毒丸隔离与死信队列 (DLQ)：当队列中混入无法解析的“毒丸消息（Poison Pill）”导致消费者频繁崩溃、管道堵塞时，中间件在达到重试阈值后自适应将其直接剔除并打入死信队列，实现自动“故障隔离”。</td>
-</tr>
-<tr>
-<td>5. 持久化存储与数据层 (Data &amp; Persistent Storage)</td>
-<td>云数据库 RDS、分布式 NoSQL、分布式缓存（Redis）</td>
-<td>• 高可用架构：利用云数据库厂商成熟的跨 AZ 存储高可用方案与主备切换机制。<br> • 限流防死锁：通过智能 SQL 索引优化和数据库连接池代理（Proxy）硬核限制最大并发连接数，预防慢查询导致存储层 CPU 瞬间锁死。</td>
-<td>• 读写分离与副本自愈：在大促洪峰或复杂大表查询时，路由系统自动将海量“读流量”瞬间分流至多个只读副本群。即使只读库因过载变慢或局部挂掉，也绝不影响核心“写链路（主库扣减库存）”，用非核心层面的牺牲换取核心交易的持续运行。</td>
-</tr>
-</tbody></table>
-<h1 id="三、-深度辨析：可靠性与可用性的“四象限”博弈与经济学"><a href="#三、-深度辨析：可靠性与可用性的“四象限”博弈与经济学" class="headerlink" title="三、 深度辨析：可靠性与可用性的“四象限”博弈与经济学"></a>三、 深度辨析：可靠性与可用性的“四象限”博弈与经济学</h1><p>应用系统的可用性 (Availability) 是从用户视角出发，衡量系统在特定时间段内基于可靠性与韧性的综合表现。其经典的数学表达式为：  </p>
-<p>$$\text{可用性 (Availability)} = \frac{\text{MTBF}}{\text{MTBF} + \text{MTTR}}$$  </p>
-<p>单纯从公式来看，要向 100% 的完美可用性逼近，只有两个数学方向：提高分子与分母中的 MTBF（提升可靠性），或者将分母中的 MTTR 降至无限接近于零（提升韧性）。<br>然而，现实中极端的追求单一维度的提升，往往会导致应用系统及其支撑系统变得极其臃肿，建设成本飙高。简单性 (Simplicity)、成本 (Cost) 和可维护性 (Maintainability) 是一把无形的尺子，它时时刻刻在提醒我们：必须在【先天可靠性】与【运行时韧性】之间找到最佳的经济平衡点，而不是“杀敌一千，自损八百”。<br>通过可靠性与可用性的四象限博弈，我们可以清晰地看到这门“可用性经济学（基于云资源 FinOps 视角）”的玄机：  </p>
-<pre><code class="language-plaintext">
-                      【可靠性 (MTBF / 预防能力)】高
-                                    │
-                                    │  [第一象限] 高可靠、高可用
-            [第四象限] 高可靠、低可用  │  • 特点：传统独占高配云服务思维，盲目堆规格
-            • 特点：过度设计，金玉其外      │  • 痛点：订阅费用与技术债呈指数级飙升
-            • 痛点：配置错误即全盘崩溃      │  • 结论：商业上不可持续的乌托邦
-                                    │
-    ────────────────────────────────┼──────────────────────────────── 韧性
-                                    │ (MTTR / 自愈能力) 高
-                                    │
-            [第三象限] Low可靠、Low可用 │  [第二象限] 低可靠、高可用 (云原生理想态)
-            • 特点：既无体质，又无免疫      │  • 特点：承认底层必抖，靠软件架构自愈
-            • 痛点：裸奔运行，故障常态      │  • 优势：用标准按需云资源兑现极高可用
-            • 结论：技术与业务的双重灾难    │  • 结论：最具性价比与经济性的王者
-                                    │
-</code></pre>
-<h2 id="1-高可靠、低可用：传统“金玉其外”的破产"><a href="#1-高可靠、低可用：传统“金玉其外”的破产" class="headerlink" title="1. 高可靠、低可用：传统“金玉其外”的破产"></a>1. 高可靠、低可用：传统“金玉其外”的破产</h2><ul>
-<li>场景特征：企业在云资源规格上投入巨资，盲目选用了独占型的高配云服务器或顶配数据库实例，消灭了所有可见的代码 Bug，使系统在常规状态下极难发生故障（MTBF 极长）。</li>
-<li>致命痛点：由于缺乏运行时韧性建设（没有熔断机制和自动化预案），系统一旦遭遇突发超大流量，或者因为运维误操作引入了一个微小的配置错误，全盘瞬间雪崩。工程师需要人工介入接警、排查、重启，导致恢复时间（MTTR）长达数小时。</li>
-<li>经济学结论：前期云服务账单和防范成本高昂，但在不确定性面前脆弱不堪，属于低性价比的过度设计。</li>
-</ul>
-<h2 id="2-高可靠、高可用：商业上不可持续的乌托邦"><a href="#2-高可靠、高可用：商业上不可持续的乌托邦" class="headerlink" title="2. 高可靠、高可用：商业上不可持续的乌托邦"></a>2. 高可靠、高可用：商业上不可持续的乌托邦</h2><ul>
-<li>场景特征：既通过极端严苛的开发、高规格的云实例资源堆砌保障系统几乎不生病（高 MTBF），又建设了极其复杂的全自动多活异地自愈机制（低 MTTR）。</li>
-<li>致命痛点：成本曲线呈指数级飙升。为了多追求可用性小数点后的一个“9”，购买的云服务阶梯配置和研发投入可能要翻十倍，导致系统极度复杂臃肿，严重损害了系统的可维护性（Maintainability），极易引发告警疲劳和反向误操作。</li>
-<li>经济学结论：除了极少数极端的金融核心系统，对绝大多数商业应用而言，这是一种高成本的“杀敌一千，自损八百”。</li>
-</ul>
-<h2 id="3-低可靠、低可用：裸奔的灾难"><a href="#3-低可靠、低可用：裸奔的灾难" class="headerlink" title="3. 低可靠、低可用：裸奔的灾难"></a>3. 低可靠、低可用：裸奔的灾难</h2><ul>
-<li>场景特征：既没有代码规范与合理的云资源规格选型（低 MTBF），也没有任何监控侦测与限流降级手段（高 MTTR）。</li>
-<li>经济学结论：系统处于常态化崩溃边缘，属于必须被彻底重构的垃圾架构。</li>
-</ul>
-<h2 id="4-低可靠、高可用：现代云原生的“性价比王者”"><a href="#4-低可靠、高可用：现代云原生的“性价比王者”" class="headerlink" title="4. 低可靠、高可用：现代云原生的“性价比王者”"></a>4. 低可靠、高可用：现代云原生的“性价比王者”</h2><ul>
-<li>场景特征：这是现代云原生稳定性建设追求的理想状态。我们承认底层的基础设施组件必定会产生抖动、网络必定会抖（低 MTBF）；我们不花冤枉钱去长期订阅极其昂贵的高配云服务规格，而是把精力放在通过自动化手段将分母（MTTR）逼近至零。</li>
-<li>经济学结论：用普通、标准的按需云资源，通过软件定义韧性，兑现了对用户的高可用承诺。 这种“软件借力”的做法，在简单性、云财务成本和可维护性之间取得了完美的帕累托最优，具备极致的经济性。</li>
-</ul>
-<p>为了更直观地看清这种“将分母逼近至零”的惊人优势，我们可以对比以下两组真实的生产情景：</p>
-<ul>
-<li><p>情景 A（人工响应运维）：系统由于采用普通规格资源，每年遭遇 20 次突发流量过载或局部异常（MTBF ≈ 438 小时）。由于缺乏自动化韧性自愈，每次都需要值班工程师接警、看监控、人工排障并扩容，平均耗时 1 小时（MTTR = 1 小时）。  </p>
-<p>  $\text{可用性} = \frac{438 \text{ 小时}}{438 \text{ 小时} + 1 \text{ 小时}} = 99.77% \quad \text{(每年累计业务中断约 20 小时)}$  </p>
-</li>
-<li><p>情景 B（云原生自动化韧性）：系统面临完全相同的 20 次生产异常。但在架构设计时，工程师利用网关和治理层编排了闭环的韧性策略。当故障或过载发生时，监控系统秒级侦测，自动开启熔断限流进行容错响应，在 30 秒内完成了故障隔离与流量避险（MTTR = 30 秒 ≈ 0.0083 小时）。  </p>
-<p>  $\text{可用性} = \frac{438 \text{ 小时}}{438 \text{ 小时} + 0.0083 \text{ 小时}} = 99.998% \quad \text{(每年累计业务中断仅约 10 分钟)}$</p>
-</li>
-</ul>
-<p>完全相同的底层体质，仅因韧性能力的有无，可用性便发生了跨越数量级的阶层鸿沟。这就是韧性建设在可用性对冲上的压倒性优势。</p>
-<h1 id="四、-范式跃迁：云原生-vs-传统数据中心稳定性建设的区别"><a href="#四、-范式跃迁：云原生-vs-传统数据中心稳定性建设的区别" class="headerlink" title="四、 范式跃迁：云原生 vs 传统数据中心稳定性建设的区别"></a>四、 范式跃迁：云原生 vs 传统数据中心稳定性建设的区别</h1><p>云计算以及云原生技术的成熟与普及，使得云原生应用成为了企业的主流选择。这也使得云原生应用系统的稳定性建设，相对于传统的 IT 应用来说变得更简单、更纯粹了。<br>这种“变简单”的底层逻辑，源于两者的技术栈边界与稳定性第一推力发生了本质的范式跃迁：  </p>
-<h2 id="1-传统数据中心的“全栈防御”-vs-云原生的“全责托管”"><a href="#1-传统数据中心的“全栈防御”-vs-云原生的“全责托管”" class="headerlink" title="1. 传统数据中心的“全栈防御” vs 云原生的“全责托管”"></a>1. 传统数据中心的“全栈防御” vs 云原生的“全责托管”</h2><p>在传统数据中心（IDC）时代，工程师不仅要考虑应用层的业务逻辑，还要被迫分心去操心基础设施层的物理稳定性（从机房的双路供电、精密空调，到物理服务器的阵列卡、交换机的物理走线）。任何一个底层单点故障（SPOF）都会直接传导至上层。<br>而在云原生时代，云厂商在明确的 SLA（服务等级协议） 承诺下，通过“软件定义一切”的方式帮我们整体托管了基础设施层的稳定性。无论是计算层（Kubernetes、Serverless）、数据层（云原生数据库、云消息队列）还是接入层（云网关、ALB），这些云平台原生组件内部都已经内置并封装了强大的弹性、扩展性和韧性能力。云原生应用系统正向的“可靠性体质”，在云厂商的加持下变得极其容易获得，门槛与成本大幅降低。</p>
-<h2 id="2-传统数据中心“静态顶配抗洪”-vs-云原生“软件韧性死守空窗期”"><a href="#2-传统数据中心“静态顶配抗洪”-vs-云原生“软件韧性死守空窗期”" class="headerlink" title="2. 传统数据中心“静态顶配抗洪” vs 云原生“软件韧性死守空窗期”"></a>2. 传统数据中心“静态顶配抗洪” vs 云原生“软件韧性死守空窗期”</h2><p>传统应用系统在面临大促或突发流量时，由于物理硬件采购、上架、走线、系统安装的周期长达数周，容量规划必须采取“买断式顶配”的静态思维，极不利于成本控制。<br>云原生应用系统则是无状态微服务与容器化的天下，其核心战略是“充分借力云计算的内置弹性与扩展能力”。<br>然而，在真实的云端运行时，从稳定状态向应急自愈状态的切换，隐藏着一个致命的工程现实：“弹性扩容是有冷启动时延的”。无论是向云厂商动态请求新的计算资源，还是在 Kubernetes 中水平伸展新的物理节点、初始化容器环境，往往存在数分钟的“空窗期”。<br>在这个极度危险的空窗期内，如果听任海量请求涌入，刚拉起的新算力节点也会瞬间被级联雪崩吞噬。此时，应用层建设的【运行时韧性】（如网关限流、微服务熔断、过载丢弃）必须立刻挺身而出，死守阵地，强行将整体流量压制在系统当前的安全水位线之内。</p>
-<pre><code class="language-plaintext">流量暴涨 ──► [运行时韧性触发] ──► 瞬时限流/降级 ──► 【死守 3 分钟危险空窗期】
-                                                               │
-                                                       (为底层弹性争取时间)
-                                                               ▼
-应用层高可用 ◄─── 补齐容量、恢复流量 ◄─── [基础设施弹性生效] ◄─── 自动拉起新实例 (K8s HPA)
-</code></pre>
-<p>通过这种软件韧性，系统成功为底层的“弹性扩容”争取到了宝贵的时间。一旦几分钟后计算编排层自动补齐了容量，应用层随即自适应解除限流，恢复全量服务。<br>总结而言，传统 IDC 的稳定性建设是在对抗不完美的基础设施；而云原生的稳定性建设，则是通过在五层架构中构建“侦测-响应-自愈”的运行时韧性闭环，去完美享受并驱动云计算的极致弹性，用最低的成本，最终兑现应用系统对用户的高可用。  </p>
-<h1 id="五、-实战演练：一个云原生应用在洪峰下的“黄金-3-分钟”"><a href="#五、-实战演练：一个云原生应用在洪峰下的“黄金-3-分钟”" class="headerlink" title="五、 实战演练：一个云原生应用在洪峰下的“黄金 3 分钟”"></a>五、 实战演练：一个云原生应用在洪峰下的“黄金 3 分钟”</h1><p>为了让上述所有理论不再流于纸面，我们拉近微观视角，将目光投向生产环境的第一线。下面我们将完整复盘一次大促秒杀活动中，一个构建在云原生五层架构上的应用系统，在遭遇 10 倍突发洪峰袭击时，【运行时韧性】与【基础设施弹性】如何完美接力，在 3 分钟内完成自愈的惊心动魄全过程。</p>
-<pre><code class="language-plaintext">第 0:00 分钟                  第 0:10 分钟                第 1:00 分钟                第 3:00 分钟
-────┼───────────────────────────────┼───────────────────────────┼───────────────────────────┼────► 时间轴
-    │                               │                           │                           │
- 突发洪峰袭来                  触发临界阈值                HPA 成功拉起新 Pod          全局容量稳定
-  • 流量瞬间飙升 10 倍           • 接口耗时飙升              • 容器开始拉取镜像          • 弹性计算完成横向扩容
-  • 数据库连接池饱和             • 网关果断开启                集群节点开始向外伸展        • 网关平稳关闭
-  • 系统面临整体雪崩风险            韧性限流/过载限流                                        过载限流
-                                • 强行丢弃 30% 非核心流量                                 • 100% 流量恢复正常访问
-                                • 系统免于瞬间瘫痪
-
-    │◄───────────────── 运行时韧性防御区间 ──────────────────────►│◄──────── 基础设施弹性区间 ──────►│
-    │     (软件层的架构模式在微观世界硬扛第一波冲击)              │   (云平台的硬件容量完成补给)   │
-</code></pre>
-<h2 id="1-第-0-00-分钟：灾难降临，冲击波突袭"><a href="#1-第-0-00-分钟：灾难降临，冲击波突袭" class="headerlink" title="1. 第 0:00 分钟：灾难降临，冲击波突袭"></a>1. 第 0:00 分钟：灾难降临，冲击波突袭</h2><ul>
-<li>现场还原：大促秒杀活动准时开启。交易链路的请求量瞬间飙升 10 倍，分布式消息中间件堆积量激增，存储层（RDS 云数据库）的连接数瞬间饱和。</li>
-<li>系统表现：由于容量在极短时间内超越了常规设计的瓶颈，系统的 P99 响应耗时开始快速恶化，无情地逼向需求与架构设计阶段设立的 1,500ms 临界崩溃阈值。级联雪崩的风险一触即发。</li>
-</ul>
-<h2 id="2-第-0-10-分钟：毫秒级捕获（MTTD），韧性接管战场"><a href="#2-第-0-10-分钟：毫秒级捕获（MTTD），韧性接管战场" class="headerlink" title="2. 第 0:10 分钟：毫秒级捕获（MTTD），韧性接管战场"></a>2. 第 0:10 分钟：毫秒级捕获（MTTD），韧性接管战场</h2><ul>
-<li>自动侦测：可观测性系统发挥了“雷达”作用。Prometheus 监控指标以 5 秒的高频采集速率对全链路进行紧密监控。在耗时异动的第 10 秒，自动化告警规则瞬间被点燃，平均检测时间（MTTD）被压缩到了豪秒级。</li>
-<li>容错响应：告警 Webhook 并没有发送给疲劳的人类工程师，而是直接注入了流量接入层的 API 网关与微服务治理层。网关瞬间启动过载限流（Load Shedding）模式，根据强弱依赖预案，强行将 30% 的非核心浏览和推荐流量就地阻断，返回友好降级提示。</li>
-<li>战场战果：这一软件层面的韧性动作，在瞬息之间隔离了故障点，强行把流量压制在当前系统能承受的安全水位线之内，阻止了主库连接池的彻底爆裂。系统免于瞬间瘫痪，成功挺过了第一波冲击波。</li>
-</ul>
-<h2 id="3-第-1-00-分钟：弹性开火，云资源开始动态补给"><a href="#3-第-1-00-分钟：弹性开火，云资源开始动态补给" class="headerlink" title="3. 第 1:00 分钟：弹性开火，云资源开始动态补给"></a>3. 第 1:00 分钟：弹性开火，云资源开始动态补给</h2><ul>
-<li>自愈联动：在软件韧性死守阵地的同时，事件驱动扩容引擎（如 KEDA）和计算编排层（Kubernetes）感知到了网关处的 Request 流量海啸以及 Pod 饱和度红线，立刻向云平台的集群控制器发出扩容指令。</li>
-<li>基础设施就绪：云基础设施的弹性和扩展武器全面开火。Kubernetes 开始跨越多个可用区（Multi-AZ）横向拉起大批全新的容器实例，底层云平台的集群节点也开始自动弹性向外伸展（Node Auto-scaling），开始在线拉取镜像、初始化计算运行时。</li>
-</ul>
-<h2 id="4-第-3-00-分钟：天下太平，自愈闭环完美收官"><a href="#4-第-3-00-分钟：天下太平，自愈闭环完美收官" class="headerlink" title="4. 第 3:00 分钟：天下太平，自愈闭环完美收官"></a>4. 第 3:00 分钟：天下太平，自愈闭环完美收官</h2><ul>
-<li>全局稳定：弹性的虚拟算力补给终于成功落实。新落地的成百上千个微服务 Pod 悉数通过了健康检查，并顺畅地被吸纳进网关的流量负载均衡列表中，成功横向分摊了洪峰压力，补齐了业务容量。</li>
-<li>恢复如初：云网关和监控系统侦测到后端核心链路的平均耗时已整体回落至 50ms 的健康水平。网关随后平稳、优雅地关闭了过载限流开关，100% 的流量恢复正常访问。</li>
-</ul>
-<h1 id="六、-结语：给-SRE-与架构师的终极启示"><a href="#六、-结语：给-SRE-与架构师的终极启示" class="headerlink" title="六、 结语：给 SRE 与架构师的终极启示"></a>六、 结语：给 SRE 与架构师的终极启示</h1><p>在这惊心动魄的 3 分钟里，没有任何一个高警电话拨向架构师，没有任何一个值班工程师在凌晨惊醒。系统在没有人工介入的情况下，完成了一次完美的“故障发生 -&gt; 自动侦测 -&gt; 容错响应 -&gt; 弹性自愈”的生命演进。<br>云原生时代的稳定性建设，从来不是为了追求“零缺陷”而盲目按最顶配的云规格进行饱和订阅，那是一场高成本且注定失败的战斗。现代 SRE 的真正奥秘在于：</p>
-<ol>
-<li>在正向建设上，充分信任并托管云厂商交付的基础设施，用最低的成本快速获得“易用、多活、高可靠”的先天体质；</li>
-<li>在逆向防御上，在云原生五层架构中布满自动化韧性哨兵，利用软件韧性死守资源弹性扩容的冷启动空窗期，通过将平均恢复时间（MTTR）逼近至零，最终兑现应用系统对用户的高可用承诺。</li>
-</ol>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -1137,6 +871,364 @@
       </tags>
   </entry>
   <entry>
+    <title>云原生时代的应用稳定性范式转移：从“消灭故障”到“应用韧性自愈”</title>
+    <url>/2026/06/17/cloudnative-appsys-stability-the-words/</url>
+    <content><![CDATA[<p>在传统数据中心（IDC）时代，稳定性的潜台词是“消灭故障”。工程师们依赖昂贵的高规格硬件、冗余的物理线路，试图构建一个“永不宕机”的乌托邦。然而，在云原生时代，底层的商业与工程哲学发生了根本性逆转：故障是不可避免的，网络必定会抖动，商品资源底座随时可能产生局部抖动。<br>云原生应用的稳定性建设，本质上是一场思维范式的转移——从追求“绝对不坏的确定性”，走向“顺应故障、用软件定义韧性对冲风险的非确定性”。</p>
+<span id="more"></span>
+
+<h1 id="一、-概念解耦：稳定性六星阵"><a href="#一、-概念解耦：稳定性六星阵" class="headerlink" title="一、 概念解耦：稳定性六星阵"></a>一、 概念解耦：稳定性六星阵</h1><p>为了在团队中对齐规范，我们必须首先厘清影响现代分布式系统的六个核心标尺。它们不是孤立的指标，而是一套相辅相成的“六星矩阵”。</p>
+<pre><code class="language-plaintext">        [可用性 (Availability)] ── 用户视角（体验稳定）
+                  ▲
+                  │ (一体两面)
+                  ▼
+        [稳定性 (Stability)] ── 工程师视角（系统稳定）
+              ╱       ╲
+            ╱           ╲  (双子星驱动)
+          ▼               ▼
+  【先天可靠性】       【运行时韧性】
+  (Reliability)        (Resiliency)
+        ▲                 ▲
+        │                 │ (基础设施武器支撑)
+  [可扩展性]           [弹 性]
+(Scalability)       (Elasticity)
+</code></pre>
+<h2 id="1-稳定性-Stability-vs-可用性-Availability-：一体两面"><a href="#1-稳定性-Stability-vs-可用性-Availability-：一体两面" class="headerlink" title="1. 稳定性 (Stability) vs 可用性 (Availability)：一体两面"></a>1. 稳定性 (Stability) vs 可用性 (Availability)：一体两面</h2><p>这两者是同一枚硬币的正反面：</p>
+<ul>
+<li>稳定性 (Stability) 是工程师视角：它向内看，关注的是技术栈的底层原色。如服务器的 CPU 使用率、微服务的延迟（Latency）、数据库的锁等待。它是系统层面的健康表征。  </li>
+<li>可用性 (Availability) 是用户视角：它向外看，关注的是业务体验的连续性。如“页面能否正常打开？”、“订单能否成功提交？”。即使用户访问的某台底层云主机已经宕机，只要上层通过重定向让用户无感知，在用户眼里，应用就是“高可用”的。</li>
+</ul>
+<h2 id="2-可扩展性-Scalability-vs-弹性-Elasticity-：基础设施武器"><a href="#2-可扩展性-Scalability-vs-弹性-Elasticity-：基础设施武器" class="headerlink" title="2. 可扩展性 (Scalability) vs 弹性 (Elasticity)：基础设施武器"></a>2. 可扩展性 (Scalability) vs 弹性 (Elasticity)：基础设施武器</h2><p>这是云平台赋予架构师与 SRE 的两把核心武器，也是系统高可用与低成本的硬核支撑。</p>
+<ul>
+<li>可扩展性 (Scalability - 边界容量)：属于结构与静态设计范畴。它决定了系统在面对洪峰时，通过线性增加云资源（Scale-Out），理论上最大能变多大。它代表了系统的上限和边界。  </li>
+<li>弹性 (Elasticity - 动态速度)：属于动态与运营范畴。它强调的是容量调整的效率与主动性。系统能否在运行时根据外部负载的起伏，自动化、自适应地在几分钟内实时增减计算资源。</li>
+</ul>
+<h2 id="3-可靠性-Reliability-vs-韧性-Resiliency-：稳定性的双子星"><a href="#3-可靠性-Reliability-vs-韧性-Resiliency-：稳定性的双子星" class="headerlink" title="3. 可靠性 (Reliability) vs 韧性 (Resiliency)：稳定性的双子星"></a>3. 可靠性 (Reliability) vs 韧性 (Resiliency)：稳定性的双子星</h2><p>这两者是驱动系统稳定性的核心内生能力，我们可以用人体医学做类比：</p>
+<ul>
+<li>【先天可靠性】（Reliability - 先天体质）  <ul>
+<li>核心本质：这是一种确定性的事前预防能力。它回答了核心问题：“我们如何确保系统在正常或预期的负载下不发生中断？”。</li>
+<li>目标与手段：旨在最大化平均故障间隔时间（MTBF）。通过代码层面的防御性编程、合理的容量规划、以及选用经过云厂商 SLA 承诺的标准云服务规格，让系统在常态下“不生病”。</li>
+</ul>
+</li>
+<li>【运行时韧性】（Resiliency - 免疫自愈）  <ul>
+<li>核心本质：这是一种不确定性的事后动态抗风险能力。它默认了“故障必然发生”的现实，回答了核心问题：“当某些组件不可避免地损坏或过载时，我们的系统如何活下来？”</li>
+<li>目标与手段：旨在最小化平均恢复时间（MTTR）。它通过构建“故障发生 → 自动侦测 → 容错响应 → 弹性自愈”的运行时闭环，在级联故障（Cascading Failures）吞噬全盘前强行隔离故障点。</li>
+</ul>
+</li>
+</ul>
+<h1 id="二、-纵深防御：空间五层架构与时间生命周期的双轴落地矩阵"><a href="#二、-纵深防御：空间五层架构与时间生命周期的双轴落地矩阵" class="headerlink" title="二、 纵深防御：空间五层架构与时间生命周期的双轴落地矩阵"></a>二、 纵深防御：空间五层架构与时间生命周期的双轴落地矩阵</h1><p>在云原生时代，要将稳定性建设真正对齐团队规范，SRE 与架构师必须构建一个双轴交叉的落地矩阵：在时间轴（应用生命周期）筑起质量大门，在空间轴（五层技术栈）精细化选型。<br>同时，我们必须摒弃传统盲目选用大规格、高配置云资源套现安全感的过度设计思维（这极不利于成本控制），在每一个交汇点上，将【先天可靠性】与【运行时韧性】进行一正一反的配对，并在运维手册（Runbook）中明确自动化要求。  </p>
+<p>【时间维度：应用生命周期 (SDLC)】  </p>
+<pre><code class="language-plaintext"> 需求与设计  ──►  编码与开发  ──►  测试与验证  ──►  部署与发布  ──►  运维与监控 (SRE核心)
+       │               │               │               │               │
+┌──────┴───────────────┴───────────────┴───────────────┴───────────────┴──────┐
+│  1. 接入与流量控制层 (Gateway &amp; Traffic)                                       │
+│  2. 微服务治理层 (Service Governance)                                         │  【空间维度】
+│  3. 应用与计算编排层 (Application &amp; Compute)                                   │  云原生五层架构
+│  4. 分布式消息与事件层 (Messaging &amp; Middleware)                                │
+│  5. 持久化存储与数据层 (Data &amp; Persistent Storage)                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="1-时间轴：应用生命周期（SDLC）5-阶段的工程落地表"><a href="#1-时间轴：应用生命周期（SDLC）5-阶段的工程落地表" class="headerlink" title="1. 时间轴：应用生命周期（SDLC）5 阶段的工程落地表"></a>1. 时间轴：应用生命周期（SDLC）5 阶段的工程落地表</h2><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>潜在可靠性风险</th>
+<th>应对方案与最佳实践：【先天可靠性】(体质建设)</th>
+<th>应对方案与最佳实践：【运行时韧性】(免疫自愈)</th>
+<th>运维手册 (Runbook) 与自动化要求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1. 需求与架构设计</td>
+<td>• 单点故障 (SPOF) <br>• 级联雪崩 <br>• 容量预估不足</td>
+<td>• 拒绝过度设计：不盲目配置超大规格云实例，基于 FMEA 做性价比水位选型。 <br>• 冗余设计：确保关键服务跨可用区（Multi-AZ）多副本部署。</td>
+<td>• 容错前置：在架构蓝图阶段，强制引入网关限流、微服务熔断、降级与隔舱（Bulkhead）机制。</td>
+<td>• 架构图和五层强弱依赖关系拓扑图保持最新。 <br>• 制定特殊重保时期的标准、极致降级预案手册。</td>
+</tr>
+<tr>
+<td>2. 编码与开发</td>
+<td>• 资源泄露（内存/句柄）<br> • 异常未捕获导致闪退 <br>• 并发死锁与冲突</td>
+<td>• 代码质量：严格执行静态代码分析（如 SonarQube），推行防御性编程。<br> • 规范统一：提供统一的公共组件库与错误码规范，重点审计资源释放路径。</td>
+<td>• 内嵌容错：消费者消费消息必须内嵌幂等逻辑；服务间调用内嵌超时控制、客户端侧熔断与错误回退（Fallback）逻辑。</td>
+<td>• 编写高频开发错误（如死锁、OOM、连接池耗尽）的排查与恢复指南。</td>
+</tr>
+<tr>
+<td>3. 测试与验证</td>
+<td>• 异常分支测试盲区 <br>• 线下压力无法暴露线上问题 <br>• 极限瓶颈未知</td>
+<td>• 基准验证：构建高覆盖率的自动化单元测试与集成测试矩阵。 <br>• 极限探测：引入五层全链路压测，使用等比例生产数据压测寻找各层云原生系统极限水位线。</td>
+<td>• 韧性检验：通过混沌工程（Chaos Engineering）主动在各层注入延迟、网络抖动、实例过载故障。 <br>• 闭环验证：不看系统会不会坏，专测“监控侦测-&gt;自动响应-&gt;弹性自愈”的闭环有效性。</td>
+<td>• 建立混沌工程故障注入红线手册。<br> • 制定全链路压测标准操作规程（SOP）及压测熔断红线。</td>
+</tr>
+<tr>
+<td>4. 部署与发布</td>
+<td>• 新 Bug 全量扩散 <br> • 生产配置与密钥错误 <br> • 回滚困难导致故障拉长</td>
+<td>• 环境一致性：强制推行基础设施即代码（IaC），配置版本化，禁止手动修改云产品参数。<br> • 质量大门：发布工具链强制推行金丝雀（Canary）发布或蓝绿部署，前置自动化冒烟测试。</td>
+<td>• 动态隔离：发布期间若监控系统快速侦测到新版本异常，流量网关必须能动态隔离故障点，自动切走异常流量。 • 自愈回滚：联动发布工具链触发自动化或一键（One-Click）极速回滚。</td>
+<td>• 每项变更强制附带上线检查单（Checklist）。<br> • 明确记录针对该版本的一键回滚命令与验证步骤。</td>
+</tr>
+<tr>
+<td>5. 运维与监控 (SRE核心)</td>
+<td>• 内部死循环导致监控盲区 <br>• 告警疲劳导致漏报 • 排查缺乏标准依赖经验</td>
+<td>• 白盒监控：打通可观测性三要素（Metrics、Traces、Logs），消除运行时的健康检查盲区。<br> • 管理指标：建立严格的 SLI/SLO 管理机制，用错误预算（Error Budget）科学指导业务变更。</td>
+<td>• 闭环自愈：推动运维手册（Runbook）向完全自动化触发演进。<br> • 弹性联动：当监控侦测到超预期过载时，系统自动开启过载限流，同时自动联动计算编排层迅速向外伸展并补齐云端算力。</td>
+<td>• 告警 1:1 匹配自动化处理逻辑或 Runbook 处理链接。<br> • 推动传统 Runbook 向“无人值守”的弹性自愈演进。</td>
+</tr>
+</tbody></table>
+<h2 id="2-空间轴：云原生应用系统五层架构的技术栈落地表"><a href="#2-空间轴：云原生应用系统五层架构的技术栈落地表" class="headerlink" title="2. 空间轴：云原生应用系统五层架构的技术栈落地表"></a>2. 空间轴：云原生应用系统五层架构的技术栈落地表</h2><p>在云厂商的加持下，底层基础设施的稳定与高可用由云厂商整体托管并承诺。正向的“可靠性体质”变得极其容易开箱即用。我们作为应用方，稳定性建设的重点落在如何在五层技术栈中，充分使用并驱动云计算内置的弹性、扩展与韧性能力：  </p>
+<table>
+<thead>
+<tr>
+<th>技术架构层</th>
+<th>核心技术组件</th>
+<th>应对方案与最佳实践：【先天可靠性】(体质建设)</th>
+<th>应对方案与最佳实践：【运行时韧性】(免疫自愈)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1. 接入与流量控制层 (Gateway &amp; Traffic)</td>
+<td>ALB/NLB 负载均衡、API 网关、云原生网关、CDN</td>
+<td>• 多活拓扑：在网关层部署跨可用区（Multi-AZ）的多活云负载均衡集群。<br> • 边缘校验：利用网关进行严格的 API 契约校验（Schema Validation），将畸形 Payload 拒之门外，保护后端。</td>
+<td>• 主动熔断与过载丢弃 (Load Shedding)：当后端响应耗时堆积时，网关必须具备自动侦测能力，秒级响应并开启熔断保护，主动拦截并拒绝 30% 非核心请求（如推荐、红点），死保核心交易。</td>
+</tr>
+<tr>
+<td>2. 微服务治理层 (Service Governance)</td>
+<td>注册中心、RPC 框架（Dubbo/Spring Cloud）、Service Mesh</td>
+<td>• 轻量协议：使用高性能 RPC 轻量级传输协议。<br> • 静态强隔离：开发期严格审查微服务间强弱依赖，对微服务线程池、连接数进行科学的静态规格底线配置，确保常规运行互不干扰。</td>
+<td>• 动态隔舱 (Bulkhead) 与错误回退 (Fallback)：当某微服务因故障发生内存泄露时，治理层通过隔离舱机制将其调用链限制在特定 Pod 内，阻止其拖垮整条调用链，同时触发客户端侧熔断，回退至 Fallback 默认值。</td>
+</tr>
+<tr>
+<td>3. 应用与计算编排层 (Application &amp; Compute)</td>
+<td>Kubernetes (ACK/EKS)、容器运行时、Serverless 平台</td>
+<td>• 渐进交付：强制推行金丝雀（Canary）灰度发布，在研发早期拦截 Regression Bug。<br> • 防单点部署：配置 Pod 拓扑分布约束（Topology Spread），强制将相同服务副本打散在不同云机架和云 AZ 中。</td>
+<td>• 联动弹性自愈：当监控侦测到业务流量暴涨、计算节点饱和度触及红线时，编排层（如 K8s HPA）无需人工介入，动态联动底层云平台的扩展与弹性能力，在数分钟内自动拉起大批新 Pod 并完成流量注入，快速补齐容量。</td>
+</tr>
+<tr>
+<td>4. 分布式消息与事件层 (Messaging &amp; Middleware)</td>
+<td>云消息队列（RocketMQ、Kafka、RabbitMQ）</td>
+<td>• 防错设计：消费者代码强制实现幂等性设计（Idempotence），无论因分布式网络重试导致消息被投递了多少次，均能通过状态机或去重表保证有且仅有一次业务生效。</td>
+<td>• 毒丸隔离与死信队列 (DLQ)：当队列中混入无法解析的“毒丸消息（Poison Pill）”导致消费者频繁崩溃、管道堵塞时，中间件在达到重试阈值后自适应将其直接剔除并打入死信队列，实现自动“故障隔离”。</td>
+</tr>
+<tr>
+<td>5. 持久化存储与数据层 (Data &amp; Persistent Storage)</td>
+<td>云数据库 RDS、分布式 NoSQL、分布式缓存（Redis）</td>
+<td>• 高可用架构：利用云数据库厂商成熟的跨 AZ 存储高可用方案与主备切换机制。<br> • 限流防死锁：通过智能 SQL 索引优化和数据库连接池代理（Proxy）硬核限制最大并发连接数，预防慢查询导致存储层 CPU 瞬间锁死。</td>
+<td>• 读写分离与副本自愈：在大促洪峰或复杂大表查询时，路由系统自动将海量“读流量”瞬间分流至多个只读副本群。即使只读库因过载变慢或局部挂掉，也绝不影响核心“写链路（主库扣减库存）”，用非核心层面的牺牲换取核心交易的持续运行。</td>
+</tr>
+</tbody></table>
+<h1 id="三、-深度辨析：可靠性与可用性的“四象限”博弈与经济学"><a href="#三、-深度辨析：可靠性与可用性的“四象限”博弈与经济学" class="headerlink" title="三、 深度辨析：可靠性与可用性的“四象限”博弈与经济学"></a>三、 深度辨析：可靠性与可用性的“四象限”博弈与经济学</h1><p>应用系统的可用性 (Availability) 是从用户视角出发，衡量系统在特定时间段内基于可靠性与韧性的综合表现。其经典的数学表达式为：  </p>
+<p>$$\text{可用性 (Availability)} = \frac{\text{MTBF}}{\text{MTBF} + \text{MTTR}}$$  </p>
+<p>单纯从公式来看，要向 100% 的完美可用性逼近，只有两个数学方向：提高分子与分母中的 MTBF（提升可靠性），或者将分母中的 MTTR 降至无限接近于零（提升韧性）。<br>然而，现实中极端的追求单一维度的提升，往往会导致应用系统及其支撑系统变得极其臃肿，建设成本飙高。简单性 (Simplicity)、成本 (Cost) 和可维护性 (Maintainability) 是一把无形的尺子，它时时刻刻在提醒我们：必须在【先天可靠性】与【运行时韧性】之间找到最佳的经济平衡点，而不是“杀敌一千，自损八百”。<br>通过可靠性与可用性的四象限博弈，我们可以清晰地看到这门“可用性经济学（基于云资源 FinOps 视角）”的玄机：  </p>
+<pre><code class="language-plaintext">
+                      【可靠性 (MTBF / 预防能力)】高
+                                    │
+                                    │  [第一象限] 高可靠、高可用
+            [第四象限] 高可靠、低可用  │  • 特点：传统独占高配云服务思维，盲目堆规格
+            • 特点：过度设计，金玉其外      │  • 痛点：订阅费用与技术债呈指数级飙升
+            • 痛点：配置错误即全盘崩溃      │  • 结论：商业上不可持续的乌托邦
+                                    │
+    ────────────────────────────────┼──────────────────────────────── 韧性
+                                    │ (MTTR / 自愈能力) 高
+                                    │
+            [第三象限] Low可靠、Low可用 │  [第二象限] 低可靠、高可用 (云原生理想态)
+            • 特点：既无体质，又无免疫      │  • 特点：承认底层必抖，靠软件架构自愈
+            • 痛点：裸奔运行，故障常态      │  • 优势：用标准按需云资源兑现极高可用
+            • 结论：技术与业务的双重灾难    │  • 结论：最具性价比与经济性的王者
+                                    │
+</code></pre>
+<h2 id="1-高可靠、低可用：传统“金玉其外”的破产"><a href="#1-高可靠、低可用：传统“金玉其外”的破产" class="headerlink" title="1. 高可靠、低可用：传统“金玉其外”的破产"></a>1. 高可靠、低可用：传统“金玉其外”的破产</h2><ul>
+<li>场景特征：企业在云资源规格上投入巨资，盲目选用了独占型的高配云服务器或顶配数据库实例，消灭了所有可见的代码 Bug，使系统在常规状态下极难发生故障（MTBF 极长）。</li>
+<li>致命痛点：由于缺乏运行时韧性建设（没有熔断机制和自动化预案），系统一旦遭遇突发超大流量，或者因为运维误操作引入了一个微小的配置错误，全盘瞬间雪崩。工程师需要人工介入接警、排查、重启，导致恢复时间（MTTR）长达数小时。</li>
+<li>经济学结论：前期云服务账单和防范成本高昂，但在不确定性面前脆弱不堪，属于低性价比的过度设计。</li>
+</ul>
+<h2 id="2-高可靠、高可用：商业上不可持续的乌托邦"><a href="#2-高可靠、高可用：商业上不可持续的乌托邦" class="headerlink" title="2. 高可靠、高可用：商业上不可持续的乌托邦"></a>2. 高可靠、高可用：商业上不可持续的乌托邦</h2><ul>
+<li>场景特征：既通过极端严苛的开发、高规格的云实例资源堆砌保障系统几乎不生病（高 MTBF），又建设了极其复杂的全自动多活异地自愈机制（低 MTTR）。</li>
+<li>致命痛点：成本曲线呈指数级飙升。为了多追求可用性小数点后的一个“9”，购买的云服务阶梯配置和研发投入可能要翻十倍，导致系统极度复杂臃肿，严重损害了系统的可维护性（Maintainability），极易引发告警疲劳和反向误操作。</li>
+<li>经济学结论：除了极少数极端的金融核心系统，对绝大多数商业应用而言，这是一种高成本的“杀敌一千，自损八百”。</li>
+</ul>
+<h2 id="3-低可靠、低可用：裸奔的灾难"><a href="#3-低可靠、低可用：裸奔的灾难" class="headerlink" title="3. 低可靠、低可用：裸奔的灾难"></a>3. 低可靠、低可用：裸奔的灾难</h2><ul>
+<li>场景特征：既没有代码规范与合理的云资源规格选型（低 MTBF），也没有任何监控侦测与限流降级手段（高 MTTR）。</li>
+<li>经济学结论：系统处于常态化崩溃边缘，属于必须被彻底重构的垃圾架构。</li>
+</ul>
+<h2 id="4-低可靠、高可用：现代云原生的“性价比王者”"><a href="#4-低可靠、高可用：现代云原生的“性价比王者”" class="headerlink" title="4. 低可靠、高可用：现代云原生的“性价比王者”"></a>4. 低可靠、高可用：现代云原生的“性价比王者”</h2><ul>
+<li>场景特征：这是现代云原生稳定性建设追求的理想状态。我们承认底层的基础设施组件必定会产生抖动、网络必定会抖（低 MTBF）；我们不花冤枉钱去长期订阅极其昂贵的高配云服务规格，而是把精力放在通过自动化手段将分母（MTTR）逼近至零。</li>
+<li>经济学结论：用普通、标准的按需云资源，通过软件定义韧性，兑现了对用户的高可用承诺。 这种“软件借力”的做法，在简单性、云财务成本和可维护性之间取得了完美的帕累托最优，具备极致的经济性。</li>
+</ul>
+<p>为了更直观地看清这种“将分母逼近至零”的惊人优势，我们可以对比以下两组真实的生产情景：</p>
+<ul>
+<li><p>情景 A（人工响应运维）：系统由于采用普通规格资源，每年遭遇 20 次突发流量过载或局部异常（MTBF ≈ 438 小时）。由于缺乏自动化韧性自愈，每次都需要值班工程师接警、看监控、人工排障并扩容，平均耗时 1 小时（MTTR = 1 小时）。  </p>
+<p>  $\text{可用性} = \frac{438 \text{ 小时}}{438 \text{ 小时} + 1 \text{ 小时}} = 99.77% \quad \text{(每年累计业务中断约 20 小时)}$  </p>
+</li>
+<li><p>情景 B（云原生自动化韧性）：系统面临完全相同的 20 次生产异常。但在架构设计时，工程师利用网关和治理层编排了闭环的韧性策略。当故障或过载发生时，监控系统秒级侦测，自动开启熔断限流进行容错响应，在 30 秒内完成了故障隔离与流量避险（MTTR = 30 秒 ≈ 0.0083 小时）。  </p>
+<p>  $\text{可用性} = \frac{438 \text{ 小时}}{438 \text{ 小时} + 0.0083 \text{ 小时}} = 99.998% \quad \text{(每年累计业务中断仅约 10 分钟)}$</p>
+</li>
+</ul>
+<p>完全相同的底层体质，仅因韧性能力的有无，可用性便发生了跨越数量级的阶层鸿沟。这就是韧性建设在可用性对冲上的压倒性优势。</p>
+<h1 id="四、-范式跃迁：云原生-vs-传统数据中心稳定性建设的区别"><a href="#四、-范式跃迁：云原生-vs-传统数据中心稳定性建设的区别" class="headerlink" title="四、 范式跃迁：云原生 vs 传统数据中心稳定性建设的区别"></a>四、 范式跃迁：云原生 vs 传统数据中心稳定性建设的区别</h1><p>云计算以及云原生技术的成熟与普及，使得云原生应用成为了企业的主流选择。这也使得云原生应用系统的稳定性建设，相对于传统的 IT 应用来说变得更简单、更纯粹了。<br>这种“变简单”的底层逻辑，源于两者的技术栈边界与稳定性第一推力发生了本质的范式跃迁：  </p>
+<h2 id="1-传统数据中心的“全栈防御”-vs-云原生的“全责托管”"><a href="#1-传统数据中心的“全栈防御”-vs-云原生的“全责托管”" class="headerlink" title="1. 传统数据中心的“全栈防御” vs 云原生的“全责托管”"></a>1. 传统数据中心的“全栈防御” vs 云原生的“全责托管”</h2><p>在传统数据中心（IDC）时代，工程师不仅要考虑应用层的业务逻辑，还要被迫分心去操心基础设施层的物理稳定性（从机房的双路供电、精密空调，到物理服务器的阵列卡、交换机的物理走线）。任何一个底层单点故障（SPOF）都会直接传导至上层。<br>而在云原生时代，云厂商在明确的 SLA（服务等级协议） 承诺下，通过“软件定义一切”的方式帮我们整体托管了基础设施层的稳定性。无论是计算层（Kubernetes、Serverless）、数据层（云原生数据库、云消息队列）还是接入层（云网关、ALB），这些云平台原生组件内部都已经内置并封装了强大的弹性、扩展性和韧性能力。云原生应用系统正向的“可靠性体质”，在云厂商的加持下变得极其容易获得，门槛与成本大幅降低。</p>
+<h2 id="2-传统数据中心“静态顶配抗洪”-vs-云原生“软件韧性死守空窗期”"><a href="#2-传统数据中心“静态顶配抗洪”-vs-云原生“软件韧性死守空窗期”" class="headerlink" title="2. 传统数据中心“静态顶配抗洪” vs 云原生“软件韧性死守空窗期”"></a>2. 传统数据中心“静态顶配抗洪” vs 云原生“软件韧性死守空窗期”</h2><p>传统应用系统在面临大促或突发流量时，由于物理硬件采购、上架、走线、系统安装的周期长达数周，容量规划必须采取“买断式顶配”的静态思维，极不利于成本控制。<br>云原生应用系统则是无状态微服务与容器化的天下，其核心战略是“充分借力云计算的内置弹性与扩展能力”。<br>然而，在真实的云端运行时，从稳定状态向应急自愈状态的切换，隐藏着一个致命的工程现实：“弹性扩容是有冷启动时延的”。无论是向云厂商动态请求新的计算资源，还是在 Kubernetes 中水平伸展新的物理节点、初始化容器环境，往往存在数分钟的“空窗期”。<br>在这个极度危险的空窗期内，如果听任海量请求涌入，刚拉起的新算力节点也会瞬间被级联雪崩吞噬。此时，应用层建设的【运行时韧性】（如网关限流、微服务熔断、过载丢弃）必须立刻挺身而出，死守阵地，强行将整体流量压制在系统当前的安全水位线之内。</p>
+<pre><code class="language-plaintext">流量暴涨 ──► [运行时韧性触发] ──► 瞬时限流/降级 ──► 【死守 3 分钟危险空窗期】
+                                                               │
+                                                       (为底层弹性争取时间)
+                                                               ▼
+应用层高可用 ◄─── 补齐容量、恢复流量 ◄─── [基础设施弹性生效] ◄─── 自动拉起新实例 (K8s HPA)
+</code></pre>
+<p>通过这种软件韧性，系统成功为底层的“弹性扩容”争取到了宝贵的时间。一旦几分钟后计算编排层自动补齐了容量，应用层随即自适应解除限流，恢复全量服务。<br>总结而言，传统 IDC 的稳定性建设是在对抗不完美的基础设施；而云原生的稳定性建设，则是通过在五层架构中构建“侦测-响应-自愈”的运行时韧性闭环，去完美享受并驱动云计算的极致弹性，用最低的成本，最终兑现应用系统对用户的高可用。  </p>
+<h1 id="五、-实战演练：一个云原生应用在洪峰下的“黄金-3-分钟”"><a href="#五、-实战演练：一个云原生应用在洪峰下的“黄金-3-分钟”" class="headerlink" title="五、 实战演练：一个云原生应用在洪峰下的“黄金 3 分钟”"></a>五、 实战演练：一个云原生应用在洪峰下的“黄金 3 分钟”</h1><p>为了让上述所有理论不再流于纸面，我们拉近微观视角，将目光投向生产环境的第一线。下面我们将完整复盘一次大促秒杀活动中，一个构建在云原生五层架构上的应用系统，在遭遇 10 倍突发洪峰袭击时，【运行时韧性】与【基础设施弹性】如何完美接力，在 3 分钟内完成自愈的惊心动魄全过程。</p>
+<pre><code class="language-plaintext">第 0:00 分钟                  第 0:10 分钟                第 1:00 分钟                第 3:00 分钟
+────┼───────────────────────────────┼───────────────────────────┼───────────────────────────┼────► 时间轴
+    │                               │                           │                           │
+ 突发洪峰袭来                  触发临界阈值                HPA 成功拉起新 Pod          全局容量稳定
+  • 流量瞬间飙升 10 倍           • 接口耗时飙升              • 容器开始拉取镜像          • 弹性计算完成横向扩容
+  • 数据库连接池饱和             • 网关果断开启                集群节点开始向外伸展        • 网关平稳关闭
+  • 系统面临整体雪崩风险            韧性限流/过载限流                                        过载限流
+                                • 强行丢弃 30% 非核心流量                                 • 100% 流量恢复正常访问
+                                • 系统免于瞬间瘫痪
+
+    │◄───────────────── 运行时韧性防御区间 ──────────────────────►│◄──────── 基础设施弹性区间 ──────►│
+    │     (软件层的架构模式在微观世界硬扛第一波冲击)              │   (云平台的硬件容量完成补给)   │
+</code></pre>
+<h2 id="1-第-0-00-分钟：灾难降临，冲击波突袭"><a href="#1-第-0-00-分钟：灾难降临，冲击波突袭" class="headerlink" title="1. 第 0:00 分钟：灾难降临，冲击波突袭"></a>1. 第 0:00 分钟：灾难降临，冲击波突袭</h2><ul>
+<li>现场还原：大促秒杀活动准时开启。交易链路的请求量瞬间飙升 10 倍，分布式消息中间件堆积量激增，存储层（RDS 云数据库）的连接数瞬间饱和。</li>
+<li>系统表现：由于容量在极短时间内超越了常规设计的瓶颈，系统的 P99 响应耗时开始快速恶化，无情地逼向需求与架构设计阶段设立的 1,500ms 临界崩溃阈值。级联雪崩的风险一触即发。</li>
+</ul>
+<h2 id="2-第-0-10-分钟：毫秒级捕获（MTTD），韧性接管战场"><a href="#2-第-0-10-分钟：毫秒级捕获（MTTD），韧性接管战场" class="headerlink" title="2. 第 0:10 分钟：毫秒级捕获（MTTD），韧性接管战场"></a>2. 第 0:10 分钟：毫秒级捕获（MTTD），韧性接管战场</h2><ul>
+<li>自动侦测：可观测性系统发挥了“雷达”作用。Prometheus 监控指标以 5 秒的高频采集速率对全链路进行紧密监控。在耗时异动的第 10 秒，自动化告警规则瞬间被点燃，平均检测时间（MTTD）被压缩到了豪秒级。</li>
+<li>容错响应：告警 Webhook 并没有发送给疲劳的人类工程师，而是直接注入了流量接入层的 API 网关与微服务治理层。网关瞬间启动过载限流（Load Shedding）模式，根据强弱依赖预案，强行将 30% 的非核心浏览和推荐流量就地阻断，返回友好降级提示。</li>
+<li>战场战果：这一软件层面的韧性动作，在瞬息之间隔离了故障点，强行把流量压制在当前系统能承受的安全水位线之内，阻止了主库连接池的彻底爆裂。系统免于瞬间瘫痪，成功挺过了第一波冲击波。</li>
+</ul>
+<h2 id="3-第-1-00-分钟：弹性开火，云资源开始动态补给"><a href="#3-第-1-00-分钟：弹性开火，云资源开始动态补给" class="headerlink" title="3. 第 1:00 分钟：弹性开火，云资源开始动态补给"></a>3. 第 1:00 分钟：弹性开火，云资源开始动态补给</h2><ul>
+<li>自愈联动：在软件韧性死守阵地的同时，事件驱动扩容引擎（如 KEDA）和计算编排层（Kubernetes）感知到了网关处的 Request 流量海啸以及 Pod 饱和度红线，立刻向云平台的集群控制器发出扩容指令。</li>
+<li>基础设施就绪：云基础设施的弹性和扩展武器全面开火。Kubernetes 开始跨越多个可用区（Multi-AZ）横向拉起大批全新的容器实例，底层云平台的集群节点也开始自动弹性向外伸展（Node Auto-scaling），开始在线拉取镜像、初始化计算运行时。</li>
+</ul>
+<h2 id="4-第-3-00-分钟：天下太平，自愈闭环完美收官"><a href="#4-第-3-00-分钟：天下太平，自愈闭环完美收官" class="headerlink" title="4. 第 3:00 分钟：天下太平，自愈闭环完美收官"></a>4. 第 3:00 分钟：天下太平，自愈闭环完美收官</h2><ul>
+<li>全局稳定：弹性的虚拟算力补给终于成功落实。新落地的成百上千个微服务 Pod 悉数通过了健康检查，并顺畅地被吸纳进网关的流量负载均衡列表中，成功横向分摊了洪峰压力，补齐了业务容量。</li>
+<li>恢复如初：云网关和监控系统侦测到后端核心链路的平均耗时已整体回落至 50ms 的健康水平。网关随后平稳、优雅地关闭了过载限流开关，100% 的流量恢复正常访问。</li>
+</ul>
+<h1 id="六、-结语：给-SRE-与架构师的终极启示"><a href="#六、-结语：给-SRE-与架构师的终极启示" class="headerlink" title="六、 结语：给 SRE 与架构师的终极启示"></a>六、 结语：给 SRE 与架构师的终极启示</h1><p>在这惊心动魄的 3 分钟里，没有任何一个高警电话拨向架构师，没有任何一个值班工程师在凌晨惊醒。系统在没有人工介入的情况下，完成了一次完美的“故障发生 -&gt; 自动侦测 -&gt; 容错响应 -&gt; 弹性自愈”的生命演进。<br>云原生时代的稳定性建设，从来不是为了追求“零缺陷”而盲目按最顶配的云规格进行饱和订阅，那是一场高成本且注定失败的战斗。现代 SRE 的真正奥秘在于：</p>
+<ol>
+<li>在正向建设上，充分信任并托管云厂商交付的基础设施，用最低的成本快速获得“易用、多活、高可靠”的先天体质；</li>
+<li>在逆向防御上，在云原生五层架构中布满自动化韧性哨兵，利用软件韧性死守资源弹性扩容的冷启动空窗期，通过将平均恢复时间（MTTR）逼近至零，最终兑现应用系统对用户的高可用承诺。</li>
+</ol>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>架构</category>
+      </categories>
+      <tags>
+        <tag>Architecture</tag>
+        <tag>Cloud-Native</tag>
+        <tag>Stability/Aailability</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建容器化的Azure DevOps Agent</title>
+    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
+    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
+<span id="more"></span>
+
+<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
+<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
+</blockquote>
+<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
+<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
+</li>
+<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
+</li>
+</ol>
+<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>环境变量说明：</p>
+<table>
+<thead>
+<tr>
+<th>变量名</th>
+<th>必需</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AZP_URL</td>
+<td>是</td>
+<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
+</tr>
+<tr>
+<td>AZP_TOKEN</td>
+<td>是</td>
+<td>前面申请的有足够权限的Personal Access Token</td>
+</tr>
+<tr>
+<td>AZP_AGENT_NAME</td>
+<td>是</td>
+<td>显示在Agent Pool中的Agent名字</td>
+</tr>
+<tr>
+<td>AZP_POOL</td>
+<td>是</td>
+<td>Agent pool的名字</td>
+</tr>
+<tr>
+<td>AZP_AGENTPACKAGE_URL</td>
+<td>否</td>
+<td>显式指定Azure Agent包的下载地址</td>
+</tr>
+</tbody></table>
+<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
+<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
+<p>getaddrinfo ENOTFOUND …</p>
+<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Azure DevOps</tag>
+        <tag>CI/CD</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>在Kubernetes中创建自托管GitHub Actions Runner</title>
     <url>/2022/04/10/creating-self-hosted-actions-runner-k8s/</url>
     <content><![CDATA[<p>GitHub Actions 是一个持续集成和交付 (CI/CD) 平台，利用工作流（Workflow）可以创建自动化构建、测试和部署管道。GitHub Actions不仅限于构建CI/CD工作流，它可以定义任意的工作流完成某个自动化的功能， 例如，定义一个工作流，当代码仓库中有新的问题创建时自动添加适当的标签。GitHub Action Runner是执行工作流的组件。本文介绍了利用开源项目<a href="https://github.com/actions/actions-runner-controller">Actions Runner Controller</a>在Kubernetes中部署和管理自托管的容器版本的GitHub Action Runner。</p>
@@ -1262,98 +1354,6 @@
       </tags>
   </entry>
   <entry>
-    <title>创建容器化的Azure DevOps Agent</title>
-    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
-    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
-<span id="more"></span>
-
-<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
-<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
-</blockquote>
-<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
-<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
-</li>
-<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
-</li>
-</ol>
-<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p>环境变量说明：</p>
-<table>
-<thead>
-<tr>
-<th>变量名</th>
-<th>必需</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>AZP_URL</td>
-<td>是</td>
-<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
-</tr>
-<tr>
-<td>AZP_TOKEN</td>
-<td>是</td>
-<td>前面申请的有足够权限的Personal Access Token</td>
-</tr>
-<tr>
-<td>AZP_AGENT_NAME</td>
-<td>是</td>
-<td>显示在Agent Pool中的Agent名字</td>
-</tr>
-<tr>
-<td>AZP_POOL</td>
-<td>是</td>
-<td>Agent pool的名字</td>
-</tr>
-<tr>
-<td>AZP_AGENTPACKAGE_URL</td>
-<td>否</td>
-<td>显式指定Azure Agent包的下载地址</td>
-</tr>
-</tbody></table>
-<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
-<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
-<p>getaddrinfo ENOTFOUND …</p>
-<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>CI/CD</tag>
-        <tag>Azure DevOps</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>从Git仓库中永久清理脏数据</title>
     <url>/2020/09/26/git-clean-bad-data-from-history/</url>
     <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
@@ -1449,194 +1449,6 @@
 <blockquote>
 <p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
 </blockquote>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Git加密存储文件</title>
-    <url>/2020/12/16/git-encrypt-file-in-repository/</url>
-    <content><![CDATA[<p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
-<span id="more"></span>
-
-<h1 id="私有仓库是否安全"><a href="#私有仓库是否安全" class="headerlink" title="私有仓库是否安全"></a>私有仓库是否安全</h1><p>也许有人会说：”我把代码仓库设成私有的不就安全了？“，然而情况并非如此，因为即使是私有仓库，也同样面临着不同类型的风险。当你集成某个第三方服务到你的私有仓库（比如集成第三方的持续集成服务）时，你的私有仓库就开放给了第三方服务，这些第三方服务就有可能读取你存储在代码仓库中的敏感信息。如果第三方服务遭受了黑客攻击，那么黑客就可以通过这个第三方服务获取你的Git仓库中的敏感信息。</p>
-<h1 id="为什么还要将敏感信息放在Git代码仓库中"><a href="#为什么还要将敏感信息放在Git代码仓库中" class="headerlink" title="为什么还要将敏感信息放在Git代码仓库中"></a>为什么还要将敏感信息放在Git代码仓库中</h1><p>正如文初谈到的”不要将敏感信息放在Git代码仓库中已是共识“，那为什么还用谈将敏感信息放在Git代码仓库中？正所谓无风不起浪，存在即合理。抛开敏感信息这个特征不谈，包含这些信息的文件其实和我们的代码文件没什么区别，如果不放在Git仓库中，就不能对它们做版本管理，比如对文件名和路径的变更，密码等敏感信息的变更，新信息的添加等都没法追踪它们的变更记录，尤其在构建一个自动部署系统时，你就不得不维护一个额外的安全服务来加密存储这些包含敏感信息的配置文件，而自动部署系统也需要设计额外的方法和步骤来读取这些配置文件，更为麻烦的是自动部署系统无法通过Git变更记录来指定使用的配置文件的版本。</p>
-<h1 id="git-secret的原理"><a href="#git-secret的原理" class="headerlink" title="git-secret的原理"></a>git-secret的原理</h1><p>既要将包含敏感信息的配置文件保存在Git代码仓库中（能带来很多便利），又要保证安全，那么最直接的做法就是将这些文件加密后再保存到Git仓库中，而git-secret则满足了这一需求，同时git-secret也能保证多人协同工作。以下是git-secret提供的一些功能：</p>
-<ul>
-<li><p>利用<a href="http://www.gnupg.org/">GnuPG</a>的多密钥加密功能：多个公钥加密文件，不同的私钥解密文件。这样，工作在Git仓库中的开发人员只需要将自己的公钥保存在代码仓库中用来加密文件，同时在自己的工作机器上保存自己的私钥来解密文件。</p>
-</li>
-<li><p>通过git-secret将包含敏感信息的文件放入.gitignore文件中避免误提交，同时生成一个新的加密文件（在原有文件名上添加了一个额外的后缀.secret）并保存在Git仓库中。</p>
-</li>
-<li><p>当把代码仓库克隆到本地（只包含带有后缀.secret的加密文件）后，可以通过git-secret解密后生成解密文件（不包含.secret后缀），这样就可以在本地使用包含这些敏感信息的文件了。</p>
-</li>
-</ul>
-<h1 id="git-secret的安装和使用"><a href="#git-secret的安装和使用" class="headerlink" title="git-secret的安装和使用"></a>git-secret的安装和使用</h1><p>git-secret的使用依赖于git和<a href="http://www.gnupg.org/">GnuPG</a>。Git的安装可以参考相关文档，不在这里赘述。git-secret使用的密钥以及加解密的功能都是通过GnuPG来完成的。</p>
-<h2 id="安装GnuPG"><a href="#安装GnuPG" class="headerlink" title="安装GnuPG"></a>安装GnuPG</h2><p>GnuPG，也称为GPG，是OpenPGP标准RFC4880（也称为PGP）的免费实现。GnuPG允许你对数据和通信进行加密和签名，它具有通用的密钥管理系统，以及用于各种公钥目录的访问模块。GnuPG是一种命令行工具，具有易于与其他应用程序集成的功能。GnuPG也提供了大量的前端应用程序和库，GnuPG还提供对S/MIME和Secure Shell（ssh）的支持。</p>
-<ul>
-<li><p>Mac OSX中的安装</p>
-<p>目前最新版本的GnuPG是2.2.25。可以从<a href="https://sourceforge.net/p/gpgosx/docu/Download/">https://sourceforge.net/p/gpgosx/docu/Download/</a> 下载dmg文件并安装，也可以通过下面的brew命令安装：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install gpg2</span><br></pre></td></tr></tbody></table></figure>
-
-<p>推荐使用brew的安装方式，以后可以方便升级。</p>
-</li>
-<li><p>Windows中的安装</p>
-<p>Gpg4win是Windows版本的GnuPG完整实现。可以从<a href="https://gpg4win.org/download.html">https://gpg4win.org/download.html</a> 下载安装文件并安装。</p>
-</li>
-<li><p>Linux中的安装 </p>
-<p>大部分Linux系统已经自带GnuPG了，所以不需要再额外安装，只是有可能不是最新版本的，但是不影响使用。如果GnuPG不存在，也可以通过以下的命令来安装：</p>
-<p>Debian或Ubuntu</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-get install gnupg</span><br></pre></td></tr></tbody></table></figure>
-
-<p>RedHat或CentOS</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum install gnupg</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h2 id="安装git-secret"><a href="#安装git-secret" class="headerlink" title="安装git-secret"></a>安装git-secret</h2><p>在Max OSX和Linux中的安装可以参考git-secret的<a href="https://git-secret.io/installation">安装文档</a>。</p>
-<ul>
-<li><p>Mac OSX中的安装</p>
-<p>通过brew安装：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install git-secret</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>Linux中的安装</p>
-<p>Ubuntu或者Debian</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">"deb https://dl.bintray.com/sobolevn/deb git-secret main"</span> | <span class="built_in">sudo</span> <span class="built_in">tee</span> -a /etc/apt/sources.list</span><br><span class="line">wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | <span class="built_in">sudo</span> apt-key add -</span><br><span class="line"><span class="built_in">sudo</span> apt-get update &amp;&amp; <span class="built_in">sudo</span> apt-get install git-secret</span><br></pre></td></tr></tbody></table></figure>
-
-<p>RedHat或者CentOS:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">wget https://bintray.com/sobolevn/rpm/rpm -O bintray-sobolevn-rpm.repo</span><br><span class="line"><span class="built_in">sudo</span> <span class="built_in">mv</span> bintray-sobolevn-rpm.repo /etc/yum.repos.d/</span><br><span class="line"><span class="built_in">sudo</span> yum install git-secret</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>Windows中的安装</p>
-<p>git-secret官方并没有宣称支持Windows系统，但是从源代码来看已经支持CYGWIN或MINGW环境了。经过试验，以下方法可用：</p>
-<p>(1) 首先，在Windows系统中国安装Git时，选择”在命令提示符下使用Git和可选的Unix工具“，这样可以安装和使用很多可用的Linux命令</p>
-<p><img src="/2020/12/16/git-encrypt-file-in-repository/1.png"></p>
-<p>(2) 将Mac OSX下通过brew安装的git secret打包</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">zip -r -9 git-secret.zip /usr/local/Cellar/git-secret/</span><br></pre></td></tr></tbody></table></figure>
-
-<p>(3) 将git-secret.zip拷贝到Windows系统某个目录下并解压，例如解压后的路径如下：</p>
-<figure class="highlight bat"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function">C:\<span class="title">Users</span>\<span class="title">Administrator</span>\<span class="title">Documents</span>\<span class="title">Tools</span>\<span class="title">git</span>-<span class="title">secret</span>\0.3.3</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>0.3.3是git-secret的版本，可能会有变化。</p>
-</blockquote>
-<p>(4) 将git-secret目录下的bin目录加到Windows的Path环境变量中</p>
-<p><img src="/2020/12/16/git-encrypt-file-in-repository/2.png"></p>
-<p>(5) 重新启动一个命令行控制台执行以下命令检查git secret命令可用</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret --version</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h2 id="使用git-secret"><a href="#使用git-secret" class="headerlink" title="使用git-secret"></a>使用git-secret</h2><h3 id="初次添加对git-secret支持"><a href="#初次添加对git-secret支持" class="headerlink" title="初次添加对git-secret支持"></a>初次添加对git-secret支持</h3><ul>
-<li><p>执行下面的命令创建GPG公钥和私钥</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:mikejianzhang@163.com">mikejianzhang@163.com</a>。</p>
-</blockquote>
-</li>
-<li><p>导出GPG公钥和私钥</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --armor --<span class="built_in">export</span> mikejianzhang@163.com &gt; mikejianzhang.public-key.gpg</span><br><span class="line">gpg --armor --export-secret-key  mikejianzhang@163.com &gt; mikejianzhang.private-key.gpg</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>如果还有第二个开发电脑，则需要在电脑里安装Git和GnuPG，并执行下面命令导入自己的私钥：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --import mikejianzhang.private-key.gpg</span><br></pre></td></tr></tbody></table></figure></blockquote>
-</li>
-<li><p>初始化一个新的Git仓库或者克隆一个已经存在的代码仓库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> test-git-secret</span><br><span class="line"><span class="built_in">cd</span> test-git-secret</span><br><span class="line">git init</span><br></pre></td></tr></tbody></table></figure>
-
-<p>或者</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>初始化Git仓库支持git-secret</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">cd</span> test-git-secret</span><br><span class="line">git secret init</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>类似于.git目录，git secret init命令会在根目录下创建一个.gitsecret目录用来存储GPG公钥。</p>
-</blockquote>
-</li>
-<li><p>将自己的公钥导入进git secret的密钥串中（保存在.gitsecret目录）</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret tell mikejianzhang@163.com</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>执行下面命令添加需要加密的文件</p>
-<p>执行命令之前，你需要创建一个包含敏感信息的文件，而且还没有提交到Git仓库中，例如test。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret add <span class="built_in">test</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>文件“test”会被加入到.gitignore文件中，这样Git命令就会忽略这个文件</p>
-</blockquote>
-</li>
-<li><p>执行下面命令加密所有通过git secret add添加的待加密文件</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret hide </span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>这个命令会产生一个加密文件，例如”test.secret”。</p>
-</blockquote>
-</li>
-<li><p>将所有本地文件和文件夹提交到Git仓库中</p>
-</li>
-</ul>
-<h3 id="编辑已加密后的文件"><a href="#编辑已加密后的文件" class="headerlink" title="编辑已加密后的文件"></a>编辑已加密后的文件</h3><ul>
-<li><p>克隆Git代码仓库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>解密所有的加密文件</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>“-f”选项将解密后的文件强制覆盖本地的明文文件。</p>
-</blockquote>
-</li>
-<li><p>编辑本地的明文文件并执行下面命令重新加密</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>将所有的本地改动提交的Git仓库中</p>
-<blockquote>
-<p>当每次有改动时，可以通过下面命令检查是否有加密文件的改动，以决定是否需要执行git secret hide命令去重新加密</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret changes</span><br></pre></td></tr></tbody></table></figure></blockquote>
-</li>
-</ul>
-<h3 id="添加第二个用户"><a href="#添加第二个用户" class="headerlink" title="添加第二个用户"></a>添加第二个用户</h3><ul>
-<li><p>拿到第二个用户的公钥文件，例如user2.public-key.gpg, 并执行以下的操作将第二个用户的公钥导入git仓库的密钥串中<br>执行以下命令先将用户的公钥导入gpg的密钥串中：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --import user2.public-key.gpg</span><br></pre></td></tr></tbody></table></figure>
-<p>在当前代码仓库下执行以下命令将用户的公钥从gpg的密钥串中导入git仓库的密钥串中：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git tell &lt;user2&gt;@xxx.com</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>执行下面命令解密出所有最新的加密文件</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>用目前密钥串中的所有公钥（包含第二个用户的公钥）重新加密所有的文件并提交</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<p>当做完以上所有的操作后，第二个用户就可以执行git secret命令进行正常的加解密操作了。</p>
-<h1 id="git-secret对CI-CD流程的支持"><a href="#git-secret对CI-CD流程的支持" class="headerlink" title="git-secret对CI/CD流程的支持"></a>git-secret对CI/CD流程的支持</h1><p>申请一个服务账号（一般企业都会支持这样的操作）包含邮箱地址，利用这个邮箱地址创建一个GnuPG的公钥和私钥，将公钥导入Git仓库的密钥环中，将私钥导入所有的构建机器中，最后在CI/CD脚本执行构建，测试和部署前用git secret命令来解密所有的加密的文件。</p>
-<h1 id="git-secret的缺点"><a href="#git-secret的缺点" class="headerlink" title="git-secret的缺点"></a>git-secret的缺点</h1><ul>
-<li><p>无法在Web界面上浏览加密文件内容或做差异化比较，只有把代码仓库克隆到本地解密后才能浏览文件内容或做差异化比较。如果git-secret能够提供加密部分文件内容的功能，那么就比较完美了。例如，在一个配置文件里用正则表达式或Glob语法来定义需要加密的文本，git-secret的hide命令可以读取这个配置文件去加密文件内容而非整个文件。</p>
-</li>
-<li><p>操作变得复杂了。个人觉得这也不能算什么缺点，有得必有失，获得了高安全性，而在操作上就必定要花费一些代价，但这也是我们愿意花费代价去做这件事的。</p>
-</li>
-<li><p>用户还是需要一个安全的工具来妥善保存自己的私钥，开源和商业领域都有相关的工具选择，所以问题也不是很大。</p>
-</li>
-</ul>
-<h1 id="其它的同类工具"><a href="#其它的同类工具" class="headerlink" title="其它的同类工具"></a>其它的同类工具</h1><p>除了git-secret, 还有很多其它类似的工具可供选择，它们的原理基本上都是相似的。下面列出一些仅供参考。</p>
-<ul>
-<li><p><a href="https://www.agwa.name/projects/git-crypt/">git-crypt</a><br>另一个和git-secret相似的方案是git-crypt，但是git-crypt是二进制可执行文件而不是shell脚本。</p>
-</li>
-<li><p><a href="https://github.com/StackExchange/blackbox">BlackBox</a><br>BlackBox既支持Git也支持其它的版本管理系统，例如Mercurial和Subversion。BlackBox支持加密某个文本串而不是整个文件，这正好可以弥补git-secret只能加密整个文件的缺点。可以抽空做个深入研究看BlackBox是否支持git-secret其它的一些操作。</p>
-</li>
-</ul>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -1934,6 +1746,194 @@
       </tags>
   </entry>
   <entry>
+    <title>Git加密存储文件</title>
+    <url>/2020/12/16/git-encrypt-file-in-repository/</url>
+    <content><![CDATA[<p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
+<span id="more"></span>
+
+<h1 id="私有仓库是否安全"><a href="#私有仓库是否安全" class="headerlink" title="私有仓库是否安全"></a>私有仓库是否安全</h1><p>也许有人会说：”我把代码仓库设成私有的不就安全了？“，然而情况并非如此，因为即使是私有仓库，也同样面临着不同类型的风险。当你集成某个第三方服务到你的私有仓库（比如集成第三方的持续集成服务）时，你的私有仓库就开放给了第三方服务，这些第三方服务就有可能读取你存储在代码仓库中的敏感信息。如果第三方服务遭受了黑客攻击，那么黑客就可以通过这个第三方服务获取你的Git仓库中的敏感信息。</p>
+<h1 id="为什么还要将敏感信息放在Git代码仓库中"><a href="#为什么还要将敏感信息放在Git代码仓库中" class="headerlink" title="为什么还要将敏感信息放在Git代码仓库中"></a>为什么还要将敏感信息放在Git代码仓库中</h1><p>正如文初谈到的”不要将敏感信息放在Git代码仓库中已是共识“，那为什么还用谈将敏感信息放在Git代码仓库中？正所谓无风不起浪，存在即合理。抛开敏感信息这个特征不谈，包含这些信息的文件其实和我们的代码文件没什么区别，如果不放在Git仓库中，就不能对它们做版本管理，比如对文件名和路径的变更，密码等敏感信息的变更，新信息的添加等都没法追踪它们的变更记录，尤其在构建一个自动部署系统时，你就不得不维护一个额外的安全服务来加密存储这些包含敏感信息的配置文件，而自动部署系统也需要设计额外的方法和步骤来读取这些配置文件，更为麻烦的是自动部署系统无法通过Git变更记录来指定使用的配置文件的版本。</p>
+<h1 id="git-secret的原理"><a href="#git-secret的原理" class="headerlink" title="git-secret的原理"></a>git-secret的原理</h1><p>既要将包含敏感信息的配置文件保存在Git代码仓库中（能带来很多便利），又要保证安全，那么最直接的做法就是将这些文件加密后再保存到Git仓库中，而git-secret则满足了这一需求，同时git-secret也能保证多人协同工作。以下是git-secret提供的一些功能：</p>
+<ul>
+<li><p>利用<a href="http://www.gnupg.org/">GnuPG</a>的多密钥加密功能：多个公钥加密文件，不同的私钥解密文件。这样，工作在Git仓库中的开发人员只需要将自己的公钥保存在代码仓库中用来加密文件，同时在自己的工作机器上保存自己的私钥来解密文件。</p>
+</li>
+<li><p>通过git-secret将包含敏感信息的文件放入.gitignore文件中避免误提交，同时生成一个新的加密文件（在原有文件名上添加了一个额外的后缀.secret）并保存在Git仓库中。</p>
+</li>
+<li><p>当把代码仓库克隆到本地（只包含带有后缀.secret的加密文件）后，可以通过git-secret解密后生成解密文件（不包含.secret后缀），这样就可以在本地使用包含这些敏感信息的文件了。</p>
+</li>
+</ul>
+<h1 id="git-secret的安装和使用"><a href="#git-secret的安装和使用" class="headerlink" title="git-secret的安装和使用"></a>git-secret的安装和使用</h1><p>git-secret的使用依赖于git和<a href="http://www.gnupg.org/">GnuPG</a>。Git的安装可以参考相关文档，不在这里赘述。git-secret使用的密钥以及加解密的功能都是通过GnuPG来完成的。</p>
+<h2 id="安装GnuPG"><a href="#安装GnuPG" class="headerlink" title="安装GnuPG"></a>安装GnuPG</h2><p>GnuPG，也称为GPG，是OpenPGP标准RFC4880（也称为PGP）的免费实现。GnuPG允许你对数据和通信进行加密和签名，它具有通用的密钥管理系统，以及用于各种公钥目录的访问模块。GnuPG是一种命令行工具，具有易于与其他应用程序集成的功能。GnuPG也提供了大量的前端应用程序和库，GnuPG还提供对S/MIME和Secure Shell（ssh）的支持。</p>
+<ul>
+<li><p>Mac OSX中的安装</p>
+<p>目前最新版本的GnuPG是2.2.25。可以从<a href="https://sourceforge.net/p/gpgosx/docu/Download/">https://sourceforge.net/p/gpgosx/docu/Download/</a> 下载dmg文件并安装，也可以通过下面的brew命令安装：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install gpg2</span><br></pre></td></tr></tbody></table></figure>
+
+<p>推荐使用brew的安装方式，以后可以方便升级。</p>
+</li>
+<li><p>Windows中的安装</p>
+<p>Gpg4win是Windows版本的GnuPG完整实现。可以从<a href="https://gpg4win.org/download.html">https://gpg4win.org/download.html</a> 下载安装文件并安装。</p>
+</li>
+<li><p>Linux中的安装 </p>
+<p>大部分Linux系统已经自带GnuPG了，所以不需要再额外安装，只是有可能不是最新版本的，但是不影响使用。如果GnuPG不存在，也可以通过以下的命令来安装：</p>
+<p>Debian或Ubuntu</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-get install gnupg</span><br></pre></td></tr></tbody></table></figure>
+
+<p>RedHat或CentOS</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> yum install gnupg</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h2 id="安装git-secret"><a href="#安装git-secret" class="headerlink" title="安装git-secret"></a>安装git-secret</h2><p>在Max OSX和Linux中的安装可以参考git-secret的<a href="https://git-secret.io/installation">安装文档</a>。</p>
+<ul>
+<li><p>Mac OSX中的安装</p>
+<p>通过brew安装：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install git-secret</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>Linux中的安装</p>
+<p>Ubuntu或者Debian</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">"deb https://dl.bintray.com/sobolevn/deb git-secret main"</span> | <span class="built_in">sudo</span> <span class="built_in">tee</span> -a /etc/apt/sources.list</span><br><span class="line">wget -qO - https://api.bintray.com/users/sobolevn/keys/gpg/public.key | <span class="built_in">sudo</span> apt-key add -</span><br><span class="line"><span class="built_in">sudo</span> apt-get update &amp;&amp; <span class="built_in">sudo</span> apt-get install git-secret</span><br></pre></td></tr></tbody></table></figure>
+
+<p>RedHat或者CentOS:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">wget https://bintray.com/sobolevn/rpm/rpm -O bintray-sobolevn-rpm.repo</span><br><span class="line"><span class="built_in">sudo</span> <span class="built_in">mv</span> bintray-sobolevn-rpm.repo /etc/yum.repos.d/</span><br><span class="line"><span class="built_in">sudo</span> yum install git-secret</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>Windows中的安装</p>
+<p>git-secret官方并没有宣称支持Windows系统，但是从源代码来看已经支持CYGWIN或MINGW环境了。经过试验，以下方法可用：</p>
+<p>(1) 首先，在Windows系统中国安装Git时，选择”在命令提示符下使用Git和可选的Unix工具“，这样可以安装和使用很多可用的Linux命令</p>
+<p><img src="/2020/12/16/git-encrypt-file-in-repository/1.png"></p>
+<p>(2) 将Mac OSX下通过brew安装的git secret打包</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">zip -r -9 git-secret.zip /usr/local/Cellar/git-secret/</span><br></pre></td></tr></tbody></table></figure>
+
+<p>(3) 将git-secret.zip拷贝到Windows系统某个目录下并解压，例如解压后的路径如下：</p>
+<figure class="highlight bat"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function">C:\<span class="title">Users</span>\<span class="title">Administrator</span>\<span class="title">Documents</span>\<span class="title">Tools</span>\<span class="title">git</span>-<span class="title">secret</span>\0.3.3</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>0.3.3是git-secret的版本，可能会有变化。</p>
+</blockquote>
+<p>(4) 将git-secret目录下的bin目录加到Windows的Path环境变量中</p>
+<p><img src="/2020/12/16/git-encrypt-file-in-repository/2.png"></p>
+<p>(5) 重新启动一个命令行控制台执行以下命令检查git secret命令可用</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret --version</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h2 id="使用git-secret"><a href="#使用git-secret" class="headerlink" title="使用git-secret"></a>使用git-secret</h2><h3 id="初次添加对git-secret支持"><a href="#初次添加对git-secret支持" class="headerlink" title="初次添加对git-secret支持"></a>初次添加对git-secret支持</h3><ul>
+<li><p>执行下面的命令创建GPG公钥和私钥</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --full-generate-key</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>选择缺省的加密算法“(1) RSA and RSA (default)”。<br>输入uid和email，例如分别为mikejianzhang和<a href="mailto:mikejianzhang@163.com">mikejianzhang@163.com</a>。</p>
+</blockquote>
+</li>
+<li><p>导出GPG公钥和私钥</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --armor --<span class="built_in">export</span> mikejianzhang@163.com &gt; mikejianzhang.public-key.gpg</span><br><span class="line">gpg --armor --export-secret-key  mikejianzhang@163.com &gt; mikejianzhang.private-key.gpg</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>如果还有第二个开发电脑，则需要在电脑里安装Git和GnuPG，并执行下面命令导入自己的私钥：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --import mikejianzhang.private-key.gpg</span><br></pre></td></tr></tbody></table></figure></blockquote>
+</li>
+<li><p>初始化一个新的Git仓库或者克隆一个已经存在的代码仓库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> test-git-secret</span><br><span class="line"><span class="built_in">cd</span> test-git-secret</span><br><span class="line">git init</span><br></pre></td></tr></tbody></table></figure>
+
+<p>或者</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>初始化Git仓库支持git-secret</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">cd</span> test-git-secret</span><br><span class="line">git secret init</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>类似于.git目录，git secret init命令会在根目录下创建一个.gitsecret目录用来存储GPG公钥。</p>
+</blockquote>
+</li>
+<li><p>将自己的公钥导入进git secret的密钥串中（保存在.gitsecret目录）</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret tell mikejianzhang@163.com</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>执行下面命令添加需要加密的文件</p>
+<p>执行命令之前，你需要创建一个包含敏感信息的文件，而且还没有提交到Git仓库中，例如test。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret add <span class="built_in">test</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>文件“test”会被加入到.gitignore文件中，这样Git命令就会忽略这个文件</p>
+</blockquote>
+</li>
+<li><p>执行下面命令加密所有通过git secret add添加的待加密文件</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret hide </span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>这个命令会产生一个加密文件，例如”test.secret”。</p>
+</blockquote>
+</li>
+<li><p>将所有本地文件和文件夹提交到Git仓库中</p>
+</li>
+</ul>
+<h3 id="编辑已加密后的文件"><a href="#编辑已加密后的文件" class="headerlink" title="编辑已加密后的文件"></a>编辑已加密后的文件</h3><ul>
+<li><p>克隆Git代码仓库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mikejianzhang/test-git-secret.git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>解密所有的加密文件</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>“-f”选项将解密后的文件强制覆盖本地的明文文件。</p>
+</blockquote>
+</li>
+<li><p>编辑本地的明文文件并执行下面命令重新加密</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>将所有的本地改动提交的Git仓库中</p>
+<blockquote>
+<p>当每次有改动时，可以通过下面命令检查是否有加密文件的改动，以决定是否需要执行git secret hide命令去重新加密</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret changes</span><br></pre></td></tr></tbody></table></figure></blockquote>
+</li>
+</ul>
+<h3 id="添加第二个用户"><a href="#添加第二个用户" class="headerlink" title="添加第二个用户"></a>添加第二个用户</h3><ul>
+<li><p>拿到第二个用户的公钥文件，例如user2.public-key.gpg, 并执行以下的操作将第二个用户的公钥导入git仓库的密钥串中<br>执行以下命令先将用户的公钥导入gpg的密钥串中：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">gpg --import user2.public-key.gpg</span><br></pre></td></tr></tbody></table></figure>
+<p>在当前代码仓库下执行以下命令将用户的公钥从gpg的密钥串中导入git仓库的密钥串中：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git tell &lt;user2&gt;@xxx.com</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>执行下面命令解密出所有最新的加密文件</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret reveal -f</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>用目前密钥串中的所有公钥（包含第二个用户的公钥）重新加密所有的文件并提交</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git secret hide</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<p>当做完以上所有的操作后，第二个用户就可以执行git secret命令进行正常的加解密操作了。</p>
+<h1 id="git-secret对CI-CD流程的支持"><a href="#git-secret对CI-CD流程的支持" class="headerlink" title="git-secret对CI/CD流程的支持"></a>git-secret对CI/CD流程的支持</h1><p>申请一个服务账号（一般企业都会支持这样的操作）包含邮箱地址，利用这个邮箱地址创建一个GnuPG的公钥和私钥，将公钥导入Git仓库的密钥环中，将私钥导入所有的构建机器中，最后在CI/CD脚本执行构建，测试和部署前用git secret命令来解密所有的加密的文件。</p>
+<h1 id="git-secret的缺点"><a href="#git-secret的缺点" class="headerlink" title="git-secret的缺点"></a>git-secret的缺点</h1><ul>
+<li><p>无法在Web界面上浏览加密文件内容或做差异化比较，只有把代码仓库克隆到本地解密后才能浏览文件内容或做差异化比较。如果git-secret能够提供加密部分文件内容的功能，那么就比较完美了。例如，在一个配置文件里用正则表达式或Glob语法来定义需要加密的文本，git-secret的hide命令可以读取这个配置文件去加密文件内容而非整个文件。</p>
+</li>
+<li><p>操作变得复杂了。个人觉得这也不能算什么缺点，有得必有失，获得了高安全性，而在操作上就必定要花费一些代价，但这也是我们愿意花费代价去做这件事的。</p>
+</li>
+<li><p>用户还是需要一个安全的工具来妥善保存自己的私钥，开源和商业领域都有相关的工具选择，所以问题也不是很大。</p>
+</li>
+</ul>
+<h1 id="其它的同类工具"><a href="#其它的同类工具" class="headerlink" title="其它的同类工具"></a>其它的同类工具</h1><p>除了git-secret, 还有很多其它类似的工具可供选择，它们的原理基本上都是相似的。下面列出一些仅供参考。</p>
+<ul>
+<li><p><a href="https://www.agwa.name/projects/git-crypt/">git-crypt</a><br>另一个和git-secret相似的方案是git-crypt，但是git-crypt是二进制可执行文件而不是shell脚本。</p>
+</li>
+<li><p><a href="https://github.com/StackExchange/blackbox">BlackBox</a><br>BlackBox既支持Git也支持其它的版本管理系统，例如Mercurial和Subversion。BlackBox支持加密某个文本串而不是整个文件，这正好可以弥补git-secret只能加密整个文件的缺点。可以抽空做个深入研究看BlackBox是否支持git-secret其它的一些操作。</p>
+</li>
+</ul>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>安装Python并搭建Python的虚拟开发环境</title>
     <url>/2020/01/31/install-python/</url>
     <content><![CDATA[<p>虽然Python的安装之于开发来说比较简单，但弄清楚Python及其相关工具在各个平台上的安装对于之后的开发，打包都是很有帮助的，正所谓工欲善其事，必先利其器！本文将介绍如何在Mac，Windows，Ubuntu和CentOS中同时安装和设置Python2和Python3，以及利用virtualenv命令创建Python的虚拟开发环境。为什么要Python2和Python3共存？尽管官方已经不支持Python2了，但还是有很多Python2的程序存在，有很多Python2的库没有迁移到Python3，所以在很长的一段时间里是需要Python2和Python3的开发和运行环境共存。</p>
@@ -2133,112 +2133,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins Job的并发执行</title>
-    <url>/2019/07/08/jenkins-concurrent-builds/</url>
-    <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
-<ul>
-<li>充分利用Slave资源。如果让一台VM Slave一次只处理一个CI请求，往往会浪费很多的资源（CPU，Memory，Storage）。</li>
-<li>持续集成的最佳实践要求快速地“Build Per Change Commit”，但是对于一些比较耗时的持续集成流水线，比如项目比较大，或者自动化测试的时间比较长，往往是前一个集成还没结束，新的change commit已经到来，如果不能并发执行，只能阻塞等待，导致commit的提交者不能及时得到反馈，从而使持续集成流水线在项目中失去了应有的作用，地位也会变得比较尴尬。此时，如果再一味地推进与持续集成流水线配套的一些策略，将会受到很大的阻力。</li>
-</ul>
-<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：<br>1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；<br>2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
-<p>为了支持Jenkins Job并发执行，首先需要设置Jenkins Slave的Build Executors的数量大于1：<br><img src="/2019/07/08/jenkins-concurrent-builds/1.png"></p>
-<p>当Jenkins Job有新的build请求时，只要匹配的Slave节点有空闲的Executor，即使已经有build在执行，新的build也会立刻被并发执行。如果匹配的Slave节点没有空闲的Executor，这个新的build请求将被放入待执行队列里等待调度。</p>
-<p>Free Style Job缺省并没有打开并发执行的功能。需要在Job的配置中打开选项“Execute concurrent builds if necessary”：<br><img src="/2019/07/08/jenkins-concurrent-builds/2.png"></p>
-<p>Pipeline2.0的Job缺省是并发执行模式。如果要禁止并发执行，可以通过添加以下代码：</p>
-<ul>
-<li><p>Scripted Pipeline</p>
-<p>在Jenkinsfile头部添加以下属性：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">properties(</span><br><span class="line">  [</span><br><span class="line">      disableConcurrentBuilds()</span><br><span class="line">  ]</span><br><span class="line">)</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>Declarative Pipeline</p>
-<p>在pipeline块中添加以下选项：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    options {</span><br><span class="line">        disableConcurrentBuilds()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="Jenkins-Job并发执行需要解决的问题"><a href="#Jenkins-Job并发执行需要解决的问题" class="headerlink" title="Jenkins Job并发执行需要解决的问题"></a>Jenkins Job并发执行需要解决的问题</h1><p>Jenkins Job的并发执行是一把双刃剑，用得好，所向披靡，能够充分利用既有资源服务更多的持续集成请求，用得不好，会出现很多预料不到的问题，而且有些问题并不能重复出现，给调试带来了很大的负担。Jenkins Job的并发执行主要面临的问题是资源使用的冲突。下图是一个常见的基于Pipeline2.0实现的一个Jenkins CI Job(yunzai-ci)：<br><img src="/2019/07/08/jenkins-concurrent-builds/3.png">按照流程顺序，逐一分析如下：</p>
-<ul>
-<li><p>在“Checkout Code”阶段，同一个Jenkins Job并发执行的build在同一个Slave上的Workspace会存在着冲突。对于这个问题，其实Jenkins已经提供了解决方案，细心的你一定会发现在Slave机子上同一个Job会存在着多个文件夹，比如“yunzai-ci”，“yunzai-ci@1”，“yunzai-ci@2”…，这就是同一个Job并发执行的build对应的不同的Workspace。Jenkins缺省是在Job的名字后面加上符号@和数字来命名不同的Workspace的，当并发执行的build数量大于Workspace的数量，Jenkins会根据命名规则自动创建一个新的Workspace，当并发执行的build数量小于Workspace数量，Jenkins会按顺序重用已有的Workspace。</p>
-<blockquote>
-<p>Workspace的分隔符@可以在启动Jenkins master时设置Java系统属性“hudson.slaves.WorkspaceList”来改变。比如，“hudson.slaves.WorkspaceList=-”将Workspace的分隔符改为中划线。</p>
-</blockquote>
-<p>Workspace的冲突解决了，但是又引入了一个潜在的效率问题。想象一下，如果项目的代码库比较大(几百兆，或者几个G)，那么在创建一个新的Workspace时，会重新从远处的代码仓库克隆代码，这将导致当前Jenkins job执行的时间被拉长。可以优化Jenkins Job，通过拷贝本地已有Workspace的代码来提升速度(Linux上可以使用Rsync，Window上可以使用Robocopy)，而不是直接从远程代码仓库去克隆代码。</p>
-</li>
-<li><p>在“Build/UT”阶段，会使用不同的自动构建工具和包管理工具，比如Maven, Gradle, Npm, Bower等等，构建出来的制品会上传到制品仓库(Artifactory或Nexus)。这里，自动构建工具的本地缓存，以及构建制品上传到制品仓库都可能存在冲突。比如Maven, 缺省的本地缓存是在当前用户的.m2目录下，Maven执行时会更新或者下载项目的依赖到本地缓存，或者安装当前构建的制品到本地缓存，当同一个Jenkins Job并发执行的build运行在同一个Jenkins Slave上时，会启动多个Maven进程同时执行，它们会下载同一个依赖包或者安装相同版本(Maven的snapshot版本或者其它原因导致两个build版本相同)的构建制品到到同一个缓存目录，这时就会经常出现写磁盘文件冲突的问题，而且这个问题不是每次都发生。当多个Maven进程同时上传相同版本的制品到制品仓库时，也会存在着冲突。<br>要解决这类型的冲突，需要具体情况，具体对待。对于Maven来说，可以通过属性”maven.repo.local”来为每个Maven进程指定不同的本地缓存目录，且保证每个Build的版本都是唯一的。这个解决方案同样存在着效率问题，每开一个新的Maven本地缓存目录都会增加build的执行时间，因为Maven要重新去下载项目的所有依赖，这时也可以通过拷贝本地已有的缓存目录来提升速度。</p>
-</li>
-<li><p>在“Code Static Check”阶段，如果使用的是SonarQube，则不会产生冲突，因为每一个并发执行的build都会在SonarQube服务端产生一个独立的分析，所以不会相互干扰。但如果是其它的静态代码分析服务器，可能就需要具体情况，具体对待。</p>
-</li>
-<li><p>在“自动化测试”阶段，由于资源有限(自动化测试机器有限，而且执行自动化测试用例也需要一定的时间)，所以不一定能够服务于并发执行的多个build。这时可以增加自动化测试机器(虚拟机)，同时进行测试分级，抽取出部分重要的测试用例放到Jenkins Job中去执行以降低测试执行的时间。可以把全量测试降级为以天为单位，比如每晚取最新的build去执行全量测试，并给出测试报告。</p>
-</li>
-</ul>
-<p>不同公司或组织的持续集成流水线可能和上文描述的不相同，为了能够并发执行Jenkins Job，需要逐一分析和解决每个阶段可能出现的资源冲突问题。</p>
-<h1 id="Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin"><a href="#Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin" class="headerlink" title="Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)"></a>Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)</h1><p>Jenkins Job缺省的并发行为是只要有足够可用的Jenkins Slave和Executor资源，启动的build数量是不限的。但实际情况是我们需要精确地控制某个Jenkins Job总的并发执行的build数量，同时也希望单个Jenkins Slave节点上同一个Jenkins Job并发执行的build数量，这样可以限制某个Jenkins Job的总体资源消耗，保证其它Jenkins Job也能均衡执行。借助于Jenkins插件“Throttle Concurrent Builds Plugin”可以达到这样的控制目的。“Throttle Concurrent Builds Plugin”支持系统级别的配置，也支持Job级别的配置：</p>
-<ul>
-<li><p>系统级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/4.png">系统级别的配置可以设置一个并发执行的类别，不同的Jenkins Job可以引用这个类别。<br>“Maximum Total Courrent Builds”用来设置Jenkins Job最大的并发数量。<br>“Maximum Concurrent Builds Per Node”用来设置同一个Jenkins Job在同一个Slave节点上最大的并发数量。</p>
-</li>
-<li><p>Free Style Job级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/5.png">在Job级别，可以选择“Throttle this project alone”，并且设置“Maximum Total Courrent Builds”和“Maximum Concurrent Builds Per Node”这两个值，也可以通过“Multi-Project Throttle Category”选择系统级别配置好的并发执行的类别。</p>
-</li>
-<li><p>Scripted Pipeline只支持使用系统级别配置好的并发执行类别：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">throttle(['test-cocurrent']) {</span><br><span class="line">  node('xxxx') {</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
-<li><p>对于Declarative Pipeline，目前“Throttle Concurrent Builds Plugin”还不支持，所以只能是前面讨论的缺省并发行为。</p>
-<blockquote>
-<p>对于插件“Throttle Concurrent Builds Plugin”的详细用法，<br>可以参考插件的Wiki: <a href="https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds">https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds+Plugin</a>和GitHub地址: <a href="https://github.com/jenkinsci/throttle-concurrent-builds-plugin">https://github.com/jenkinsci/throttle-concurrent-builds-plugin</a>。</p>
-</blockquote>
-</li>
-</ul>
-<h1 id="Jenkins-Job相同参数build的执行情况"><a href="#Jenkins-Job相同参数build的执行情况" class="headerlink" title="Jenkins Job相同参数build的执行情况"></a>Jenkins Job相同参数build的执行情况</h1><p>所谓相同参数build，就是指同一个Jenkins Job以相同的参数触发多个build。不论是Jenkins Job并发执行，还是非并发执行，只要有符合Jenkins Job执行的Slave和Executor资源而且并发策略允许，所有被触发的build都会被立刻执行。但如果没有足够的执行资源，或者并发策略不允许，而且已经有build在待执行队列里等待的情况下，再次触发与等待的build参数相同的build，行为就会有些区别，总结如下：</p>
-<table>
-<thead>
-<tr>
-<th>Job类型</th>
-<th>并发执行</th>
-<th>非并发执行</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Free Style Job</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-<tr>
-<td>Scripted Pipeline</td>
-<td>相同参数的build会重复加入到待执行队列</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-<tr>
-<td>Declarative Pipeline</td>
-<td>相同参数的build会重复加入到待执行队列</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-</tbody></table>
-<p>以上是根据实测得到的结果，并没有任何官方文档提供详细的说明，所以随着Jenkins版本的升级，其行为有可能会变化。</p>
-<h1 id="容器作为Slave节点会让并发执行变得容易吗？"><a href="#容器作为Slave节点会让并发执行变得容易吗？" class="headerlink" title="容器作为Slave节点会让并发执行变得容易吗？"></a>容器作为Slave节点会让并发执行变得容易吗？</h1><p>最近几年容器技术借助于Docker在IT领域里掀起了巨大的变革，容器编排平台Kubernetes的出现更是将容器化的应用推向高潮。在CI/CD领域也不例外，越来越多的组织开始尝试利用Docker容器作为CI Job执行的Slave节点，通过Kubernetes平台统一管理调度虚拟机资源，以期望更加细粒度地控制和使用计算资源。Docker容器作为Slave节点确实是实现了本地执行环境的隔离，但每次执行都会启动全新的容器，都得重新下载代码和构建工具的本地缓存，使得每次的构建都要花费更长的时间，所以还是要考虑如何提升效率。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
     <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
     <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
@@ -2368,138 +2262,84 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建GitHub合并请求(Pull Request)</title>
-    <url>/2020/01/30/jenkins-github-pullrequest/</url>
-    <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
-<span id="more"></span>
-
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Github-Pull-Request-Builder插件"><a href="#安装Github-Pull-Request-Builder插件" class="headerlink" title="安装Github Pull Request Builder插件"></a>安装Github Pull Request Builder插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
-</li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<h2 id="配置Github-Pull-Request-Builder插件"><a href="#配置Github-Pull-Request-Builder插件" class="headerlink" title="配置Github Pull Request Builder插件"></a>配置Github Pull Request Builder插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
-</li>
-<li><p>定位到”Github Pull Request Builder“插件，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/01/30/jenkins-github-pullrequest/2.png"></p>
-</li>
-<li><p>创建”Username with password”类型的凭证，用户名和密码是有足够权限的Github账号和密码<br><img src="/2020/01/30/jenkins-github-pullrequest/3.png"></p>
-</li>
-<li><p>配置GitHub Server API URL，选择步骤3创建的凭证，可以点击”Connect to API”按钮测试基本连接<br><img src="/2020/01/30/jenkins-github-pullrequest/4.png"></p>
-<p>对于GitHub Server API URL的值，GitHub和GitHub Enterprise是有区别的：</p>
-<table>
-<thead>
-<tr>
-<th>GitHub Server</th>
-<th>API Endpoint</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>GitHub Enterprise</td>
-<td>http(s)://[hostname]/api/v3</td>
-<td></td>
-</tr>
-<tr>
-<td>GitHub</td>
-<td><a href="https://api.github.com/">https://api.github.com</a></td>
-<td>Receive the v3 version of the REST API.</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="配置Github代码仓库"><a href="#配置Github代码仓库" class="headerlink" title="配置Github代码仓库"></a>配置Github代码仓库</h1><ol>
-<li><p>打开Git仓库设置页面，点击Hooks -&gt; Add webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/5.png"></p>
-</li>
-<li><p>输入Palyload URL(<code>http://jenkins-url/github-webhook/</code>)，选择Content Type为application/json<br><img src="/2020/01/30/jenkins-github-pullrequest/6.png"></p>
-</li>
-<li><p>选择”Let me select individual envents”自定义webhook触发事件<br><img src="/2020/01/30/jenkins-github-pullrequest/7.png"></p>
-</li>
-<li><p>只选择”Pull requests”事件，并点击”Add webhook”保存Webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/8.png"></p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITHUB_URL = <span class="string">"http://xxx.github.xxxx.com"</span></span><br><span class="line">        GITHUB_ORG = <span class="string">"MikeSay"</span></span><br><span class="line">        GITHUB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITHUB_URL}/${GITHUB_ORG}/${GITHUB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                        cat README.md</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">        always {</span><br><span class="line">            junit <span class="attr">allowEmptyResults:</span> <span class="literal">true</span>, <span class="attr">testResults:</span> <span class="string">'codes/build/test-results/test/**/*.xml'</span></span><br><span class="line">            <span class="comment">// send to email</span></span><br><span class="line">            emailext(</span><br><span class="line">                <span class="symbol">subject:</span> <span class="string">'$DEFAULT_SUBJECT'</span>,</span><br><span class="line">                <span class="symbol">body:</span> <span class="string">'$DEFAULT_CONTENT'</span>,</span><br><span class="line">                <span class="symbol">recipientProviders:</span> [</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'CulpritsRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'RequesterRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class :</span> <span class="string">'DevelopersRecipientProvider'</span>]</span><br><span class="line">                ],</span><br><span class="line">                <span class="symbol">replyTo:</span> <span class="string">'$DEFAULT_REPLYTO'</span>,</span><br><span class="line">                <span class="symbol">to:</span> <span class="string">'$DEFAULT_RECIPIENTS'</span></span><br><span class="line">            )</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>30行: 添加refspec获取合并请求(pull/merge request)的分支信息</p>
-<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span></span><br></pre></td></tr></tbody></table></figure>
-<p>19行: branches选择环境变量”ghprbActualCommit”，它是合并请求(pull/merge request)分支对应的提交号</p>
-<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]]</span><br></pre></td></tr></tbody></table></figure>
-<p>除了”ghprbActualCommit”外，github pull request builder插件还往当前构建中注入了许多变量供构建Job使用，如下表：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>sha1</td>
-<td>origin/pr/6/merge</td>
-<td>合并请求(pull/merge request)分支。在构建Job中也可以用${sha1}来代替${ghprbActualCommit}</td>
-</tr>
-<tr>
-<td>ghprbAuthorRepoGitUrl</td>
-<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git</a></td>
-<td>合并请求(pull/merge request)所在仓库的http地址</td>
-</tr>
-<tr>
-<td>ghprbPullId</td>
-<td>6</td>
-<td>合并请求(pull/merge request)的ID号</td>
-</tr>
-<tr>
-<td>ghprbTargetBranch</td>
-<td>master</td>
-<td>合并请求(pull/merge request)的主分支</td>
-</tr>
-<tr>
-<td>ghprbSourceBranch</td>
-<td>test9</td>
-<td>合并请求(pull/merge request)的私有分支</td>
-</tr>
-<tr>
-<td>ghprbPullTitle</td>
-<td>Test9.</td>
-<td>合并请求(pull/merge request)的标题</td>
-</tr>
-<tr>
-<td>ghprbPullLink</td>
-<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6</a></td>
-<td>合并请求(pull/merge request)的http地址</td>
-</tr>
-</tbody></table>
-<p>可以从当前合并请求(pull/merge request)的构建参数中获得所有变量名和当前值：<br><img src="/2020/01/30/jenkins-github-pullrequest/16.png"></p>
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字”github-preflight”，点击”Ok”按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/9.png"></p>
-</li>
-<li><p>在”GitHub Project”段，输入”Project url”。注，”Project url”是Git仓库的http地址去除”.git”后缀<br><img src="/2020/01/30/jenkins-github-pullrequest/10.png"></p>
-</li>
-<li><p>在”Build Triggers”段，选择”GitHub Pull Request Builder”<br><img src="/2020/01/30/jenkins-github-pullrequest/11.png"></p>
+    <title>Jenkins Job的并发执行</title>
+    <url>/2019/07/08/jenkins-concurrent-builds/</url>
+    <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
 <ul>
-<li>GitHub API credentials: 之前配置的GitHub API</li>
-<li>Trigger phrase: 在合并请求(pull/merge request)的注释或标题里加入trigger phrase内容会自动触发新的构建</li>
-<li>Skip build phrase: 在合并请求(pull/merge request)的注释或标题里加入skip build phrase内容则不会触发构建</li>
+<li>充分利用Slave资源。如果让一台VM Slave一次只处理一个CI请求，往往会浪费很多的资源（CPU，Memory，Storage）。</li>
+<li>持续集成的最佳实践要求快速地“Build Per Change Commit”，但是对于一些比较耗时的持续集成流水线，比如项目比较大，或者自动化测试的时间比较长，往往是前一个集成还没结束，新的change commit已经到来，如果不能并发执行，只能阻塞等待，导致commit的提交者不能及时得到反馈，从而使持续集成流水线在项目中失去了应有的作用，地位也会变得比较尴尬。此时，如果再一味地推进与持续集成流水线配套的一些策略，将会受到很大的阻力。</li>
 </ul>
+<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：<br>1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；<br>2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
+<p>为了支持Jenkins Job并发执行，首先需要设置Jenkins Slave的Build Executors的数量大于1：<br><img src="/2019/07/08/jenkins-concurrent-builds/1.png"></p>
+<p>当Jenkins Job有新的build请求时，只要匹配的Slave节点有空闲的Executor，即使已经有build在执行，新的build也会立刻被并发执行。如果匹配的Slave节点没有空闲的Executor，这个新的build请求将被放入待执行队列里等待调度。</p>
+<p>Free Style Job缺省并没有打开并发执行的功能。需要在Job的配置中打开选项“Execute concurrent builds if necessary”：<br><img src="/2019/07/08/jenkins-concurrent-builds/2.png"></p>
+<p>Pipeline2.0的Job缺省是并发执行模式。如果要禁止并发执行，可以通过添加以下代码：</p>
+<ul>
+<li><p>Scripted Pipeline</p>
+<p>在Jenkinsfile头部添加以下属性：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">properties(</span><br><span class="line">  [</span><br><span class="line">      disableConcurrentBuilds()</span><br><span class="line">  ]</span><br><span class="line">)</span><br></pre></td></tr></tbody></table></figure>
 </li>
-<li><p>如果需要构建每个合并请求(pull/merge request)，勾选”Build every pull request automatically without asking (Dangerous)”，在”Whitelist Target Branches”输入主分支”master”<br><img src="/2020/01/30/jenkins-github-pullrequest/12.png"></p>
+<li><p>Declarative Pipeline</p>
+<p>在pipeline块中添加以下选项：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    options {</span><br><span class="line">        disableConcurrentBuilds()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="Jenkins-Job并发执行需要解决的问题"><a href="#Jenkins-Job并发执行需要解决的问题" class="headerlink" title="Jenkins Job并发执行需要解决的问题"></a>Jenkins Job并发执行需要解决的问题</h1><p>Jenkins Job的并发执行是一把双刃剑，用得好，所向披靡，能够充分利用既有资源服务更多的持续集成请求，用得不好，会出现很多预料不到的问题，而且有些问题并不能重复出现，给调试带来了很大的负担。Jenkins Job的并发执行主要面临的问题是资源使用的冲突。下图是一个常见的基于Pipeline2.0实现的一个Jenkins CI Job(yunzai-ci)：<br><img src="/2019/07/08/jenkins-concurrent-builds/3.png">按照流程顺序，逐一分析如下：</p>
+<ul>
+<li><p>在“Checkout Code”阶段，同一个Jenkins Job并发执行的build在同一个Slave上的Workspace会存在着冲突。对于这个问题，其实Jenkins已经提供了解决方案，细心的你一定会发现在Slave机子上同一个Job会存在着多个文件夹，比如“yunzai-ci”，“yunzai-ci@1”，“yunzai-ci@2”…，这就是同一个Job并发执行的build对应的不同的Workspace。Jenkins缺省是在Job的名字后面加上符号@和数字来命名不同的Workspace的，当并发执行的build数量大于Workspace的数量，Jenkins会根据命名规则自动创建一个新的Workspace，当并发执行的build数量小于Workspace数量，Jenkins会按顺序重用已有的Workspace。</p>
+<blockquote>
+<p>Workspace的分隔符@可以在启动Jenkins master时设置Java系统属性“hudson.slaves.WorkspaceList”来改变。比如，“hudson.slaves.WorkspaceList=-”将Workspace的分隔符改为中划线。</p>
+</blockquote>
+<p>Workspace的冲突解决了，但是又引入了一个潜在的效率问题。想象一下，如果项目的代码库比较大(几百兆，或者几个G)，那么在创建一个新的Workspace时，会重新从远处的代码仓库克隆代码，这将导致当前Jenkins job执行的时间被拉长。可以优化Jenkins Job，通过拷贝本地已有Workspace的代码来提升速度(Linux上可以使用Rsync，Window上可以使用Robocopy)，而不是直接从远程代码仓库去克隆代码。</p>
 </li>
-<li><p>在”Pipeline”段，引用Jenkinsfile<br><img src="/2020/01/30/jenkins-github-pullrequest/13.png"></p>
+<li><p>在“Build/UT”阶段，会使用不同的自动构建工具和包管理工具，比如Maven, Gradle, Npm, Bower等等，构建出来的制品会上传到制品仓库(Artifactory或Nexus)。这里，自动构建工具的本地缓存，以及构建制品上传到制品仓库都可能存在冲突。比如Maven, 缺省的本地缓存是在当前用户的.m2目录下，Maven执行时会更新或者下载项目的依赖到本地缓存，或者安装当前构建的制品到本地缓存，当同一个Jenkins Job并发执行的build运行在同一个Jenkins Slave上时，会启动多个Maven进程同时执行，它们会下载同一个依赖包或者安装相同版本(Maven的snapshot版本或者其它原因导致两个build版本相同)的构建制品到到同一个缓存目录，这时就会经常出现写磁盘文件冲突的问题，而且这个问题不是每次都发生。当多个Maven进程同时上传相同版本的制品到制品仓库时，也会存在着冲突。<br>要解决这类型的冲突，需要具体情况，具体对待。对于Maven来说，可以通过属性”maven.repo.local”来为每个Maven进程指定不同的本地缓存目录，且保证每个Build的版本都是唯一的。这个解决方案同样存在着效率问题，每开一个新的Maven本地缓存目录都会增加build的执行时间，因为Maven要重新去下载项目的所有依赖，这时也可以通过拷贝本地已有的缓存目录来提升速度。</p>
 </li>
-</ol>
-<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
-<li><p>Github的合并请求(pull/merge request)<br><img src="/2020/01/30/jenkins-github-pullrequest/14.png"></p>
+<li><p>在“Code Static Check”阶段，如果使用的是SonarQube，则不会产生冲突，因为每一个并发执行的build都会在SonarQube服务端产生一个独立的分析，所以不会相互干扰。但如果是其它的静态代码分析服务器，可能就需要具体情况，具体对待。</p>
 </li>
-<li><p>触发的构建<br><img src="/2020/01/30/jenkins-github-pullrequest/15.png"></p>
+<li><p>在“自动化测试”阶段，由于资源有限(自动化测试机器有限，而且执行自动化测试用例也需要一定的时间)，所以不一定能够服务于并发执行的多个build。这时可以增加自动化测试机器(虚拟机)，同时进行测试分级，抽取出部分重要的测试用例放到Jenkins Job中去执行以降低测试执行的时间。可以把全量测试降级为以天为单位，比如每晚取最新的build去执行全量测试，并给出测试报告。</p>
 </li>
-</ol>
+</ul>
+<p>不同公司或组织的持续集成流水线可能和上文描述的不相同，为了能够并发执行Jenkins Job，需要逐一分析和解决每个阶段可能出现的资源冲突问题。</p>
+<h1 id="Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin"><a href="#Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin" class="headerlink" title="Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)"></a>Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)</h1><p>Jenkins Job缺省的并发行为是只要有足够可用的Jenkins Slave和Executor资源，启动的build数量是不限的。但实际情况是我们需要精确地控制某个Jenkins Job总的并发执行的build数量，同时也希望单个Jenkins Slave节点上同一个Jenkins Job并发执行的build数量，这样可以限制某个Jenkins Job的总体资源消耗，保证其它Jenkins Job也能均衡执行。借助于Jenkins插件“Throttle Concurrent Builds Plugin”可以达到这样的控制目的。“Throttle Concurrent Builds Plugin”支持系统级别的配置，也支持Job级别的配置：</p>
+<ul>
+<li><p>系统级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/4.png">系统级别的配置可以设置一个并发执行的类别，不同的Jenkins Job可以引用这个类别。<br>“Maximum Total Courrent Builds”用来设置Jenkins Job最大的并发数量。<br>“Maximum Concurrent Builds Per Node”用来设置同一个Jenkins Job在同一个Slave节点上最大的并发数量。</p>
+</li>
+<li><p>Free Style Job级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/5.png">在Job级别，可以选择“Throttle this project alone”，并且设置“Maximum Total Courrent Builds”和“Maximum Concurrent Builds Per Node”这两个值，也可以通过“Multi-Project Throttle Category”选择系统级别配置好的并发执行的类别。</p>
+</li>
+<li><p>Scripted Pipeline只支持使用系统级别配置好的并发执行类别：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">throttle(['test-cocurrent']) {</span><br><span class="line">  node('xxxx') {</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
+<li><p>对于Declarative Pipeline，目前“Throttle Concurrent Builds Plugin”还不支持，所以只能是前面讨论的缺省并发行为。</p>
+<blockquote>
+<p>对于插件“Throttle Concurrent Builds Plugin”的详细用法，<br>可以参考插件的Wiki: <a href="https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds">https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds+Plugin</a>和GitHub地址: <a href="https://github.com/jenkinsci/throttle-concurrent-builds-plugin">https://github.com/jenkinsci/throttle-concurrent-builds-plugin</a>。</p>
+</blockquote>
+</li>
+</ul>
+<h1 id="Jenkins-Job相同参数build的执行情况"><a href="#Jenkins-Job相同参数build的执行情况" class="headerlink" title="Jenkins Job相同参数build的执行情况"></a>Jenkins Job相同参数build的执行情况</h1><p>所谓相同参数build，就是指同一个Jenkins Job以相同的参数触发多个build。不论是Jenkins Job并发执行，还是非并发执行，只要有符合Jenkins Job执行的Slave和Executor资源而且并发策略允许，所有被触发的build都会被立刻执行。但如果没有足够的执行资源，或者并发策略不允许，而且已经有build在待执行队列里等待的情况下，再次触发与等待的build参数相同的build，行为就会有些区别，总结如下：</p>
+<table>
+<thead>
+<tr>
+<th>Job类型</th>
+<th>并发执行</th>
+<th>非并发执行</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Free Style Job</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+<tr>
+<td>Scripted Pipeline</td>
+<td>相同参数的build会重复加入到待执行队列</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+<tr>
+<td>Declarative Pipeline</td>
+<td>相同参数的build会重复加入到待执行队列</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+</tbody></table>
+<p>以上是根据实测得到的结果，并没有任何官方文档提供详细的说明，所以随着Jenkins版本的升级，其行为有可能会变化。</p>
+<h1 id="容器作为Slave节点会让并发执行变得容易吗？"><a href="#容器作为Slave节点会让并发执行变得容易吗？" class="headerlink" title="容器作为Slave节点会让并发执行变得容易吗？"></a>容器作为Slave节点会让并发执行变得容易吗？</h1><p>最近几年容器技术借助于Docker在IT领域里掀起了巨大的变革，容器编排平台Kubernetes的出现更是将容器化的应用推向高潮。在CI/CD领域也不例外，越来越多的组织开始尝试利用Docker容器作为CI Job执行的Slave节点，通过Kubernetes平台统一管理调度虚拟机资源，以期望更加细粒度地控制和使用计算资源。Docker容器作为Slave节点确实是实现了本地执行环境的隔离，但每次执行都会启动全新的容器，都得重新下载代码和构建工具的本地缓存，使得每次的构建都要花费更长的时间，所以还是要考虑如何提升效率。</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -2525,7 +2365,6 @@
       <tags>
         <tag>CI/CD</tag>
         <tag>Jenkins</tag>
-        <tag>Github</tag>
       </tags>
   </entry>
   <entry>
@@ -3291,39 +3130,138 @@
       </tags>
   </entry>
   <entry>
-    <title>Podman介绍和使用</title>
-    <url>/2021/10/10/podman-introduction-and-usage/</url>
-    <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022/1/31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
+    <title>Jenkins构建GitHub合并请求(Pull Request)</title>
+    <url>/2020/01/30/jenkins-github-pullrequest/</url>
+    <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
 <span id="more"></span>
 
-<h1 id="Podman"><a href="#Podman" class="headerlink" title="Podman"></a>Podman</h1><p><a href="https://podman.io/">Podman</a>是一个无守护进程的开源Linux 原生工具，旨在使用开放容器协议 (OCI) 容器和容器镜像轻松查找、运行、构建、共享和部署应用程序。对于无守护进程这一说法，主要是针对运行在Linux系统中的Podman，因为Podman原生是支持Linux系统的，而在Mac和Windows系统中，仍然需要启动一个Linux虚拟机来管理和运行容器。Podman的架构如下：<br><img src="/2021/10/10/podman-introduction-and-usage/1.jpg"></p>
-<p>Podman是从CRI-O独立出来的一个项目，目的是让CRI-O和Podman能够独立发展。Podman主要包含一个兼容Docker命令的CLI模块和libpod，libpod通过runc创建和执行容器进程。由于Podman底层使用的runc运行时，所以Podman能够使用任何符合OCI标准的镜像包括Docker镜像。</p>
-<h1 id="在Mac上安装Podman"><a href="#在Mac上安装Podman" class="headerlink" title="在Mac上安装Podman"></a>在Mac上安装Podman</h1><p>通过brew命令来安装Podman：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install podman</span><br></pre></td></tr></tbody></table></figure>
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Github-Pull-Request-Builder插件"><a href="#安装Github-Pull-Request-Builder插件" class="headerlink" title="安装Github Pull Request Builder插件"></a>安装Github Pull Request Builder插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<h2 id="配置Github-Pull-Request-Builder插件"><a href="#配置Github-Pull-Request-Builder插件" class="headerlink" title="配置Github Pull Request Builder插件"></a>配置Github Pull Request Builder插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”Github Pull Request Builder“插件，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/01/30/jenkins-github-pullrequest/2.png"></p>
+</li>
+<li><p>创建”Username with password”类型的凭证，用户名和密码是有足够权限的Github账号和密码<br><img src="/2020/01/30/jenkins-github-pullrequest/3.png"></p>
+</li>
+<li><p>配置GitHub Server API URL，选择步骤3创建的凭证，可以点击”Connect to API”按钮测试基本连接<br><img src="/2020/01/30/jenkins-github-pullrequest/4.png"></p>
+<p>对于GitHub Server API URL的值，GitHub和GitHub Enterprise是有区别的：</p>
+<table>
+<thead>
+<tr>
+<th>GitHub Server</th>
+<th>API Endpoint</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GitHub Enterprise</td>
+<td>http(s)://[hostname]/api/v3</td>
+<td></td>
+</tr>
+<tr>
+<td>GitHub</td>
+<td><a href="https://api.github.com/">https://api.github.com</a></td>
+<td>Receive the v3 version of the REST API.</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="配置Github代码仓库"><a href="#配置Github代码仓库" class="headerlink" title="配置Github代码仓库"></a>配置Github代码仓库</h1><ol>
+<li><p>打开Git仓库设置页面，点击Hooks -&gt; Add webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/5.png"></p>
+</li>
+<li><p>输入Palyload URL(<code>http://jenkins-url/github-webhook/</code>)，选择Content Type为application/json<br><img src="/2020/01/30/jenkins-github-pullrequest/6.png"></p>
+</li>
+<li><p>选择”Let me select individual envents”自定义webhook触发事件<br><img src="/2020/01/30/jenkins-github-pullrequest/7.png"></p>
+</li>
+<li><p>只选择”Pull requests”事件，并点击”Add webhook”保存Webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITHUB_URL = <span class="string">"http://xxx.github.xxxx.com"</span></span><br><span class="line">        GITHUB_ORG = <span class="string">"MikeSay"</span></span><br><span class="line">        GITHUB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITHUB_URL}/${GITHUB_ORG}/${GITHUB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                        cat README.md</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">        always {</span><br><span class="line">            junit <span class="attr">allowEmptyResults:</span> <span class="literal">true</span>, <span class="attr">testResults:</span> <span class="string">'codes/build/test-results/test/**/*.xml'</span></span><br><span class="line">            <span class="comment">// send to email</span></span><br><span class="line">            emailext(</span><br><span class="line">                <span class="symbol">subject:</span> <span class="string">'$DEFAULT_SUBJECT'</span>,</span><br><span class="line">                <span class="symbol">body:</span> <span class="string">'$DEFAULT_CONTENT'</span>,</span><br><span class="line">                <span class="symbol">recipientProviders:</span> [</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'CulpritsRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'RequesterRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class :</span> <span class="string">'DevelopersRecipientProvider'</span>]</span><br><span class="line">                ],</span><br><span class="line">                <span class="symbol">replyTo:</span> <span class="string">'$DEFAULT_REPLYTO'</span>,</span><br><span class="line">                <span class="symbol">to:</span> <span class="string">'$DEFAULT_RECIPIENTS'</span></span><br><span class="line">            )</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
 
-<p>通过以下命令在Mac主机上启动一个Podman管理的虚拟机：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine init</span><br><span class="line">podman machine start</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以通过一下命令列出Podman管理的虚拟机：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine list</span><br></pre></td></tr></tbody></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/2.jpg"></p>
-<h1 id="拉取和执行Docker镜像"><a href="#拉取和执行Docker镜像" class="headerlink" title="拉取和执行Docker镜像"></a>拉取和执行Docker镜像</h1><p>通过以下命令拉取Docker镜像：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman pull nginx</span><br></pre></td></tr></tbody></table></figure>
-
-<p>通过以下命令检查所有Podman管理的镜像：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman images</span><br></pre></td></tr></tbody></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/3.jpg"></p>
-<p>通过以下命令启动镜像：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman run --name nginx -d -p 8000:80 nginx:latest</span><br></pre></td></tr></tbody></table></figure>
-<p>通过以下命令列出运行的容器：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman ps</span><br></pre></td></tr></tbody></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/4.jpg"></p>
-<p>停止，删除运行的容器：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman stop nginx</span><br><span class="line">podman <span class="built_in">rm</span> nginx</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="设置docker别名"><a href="#设置docker别名" class="headerlink" title="设置docker别名"></a>设置docker别名</h1><p>由于podman与Docker CLI命令具有一对多映射，因此建议按如下所示设置docker别名。这样也可以确保继续使用之前的Docker命令经验。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> docker=podman</span><br></pre></td></tr></tbody></table></figure>
-
+<p>30行: 添加refspec获取合并请求(pull/merge request)的分支信息</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span></span><br></pre></td></tr></tbody></table></figure>
+<p>19行: branches选择环境变量”ghprbActualCommit”，它是合并请求(pull/merge request)分支对应的提交号</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]]</span><br></pre></td></tr></tbody></table></figure>
+<p>除了”ghprbActualCommit”外，github pull request builder插件还往当前构建中注入了许多变量供构建Job使用，如下表：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>sha1</td>
+<td>origin/pr/6/merge</td>
+<td>合并请求(pull/merge request)分支。在构建Job中也可以用${sha1}来代替${ghprbActualCommit}</td>
+</tr>
+<tr>
+<td>ghprbAuthorRepoGitUrl</td>
+<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git</a></td>
+<td>合并请求(pull/merge request)所在仓库的http地址</td>
+</tr>
+<tr>
+<td>ghprbPullId</td>
+<td>6</td>
+<td>合并请求(pull/merge request)的ID号</td>
+</tr>
+<tr>
+<td>ghprbTargetBranch</td>
+<td>master</td>
+<td>合并请求(pull/merge request)的主分支</td>
+</tr>
+<tr>
+<td>ghprbSourceBranch</td>
+<td>test9</td>
+<td>合并请求(pull/merge request)的私有分支</td>
+</tr>
+<tr>
+<td>ghprbPullTitle</td>
+<td>Test9.</td>
+<td>合并请求(pull/merge request)的标题</td>
+</tr>
+<tr>
+<td>ghprbPullLink</td>
+<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6</a></td>
+<td>合并请求(pull/merge request)的http地址</td>
+</tr>
+</tbody></table>
+<p>可以从当前合并请求(pull/merge request)的构建参数中获得所有变量名和当前值：<br><img src="/2020/01/30/jenkins-github-pullrequest/16.png"></p>
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字”github-preflight”，点击”Ok”按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/9.png"></p>
+</li>
+<li><p>在”GitHub Project”段，输入”Project url”。注，”Project url”是Git仓库的http地址去除”.git”后缀<br><img src="/2020/01/30/jenkins-github-pullrequest/10.png"></p>
+</li>
+<li><p>在”Build Triggers”段，选择”GitHub Pull Request Builder”<br><img src="/2020/01/30/jenkins-github-pullrequest/11.png"></p>
+<ul>
+<li>GitHub API credentials: 之前配置的GitHub API</li>
+<li>Trigger phrase: 在合并请求(pull/merge request)的注释或标题里加入trigger phrase内容会自动触发新的构建</li>
+<li>Skip build phrase: 在合并请求(pull/merge request)的注释或标题里加入skip build phrase内容则不会触发构建</li>
+</ul>
+</li>
+<li><p>如果需要构建每个合并请求(pull/merge request)，勾选”Build every pull request automatically without asking (Dangerous)”，在”Whitelist Target Branches”输入主分支”master”<br><img src="/2020/01/30/jenkins-github-pullrequest/12.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile<br><img src="/2020/01/30/jenkins-github-pullrequest/13.png"></p>
+</li>
+</ol>
+<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
+<li><p>Github的合并请求(pull/merge request)<br><img src="/2020/01/30/jenkins-github-pullrequest/14.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/01/30/jenkins-github-pullrequest/15.png"></p>
+</li>
+</ol>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -3344,12 +3282,12 @@
           });
       </script>]]></content>
       <categories>
-        <category>Kubernetes</category>
+        <category>DevOps</category>
       </categories>
       <tags>
-        <tag>Kubernetes</tag>
-        <tag>Docker</tag>
-        <tag>Podman</tag>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+        <tag>Github</tag>
       </tags>
   </entry>
   <entry>
@@ -3884,6 +3822,68 @@
       <tags>
         <tag>Terraform</tag>
         <tag>Ansible</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Podman介绍和使用</title>
+    <url>/2021/10/10/podman-introduction-and-usage/</url>
+    <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022/1/31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
+<span id="more"></span>
+
+<h1 id="Podman"><a href="#Podman" class="headerlink" title="Podman"></a>Podman</h1><p><a href="https://podman.io/">Podman</a>是一个无守护进程的开源Linux 原生工具，旨在使用开放容器协议 (OCI) 容器和容器镜像轻松查找、运行、构建、共享和部署应用程序。对于无守护进程这一说法，主要是针对运行在Linux系统中的Podman，因为Podman原生是支持Linux系统的，而在Mac和Windows系统中，仍然需要启动一个Linux虚拟机来管理和运行容器。Podman的架构如下：<br><img src="/2021/10/10/podman-introduction-and-usage/1.jpg"></p>
+<p>Podman是从CRI-O独立出来的一个项目，目的是让CRI-O和Podman能够独立发展。Podman主要包含一个兼容Docker命令的CLI模块和libpod，libpod通过runc创建和执行容器进程。由于Podman底层使用的runc运行时，所以Podman能够使用任何符合OCI标准的镜像包括Docker镜像。</p>
+<h1 id="在Mac上安装Podman"><a href="#在Mac上安装Podman" class="headerlink" title="在Mac上安装Podman"></a>在Mac上安装Podman</h1><p>通过brew命令来安装Podman：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install podman</span><br></pre></td></tr></tbody></table></figure>
+
+<p>通过以下命令在Mac主机上启动一个Podman管理的虚拟机：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine init</span><br><span class="line">podman machine start</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以通过一下命令列出Podman管理的虚拟机：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine list</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/2.jpg"></p>
+<h1 id="拉取和执行Docker镜像"><a href="#拉取和执行Docker镜像" class="headerlink" title="拉取和执行Docker镜像"></a>拉取和执行Docker镜像</h1><p>通过以下命令拉取Docker镜像：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman pull nginx</span><br></pre></td></tr></tbody></table></figure>
+
+<p>通过以下命令检查所有Podman管理的镜像：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman images</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/3.jpg"></p>
+<p>通过以下命令启动镜像：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman run --name nginx -d -p 8000:80 nginx:latest</span><br></pre></td></tr></tbody></table></figure>
+<p>通过以下命令列出运行的容器：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman ps</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/4.jpg"></p>
+<p>停止，删除运行的容器：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman stop nginx</span><br><span class="line">podman <span class="built_in">rm</span> nginx</span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="设置docker别名"><a href="#设置docker别名" class="headerlink" title="设置docker别名"></a>设置docker别名</h1><p>由于podman与Docker CLI命令具有一对多映射，因此建议按如下所示设置docker别名。这样也可以确保继续使用之前的Docker命令经验。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> docker=podman</span><br></pre></td></tr></tbody></table></figure>
+
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>Docker</tag>
+        <tag>Podman</tag>
       </tags>
   </entry>
   <entry>
