@@ -26,6 +26,7 @@
       repo: '',
 
       basePath: '/resources/dm231971/',
+      relativePath: true,
 
       // 2. Enable navbar, sidebar, and coverpage
       loadSidebar: true,
@@ -137,100 +138,6 @@
           crossChapterText: true,
         }
     }
-  </script>
-  <script>
-  (function () {
-    var DOCS_ROOT = '/resources/dm231971';
-
-    function isLangPath(path) {
-      return path === '/zh-CN' ||
-            path === '/zh-CN/' ||
-            path.indexOf('/zh-CN/') === 0 ||
-            path === '/en' ||
-            path === '/en/' ||
-            path.indexOf('/en/') === 0;
-    }
-
-    function rewriteToDocsRoot(input) {
-      try {
-        var rawUrl = typeof input === 'string' ? input : input && input.url;
-        if (!rawUrl) return input;
-
-        var url = new URL(rawUrl, window.location.origin);
-
-        if (url.origin !== window.location.origin) {
-          return input;
-        }
-
-        if (!isLangPath(url.pathname)) {
-          return input;
-        }
-
-        if (url.pathname === '/zh-CN' || url.pathname === '/zh-CN/') {
-          url.pathname = DOCS_ROOT + '/zh-CN/README.md';
-        } else if (url.pathname === '/en' || url.pathname === '/en/') {
-          url.pathname = DOCS_ROOT + '/en/README.md';
-        } else {
-          url.pathname = DOCS_ROOT + url.pathname;
-        }
-
-        if (typeof input === 'string') {
-          return url.href;
-        }
-
-        if (window.Request && input instanceof Request) {
-          return new Request(url.href, input);
-        }
-
-        return url.href;
-      } catch (e) {
-        return input;
-      }
-    }
-
-    // Protect Docsify markdown loading through fetch()
-    if (window.fetch) {
-      var originalFetch = window.fetch;
-      window.fetch = function (input, init) {
-        return originalFetch.call(this, rewriteToDocsRoot(input), init);
-      };
-    }
-
-    // Protect Docsify markdown loading through XMLHttpRequest
-    if (window.XMLHttpRequest) {
-      var originalOpen = XMLHttpRequest.prototype.open;
-      XMLHttpRequest.prototype.open = function (method, url) {
-        arguments[1] = rewriteToDocsRoot(url);
-        return originalOpen.apply(this, arguments);
-      };
-    }
-
-    // Protect real browser clicks on /zh-CN/... and /en/...
-    document.addEventListener('click', function (e) {
-      var a = e.target.closest && e.target.closest('a[href]');
-      if (!a) return;
-
-      try {
-        var url = new URL(a.getAttribute('href'), window.location.origin);
-
-        if (url.origin !== window.location.origin || !isLangPath(url.pathname)) {
-          return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        var route = url.pathname
-          .replace(/\/README\.md$/i, '/')
-          .replace(/\.md$/i, '');
-
-        window.location.hash = '#' + route;
-      } catch (err) {
-        return;
-      }
-    }, true);
-  })();
   </script>
   <!-- Docsify v4 -->
   <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
