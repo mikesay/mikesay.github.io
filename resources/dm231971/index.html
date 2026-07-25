@@ -25,8 +25,6 @@
       name: '<b>抽象谬误<br>为何人工智能能够模拟但不能实例化意识</b>',
       repo: '',
 
-      basePath: '/resources/dm231971/',
-
       // 2. Enable navbar, sidebar, and coverpage
       loadSidebar: true,
       loadNavbar: true,
@@ -45,10 +43,13 @@
       
       // 3. Set root alias to redirect "/" directly to "/zh-CN/"
       alias: {
+        // Direct root requests safely to zh-CN/README.md without breaking path parser
         '^/$': '/zh-CN/README.md',
         '^/README$': '/zh-CN/README.md',
-        '^/zh-CN/(.*)': '/zh-CN/$1',
-        '^/en/(.*)': '/en/$1'
+        
+        // Let subfolders locate their own sidebars without falling back incorrectly
+        '/zh-CN/(.*)': '/zh-CN/$1',
+        '/en/(.*)': '/en/$1'
       },
 
       // 4. Dynamic Title Switcher & Link Handler
