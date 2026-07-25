@@ -818,6 +818,121 @@
       </tags>
   </entry>
   <entry>
+    <title>创建自签名TLS/SSL证书和私钥</title>
+    <url>/2018/12/30/create-self-signed-ssl/</url>
+    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
+<span id="more"></span>
+
+<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
+<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
+</blockquote>
+<p>使用openssl命令生成自签名证书和私钥对：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
+<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
+<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
+<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
+<li>-days 365: 设置证书的有效期为1年（365天）。</li>
+<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
+<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
+<li>-out: 告诉openssl生成的自签名证书和路径。</li>
+</ul>
+<p>命令会提示以下的一些输入：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
+<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”/etc/nginx/ssl-certs”；</p>
+</li>
+<li><p>编辑”/etc/nginx/sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>重新加载配置文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>重启Nginx服务：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
+<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
+</blockquote>
+<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“/usr/local/share/ca-certificates”:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“/usr/local/share/ca-certificates”中删除证书：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates --fresh</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -c <span class="string">"&lt;Common Name of existing certificate&gt;"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
+</blockquote>
+<p>或者通过证书的SHA-1码来删除：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
+</blockquote>
+<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -addstore -f "Root" selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -delstore "Root" &lt;Cert Serial Number&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
+</blockquote>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>系统管理</category>
+      </categories>
+      <tags>
+        <tag>System Management</tag>
+        <tag>TLS/SSL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Minikube创建本地Kubernetes集群</title>
     <url>/2021/10/06/create-kubernetes-minikube/</url>
     <content><![CDATA[<p>在学习和使用Kubernetes的过程中，都希望能够快速创建一个本地的Kubernetes集群用作测试之用。之前一直使用docker公司的docker for mac创建的Kubernetes集群，但是经常出现启动不起来的问题，也没有详细的日志来定位问题，另外docker for mac创建的集群不支持改变系统组件的配置，比如修改API Server或Kubelet的参数，开启某些Alpaha版本的特性等。虽然Minikube已经存在很久，而且早于docker for mac，但是由于种种原因没能尝试，后经同事推荐，尝试了一下，确实蛮强大。本文将简单介绍下Minikube，以及在Mac主机上用Minikube创建和配置一个本地集群。</p>
@@ -1019,121 +1134,6 @@
       <tags>
         <tag>Kubernetes</tag>
         <tag>Minikube</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>创建自签名TLS/SSL证书和私钥</title>
-    <url>/2018/12/30/create-self-signed-ssl/</url>
-    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
-<span id="more"></span>
-
-<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
-<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
-</blockquote>
-<p>使用openssl命令生成自签名证书和私钥对：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
-<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
-<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
-<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
-<li>-days 365: 设置证书的有效期为1年（365天）。</li>
-<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
-<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
-<li>-out: 告诉openssl生成的自签名证书和路径。</li>
-</ul>
-<p>命令会提示以下的一些输入：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
-<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”/etc/nginx/ssl-certs”；</p>
-</li>
-<li><p>编辑”/etc/nginx/sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>重新加载配置文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>重启Nginx服务：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
-<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
-</blockquote>
-<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/usr/local/share/ca-certificates”:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/usr/local/share/ca-certificates”中删除证书：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates --fresh</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-
-<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -c <span class="string">"&lt;Common Name of existing certificate&gt;"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
-</blockquote>
-<p>或者通过证书的SHA-1码来删除：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
-</blockquote>
-<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -addstore -f "Root" selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-
-<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -delstore "Root" &lt;Cert Serial Number&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
-</blockquote>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>系统管理</category>
-      </categories>
-      <tags>
-        <tag>System Management</tag>
-        <tag>TLS/SSL</tag>
       </tags>
   </entry>
   <entry>
@@ -2133,6 +2133,112 @@
       </tags>
   </entry>
   <entry>
+    <title>Jenkins Job的并发执行</title>
+    <url>/2019/07/08/jenkins-concurrent-builds/</url>
+    <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
+<ul>
+<li>充分利用Slave资源。如果让一台VM Slave一次只处理一个CI请求，往往会浪费很多的资源（CPU，Memory，Storage）。</li>
+<li>持续集成的最佳实践要求快速地“Build Per Change Commit”，但是对于一些比较耗时的持续集成流水线，比如项目比较大，或者自动化测试的时间比较长，往往是前一个集成还没结束，新的change commit已经到来，如果不能并发执行，只能阻塞等待，导致commit的提交者不能及时得到反馈，从而使持续集成流水线在项目中失去了应有的作用，地位也会变得比较尴尬。此时，如果再一味地推进与持续集成流水线配套的一些策略，将会受到很大的阻力。</li>
+</ul>
+<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：<br>1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；<br>2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
+<p>为了支持Jenkins Job并发执行，首先需要设置Jenkins Slave的Build Executors的数量大于1：<br><img src="/2019/07/08/jenkins-concurrent-builds/1.png"></p>
+<p>当Jenkins Job有新的build请求时，只要匹配的Slave节点有空闲的Executor，即使已经有build在执行，新的build也会立刻被并发执行。如果匹配的Slave节点没有空闲的Executor，这个新的build请求将被放入待执行队列里等待调度。</p>
+<p>Free Style Job缺省并没有打开并发执行的功能。需要在Job的配置中打开选项“Execute concurrent builds if necessary”：<br><img src="/2019/07/08/jenkins-concurrent-builds/2.png"></p>
+<p>Pipeline2.0的Job缺省是并发执行模式。如果要禁止并发执行，可以通过添加以下代码：</p>
+<ul>
+<li><p>Scripted Pipeline</p>
+<p>在Jenkinsfile头部添加以下属性：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">properties(</span><br><span class="line">  [</span><br><span class="line">      disableConcurrentBuilds()</span><br><span class="line">  ]</span><br><span class="line">)</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>Declarative Pipeline</p>
+<p>在pipeline块中添加以下选项：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    options {</span><br><span class="line">        disableConcurrentBuilds()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="Jenkins-Job并发执行需要解决的问题"><a href="#Jenkins-Job并发执行需要解决的问题" class="headerlink" title="Jenkins Job并发执行需要解决的问题"></a>Jenkins Job并发执行需要解决的问题</h1><p>Jenkins Job的并发执行是一把双刃剑，用得好，所向披靡，能够充分利用既有资源服务更多的持续集成请求，用得不好，会出现很多预料不到的问题，而且有些问题并不能重复出现，给调试带来了很大的负担。Jenkins Job的并发执行主要面临的问题是资源使用的冲突。下图是一个常见的基于Pipeline2.0实现的一个Jenkins CI Job(yunzai-ci)：<br><img src="/2019/07/08/jenkins-concurrent-builds/3.png">按照流程顺序，逐一分析如下：</p>
+<ul>
+<li><p>在“Checkout Code”阶段，同一个Jenkins Job并发执行的build在同一个Slave上的Workspace会存在着冲突。对于这个问题，其实Jenkins已经提供了解决方案，细心的你一定会发现在Slave机子上同一个Job会存在着多个文件夹，比如“yunzai-ci”，“yunzai-ci@1”，“yunzai-ci@2”…，这就是同一个Job并发执行的build对应的不同的Workspace。Jenkins缺省是在Job的名字后面加上符号@和数字来命名不同的Workspace的，当并发执行的build数量大于Workspace的数量，Jenkins会根据命名规则自动创建一个新的Workspace，当并发执行的build数量小于Workspace数量，Jenkins会按顺序重用已有的Workspace。</p>
+<blockquote>
+<p>Workspace的分隔符@可以在启动Jenkins master时设置Java系统属性“hudson.slaves.WorkspaceList”来改变。比如，“hudson.slaves.WorkspaceList=-”将Workspace的分隔符改为中划线。</p>
+</blockquote>
+<p>Workspace的冲突解决了，但是又引入了一个潜在的效率问题。想象一下，如果项目的代码库比较大(几百兆，或者几个G)，那么在创建一个新的Workspace时，会重新从远处的代码仓库克隆代码，这将导致当前Jenkins job执行的时间被拉长。可以优化Jenkins Job，通过拷贝本地已有Workspace的代码来提升速度(Linux上可以使用Rsync，Window上可以使用Robocopy)，而不是直接从远程代码仓库去克隆代码。</p>
+</li>
+<li><p>在“Build/UT”阶段，会使用不同的自动构建工具和包管理工具，比如Maven, Gradle, Npm, Bower等等，构建出来的制品会上传到制品仓库(Artifactory或Nexus)。这里，自动构建工具的本地缓存，以及构建制品上传到制品仓库都可能存在冲突。比如Maven, 缺省的本地缓存是在当前用户的.m2目录下，Maven执行时会更新或者下载项目的依赖到本地缓存，或者安装当前构建的制品到本地缓存，当同一个Jenkins Job并发执行的build运行在同一个Jenkins Slave上时，会启动多个Maven进程同时执行，它们会下载同一个依赖包或者安装相同版本(Maven的snapshot版本或者其它原因导致两个build版本相同)的构建制品到到同一个缓存目录，这时就会经常出现写磁盘文件冲突的问题，而且这个问题不是每次都发生。当多个Maven进程同时上传相同版本的制品到制品仓库时，也会存在着冲突。<br>要解决这类型的冲突，需要具体情况，具体对待。对于Maven来说，可以通过属性”maven.repo.local”来为每个Maven进程指定不同的本地缓存目录，且保证每个Build的版本都是唯一的。这个解决方案同样存在着效率问题，每开一个新的Maven本地缓存目录都会增加build的执行时间，因为Maven要重新去下载项目的所有依赖，这时也可以通过拷贝本地已有的缓存目录来提升速度。</p>
+</li>
+<li><p>在“Code Static Check”阶段，如果使用的是SonarQube，则不会产生冲突，因为每一个并发执行的build都会在SonarQube服务端产生一个独立的分析，所以不会相互干扰。但如果是其它的静态代码分析服务器，可能就需要具体情况，具体对待。</p>
+</li>
+<li><p>在“自动化测试”阶段，由于资源有限(自动化测试机器有限，而且执行自动化测试用例也需要一定的时间)，所以不一定能够服务于并发执行的多个build。这时可以增加自动化测试机器(虚拟机)，同时进行测试分级，抽取出部分重要的测试用例放到Jenkins Job中去执行以降低测试执行的时间。可以把全量测试降级为以天为单位，比如每晚取最新的build去执行全量测试，并给出测试报告。</p>
+</li>
+</ul>
+<p>不同公司或组织的持续集成流水线可能和上文描述的不相同，为了能够并发执行Jenkins Job，需要逐一分析和解决每个阶段可能出现的资源冲突问题。</p>
+<h1 id="Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin"><a href="#Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin" class="headerlink" title="Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)"></a>Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)</h1><p>Jenkins Job缺省的并发行为是只要有足够可用的Jenkins Slave和Executor资源，启动的build数量是不限的。但实际情况是我们需要精确地控制某个Jenkins Job总的并发执行的build数量，同时也希望单个Jenkins Slave节点上同一个Jenkins Job并发执行的build数量，这样可以限制某个Jenkins Job的总体资源消耗，保证其它Jenkins Job也能均衡执行。借助于Jenkins插件“Throttle Concurrent Builds Plugin”可以达到这样的控制目的。“Throttle Concurrent Builds Plugin”支持系统级别的配置，也支持Job级别的配置：</p>
+<ul>
+<li><p>系统级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/4.png">系统级别的配置可以设置一个并发执行的类别，不同的Jenkins Job可以引用这个类别。<br>“Maximum Total Courrent Builds”用来设置Jenkins Job最大的并发数量。<br>“Maximum Concurrent Builds Per Node”用来设置同一个Jenkins Job在同一个Slave节点上最大的并发数量。</p>
+</li>
+<li><p>Free Style Job级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/5.png">在Job级别，可以选择“Throttle this project alone”，并且设置“Maximum Total Courrent Builds”和“Maximum Concurrent Builds Per Node”这两个值，也可以通过“Multi-Project Throttle Category”选择系统级别配置好的并发执行的类别。</p>
+</li>
+<li><p>Scripted Pipeline只支持使用系统级别配置好的并发执行类别：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">throttle(['test-cocurrent']) {</span><br><span class="line">  node('xxxx') {</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
+<li><p>对于Declarative Pipeline，目前“Throttle Concurrent Builds Plugin”还不支持，所以只能是前面讨论的缺省并发行为。</p>
+<blockquote>
+<p>对于插件“Throttle Concurrent Builds Plugin”的详细用法，<br>可以参考插件的Wiki: <a href="https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds">https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds+Plugin</a>和GitHub地址: <a href="https://github.com/jenkinsci/throttle-concurrent-builds-plugin">https://github.com/jenkinsci/throttle-concurrent-builds-plugin</a>。</p>
+</blockquote>
+</li>
+</ul>
+<h1 id="Jenkins-Job相同参数build的执行情况"><a href="#Jenkins-Job相同参数build的执行情况" class="headerlink" title="Jenkins Job相同参数build的执行情况"></a>Jenkins Job相同参数build的执行情况</h1><p>所谓相同参数build，就是指同一个Jenkins Job以相同的参数触发多个build。不论是Jenkins Job并发执行，还是非并发执行，只要有符合Jenkins Job执行的Slave和Executor资源而且并发策略允许，所有被触发的build都会被立刻执行。但如果没有足够的执行资源，或者并发策略不允许，而且已经有build在待执行队列里等待的情况下，再次触发与等待的build参数相同的build，行为就会有些区别，总结如下：</p>
+<table>
+<thead>
+<tr>
+<th>Job类型</th>
+<th>并发执行</th>
+<th>非并发执行</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Free Style Job</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+<tr>
+<td>Scripted Pipeline</td>
+<td>相同参数的build会重复加入到待执行队列</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+<tr>
+<td>Declarative Pipeline</td>
+<td>相同参数的build会重复加入到待执行队列</td>
+<td>相同参数的build只会加入到待执行队列一次</td>
+</tr>
+</tbody></table>
+<p>以上是根据实测得到的结果，并没有任何官方文档提供详细的说明，所以随着Jenkins版本的升级，其行为有可能会变化。</p>
+<h1 id="容器作为Slave节点会让并发执行变得容易吗？"><a href="#容器作为Slave节点会让并发执行变得容易吗？" class="headerlink" title="容器作为Slave节点会让并发执行变得容易吗？"></a>容器作为Slave节点会让并发执行变得容易吗？</h1><p>最近几年容器技术借助于Docker在IT领域里掀起了巨大的变革，容器编排平台Kubernetes的出现更是将容器化的应用推向高潮。在CI/CD领域也不例外，越来越多的组织开始尝试利用Docker容器作为CI Job执行的Slave节点，通过Kubernetes平台统一管理调度虚拟机资源，以期望更加细粒度地控制和使用计算资源。Docker容器作为Slave节点确实是实现了本地执行环境的隔离，但每次执行都会启动全新的容器，都得重新下载代码和构建工具的本地缓存，使得每次的构建都要花费更长的时间，所以还是要考虑如何提升效率。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>基于Jenkins Freestyle Job构建CI/CD流水线</title>
     <url>/2018/10/07/jenkins-freestyle-cicd-pipeline/</url>
     <content><![CDATA[<p>可能有人会问：“现在流行的是Jenkins Pipeline 2.0(Jenkinsfile)，所有人都在谈论和使用, 为什么还在用Freestyle Job, 是不是太low了！”。的确，Jenkins Pipeline 2.0现在很流行，几乎就等同于Jenkins平台上构建CI/CD流水线的标准，如果你不使用Jenkins Pipeline 2.0，那么就等于不懂CI/CD。我承认Jenkins Pipeline 2.0带来了很多革命性的理念，比如Build As Code, 但是我想说的是Jenkins Pipeline 2.0不等于CI/CD Pipeline,而且它的革命也不是很彻底。不过本文不会过多地去议论方法或工具的好坏，只是在Jenkins上利用一种非Jenkins Pipeline 2.0的方式去构建CI/CD流水线，并说明这种流水线的优缺点，以期能够给读者一次思维上的刷新。</p>
@@ -2234,112 +2340,6 @@
 </li>
 </ol>
 <p>期待“Promotes Builds Plugin”能够支持Jenkins Pipeline 2.0 （Jenkinfile），这样所有的任务（Task）也就是Jenkins作业（Job）全部可以作为代码存储在Git中，而且维护起来也很方便。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Jenkins Job的并发执行</title>
-    <url>/2019/07/08/jenkins-concurrent-builds/</url>
-    <content><![CDATA[<p>并发，多线程是程序设计领域老生常谈的问题，唯一的目的就是提高程序的执行效率-充分利用资源更快地处理多个计算请求。在持续集成、交付(CI/CD)领域同样存在着并发执行的需求。本文将主要介绍Jenkins Job的并发执行以及相关问题的探讨。<span id="more"></span>其实不仅是Jenkins，任何一个持续集成(CI)服务器都应该支持CI Job的并发执行，其原因有以下两点：</p>
-<ul>
-<li>充分利用Slave资源。如果让一台VM Slave一次只处理一个CI请求，往往会浪费很多的资源（CPU，Memory，Storage）。</li>
-<li>持续集成的最佳实践要求快速地“Build Per Change Commit”，但是对于一些比较耗时的持续集成流水线，比如项目比较大，或者自动化测试的时间比较长，往往是前一个集成还没结束，新的change commit已经到来，如果不能并发执行，只能阻塞等待，导致commit的提交者不能及时得到反馈，从而使持续集成流水线在项目中失去了应有的作用，地位也会变得比较尴尬。此时，如果再一味地推进与持续集成流水线配套的一些策略，将会受到很大的阻力。</li>
-</ul>
-<h1 id="Jenkins-Job缺省的并发行为"><a href="#Jenkins-Job缺省的并发行为" class="headerlink" title="Jenkins Job缺省的并发行为"></a>Jenkins Job缺省的并发行为</h1><p>随着Jenkins Pipeline2.0的引入，目前主要有三种类型的Jenkins Job：Free Style Job，Scripted Pipeline and Declarative Pipeline。Scripted Pipeline and Declarative Pipeline属于Jenkins Pipeline2.0引入的Job类型，最大的优点就是Pipeline as Code，在一个Jenkinsfile文件里可以编写整个CI流程，并且可以提交到代码仓库，比如Git，作版本管理。由于Pipeline2.0突出的优点，目前越来越多的公司和组织开始使用它来构建持续集成和持续交付流水线，但是Free Style类型的Job目前还是主要支持的Job类型之一，没有被废弃掉，其原因可能有两个：<br>1，并不是所有的插件都能够很好地支持Pipeline2.0（下一节的Throttle Concurrent Builds Plugin就是个例子）；<br>2，不少公司或组织还有很多遗留的Free Style类型的Job，所以本文仍然会涉及这三个类型的Job。</p>
-<p>为了支持Jenkins Job并发执行，首先需要设置Jenkins Slave的Build Executors的数量大于1：<br><img src="/2019/07/08/jenkins-concurrent-builds/1.png"></p>
-<p>当Jenkins Job有新的build请求时，只要匹配的Slave节点有空闲的Executor，即使已经有build在执行，新的build也会立刻被并发执行。如果匹配的Slave节点没有空闲的Executor，这个新的build请求将被放入待执行队列里等待调度。</p>
-<p>Free Style Job缺省并没有打开并发执行的功能。需要在Job的配置中打开选项“Execute concurrent builds if necessary”：<br><img src="/2019/07/08/jenkins-concurrent-builds/2.png"></p>
-<p>Pipeline2.0的Job缺省是并发执行模式。如果要禁止并发执行，可以通过添加以下代码：</p>
-<ul>
-<li><p>Scripted Pipeline</p>
-<p>在Jenkinsfile头部添加以下属性：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">properties(</span><br><span class="line">  [</span><br><span class="line">      disableConcurrentBuilds()</span><br><span class="line">  ]</span><br><span class="line">)</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>Declarative Pipeline</p>
-<p>在pipeline块中添加以下选项：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    options {</span><br><span class="line">        disableConcurrentBuilds()</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="Jenkins-Job并发执行需要解决的问题"><a href="#Jenkins-Job并发执行需要解决的问题" class="headerlink" title="Jenkins Job并发执行需要解决的问题"></a>Jenkins Job并发执行需要解决的问题</h1><p>Jenkins Job的并发执行是一把双刃剑，用得好，所向披靡，能够充分利用既有资源服务更多的持续集成请求，用得不好，会出现很多预料不到的问题，而且有些问题并不能重复出现，给调试带来了很大的负担。Jenkins Job的并发执行主要面临的问题是资源使用的冲突。下图是一个常见的基于Pipeline2.0实现的一个Jenkins CI Job(yunzai-ci)：<br><img src="/2019/07/08/jenkins-concurrent-builds/3.png">按照流程顺序，逐一分析如下：</p>
-<ul>
-<li><p>在“Checkout Code”阶段，同一个Jenkins Job并发执行的build在同一个Slave上的Workspace会存在着冲突。对于这个问题，其实Jenkins已经提供了解决方案，细心的你一定会发现在Slave机子上同一个Job会存在着多个文件夹，比如“yunzai-ci”，“yunzai-ci@1”，“yunzai-ci@2”…，这就是同一个Job并发执行的build对应的不同的Workspace。Jenkins缺省是在Job的名字后面加上符号@和数字来命名不同的Workspace的，当并发执行的build数量大于Workspace的数量，Jenkins会根据命名规则自动创建一个新的Workspace，当并发执行的build数量小于Workspace数量，Jenkins会按顺序重用已有的Workspace。</p>
-<blockquote>
-<p>Workspace的分隔符@可以在启动Jenkins master时设置Java系统属性“hudson.slaves.WorkspaceList”来改变。比如，“hudson.slaves.WorkspaceList=-”将Workspace的分隔符改为中划线。</p>
-</blockquote>
-<p>Workspace的冲突解决了，但是又引入了一个潜在的效率问题。想象一下，如果项目的代码库比较大(几百兆，或者几个G)，那么在创建一个新的Workspace时，会重新从远处的代码仓库克隆代码，这将导致当前Jenkins job执行的时间被拉长。可以优化Jenkins Job，通过拷贝本地已有Workspace的代码来提升速度(Linux上可以使用Rsync，Window上可以使用Robocopy)，而不是直接从远程代码仓库去克隆代码。</p>
-</li>
-<li><p>在“Build/UT”阶段，会使用不同的自动构建工具和包管理工具，比如Maven, Gradle, Npm, Bower等等，构建出来的制品会上传到制品仓库(Artifactory或Nexus)。这里，自动构建工具的本地缓存，以及构建制品上传到制品仓库都可能存在冲突。比如Maven, 缺省的本地缓存是在当前用户的.m2目录下，Maven执行时会更新或者下载项目的依赖到本地缓存，或者安装当前构建的制品到本地缓存，当同一个Jenkins Job并发执行的build运行在同一个Jenkins Slave上时，会启动多个Maven进程同时执行，它们会下载同一个依赖包或者安装相同版本(Maven的snapshot版本或者其它原因导致两个build版本相同)的构建制品到到同一个缓存目录，这时就会经常出现写磁盘文件冲突的问题，而且这个问题不是每次都发生。当多个Maven进程同时上传相同版本的制品到制品仓库时，也会存在着冲突。<br>要解决这类型的冲突，需要具体情况，具体对待。对于Maven来说，可以通过属性”maven.repo.local”来为每个Maven进程指定不同的本地缓存目录，且保证每个Build的版本都是唯一的。这个解决方案同样存在着效率问题，每开一个新的Maven本地缓存目录都会增加build的执行时间，因为Maven要重新去下载项目的所有依赖，这时也可以通过拷贝本地已有的缓存目录来提升速度。</p>
-</li>
-<li><p>在“Code Static Check”阶段，如果使用的是SonarQube，则不会产生冲突，因为每一个并发执行的build都会在SonarQube服务端产生一个独立的分析，所以不会相互干扰。但如果是其它的静态代码分析服务器，可能就需要具体情况，具体对待。</p>
-</li>
-<li><p>在“自动化测试”阶段，由于资源有限(自动化测试机器有限，而且执行自动化测试用例也需要一定的时间)，所以不一定能够服务于并发执行的多个build。这时可以增加自动化测试机器(虚拟机)，同时进行测试分级，抽取出部分重要的测试用例放到Jenkins Job中去执行以降低测试执行的时间。可以把全量测试降级为以天为单位，比如每晚取最新的build去执行全量测试，并给出测试报告。</p>
-</li>
-</ul>
-<p>不同公司或组织的持续集成流水线可能和上文描述的不相同，为了能够并发执行Jenkins Job，需要逐一分析和解决每个阶段可能出现的资源冲突问题。</p>
-<h1 id="Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin"><a href="#Jenkins-Job并发执行的精确控制-Throttle-Concurrent-Builds-Plugin" class="headerlink" title="Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)"></a>Jenkins Job并发执行的精确控制(Throttle Concurrent Builds Plugin)</h1><p>Jenkins Job缺省的并发行为是只要有足够可用的Jenkins Slave和Executor资源，启动的build数量是不限的。但实际情况是我们需要精确地控制某个Jenkins Job总的并发执行的build数量，同时也希望单个Jenkins Slave节点上同一个Jenkins Job并发执行的build数量，这样可以限制某个Jenkins Job的总体资源消耗，保证其它Jenkins Job也能均衡执行。借助于Jenkins插件“Throttle Concurrent Builds Plugin”可以达到这样的控制目的。“Throttle Concurrent Builds Plugin”支持系统级别的配置，也支持Job级别的配置：</p>
-<ul>
-<li><p>系统级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/4.png">系统级别的配置可以设置一个并发执行的类别，不同的Jenkins Job可以引用这个类别。<br>“Maximum Total Courrent Builds”用来设置Jenkins Job最大的并发数量。<br>“Maximum Concurrent Builds Per Node”用来设置同一个Jenkins Job在同一个Slave节点上最大的并发数量。</p>
-</li>
-<li><p>Free Style Job级别的配置：<br><img src="/2019/07/08/jenkins-concurrent-builds/5.png">在Job级别，可以选择“Throttle this project alone”，并且设置“Maximum Total Courrent Builds”和“Maximum Concurrent Builds Per Node”这两个值，也可以通过“Multi-Project Throttle Category”选择系统级别配置好的并发执行的类别。</p>
-</li>
-<li><p>Scripted Pipeline只支持使用系统级别配置好的并发执行类别：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">throttle(['test-cocurrent']) {</span><br><span class="line">  node('xxxx') {</span><br><span class="line">  }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure></li>
-<li><p>对于Declarative Pipeline，目前“Throttle Concurrent Builds Plugin”还不支持，所以只能是前面讨论的缺省并发行为。</p>
-<blockquote>
-<p>对于插件“Throttle Concurrent Builds Plugin”的详细用法，<br>可以参考插件的Wiki: <a href="https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds">https://wiki.jenkins.io/display/JENKINS/Throttle+Concurrent+Builds+Plugin</a>和GitHub地址: <a href="https://github.com/jenkinsci/throttle-concurrent-builds-plugin">https://github.com/jenkinsci/throttle-concurrent-builds-plugin</a>。</p>
-</blockquote>
-</li>
-</ul>
-<h1 id="Jenkins-Job相同参数build的执行情况"><a href="#Jenkins-Job相同参数build的执行情况" class="headerlink" title="Jenkins Job相同参数build的执行情况"></a>Jenkins Job相同参数build的执行情况</h1><p>所谓相同参数build，就是指同一个Jenkins Job以相同的参数触发多个build。不论是Jenkins Job并发执行，还是非并发执行，只要有符合Jenkins Job执行的Slave和Executor资源而且并发策略允许，所有被触发的build都会被立刻执行。但如果没有足够的执行资源，或者并发策略不允许，而且已经有build在待执行队列里等待的情况下，再次触发与等待的build参数相同的build，行为就会有些区别，总结如下：</p>
-<table>
-<thead>
-<tr>
-<th>Job类型</th>
-<th>并发执行</th>
-<th>非并发执行</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Free Style Job</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-<tr>
-<td>Scripted Pipeline</td>
-<td>相同参数的build会重复加入到待执行队列</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-<tr>
-<td>Declarative Pipeline</td>
-<td>相同参数的build会重复加入到待执行队列</td>
-<td>相同参数的build只会加入到待执行队列一次</td>
-</tr>
-</tbody></table>
-<p>以上是根据实测得到的结果，并没有任何官方文档提供详细的说明，所以随着Jenkins版本的升级，其行为有可能会变化。</p>
-<h1 id="容器作为Slave节点会让并发执行变得容易吗？"><a href="#容器作为Slave节点会让并发执行变得容易吗？" class="headerlink" title="容器作为Slave节点会让并发执行变得容易吗？"></a>容器作为Slave节点会让并发执行变得容易吗？</h1><p>最近几年容器技术借助于Docker在IT领域里掀起了巨大的变革，容器编排平台Kubernetes的出现更是将容器化的应用推向高潮。在CI/CD领域也不例外，越来越多的组织开始尝试利用Docker容器作为CI Job执行的Slave节点，通过Kubernetes平台统一管理调度虚拟机资源，以期望更加细粒度地控制和使用计算资源。Docker容器作为Slave节点确实是实现了本地执行环境的隔离，但每次执行都会启动全新的容器，都得重新下载代码和构建工具的本地缓存，使得每次的构建都要花费更长的时间，所以还是要考虑如何提升效率。</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -3353,72 +3353,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Podman Rootless下容器访问宿主机服务的底层原理</title>
-    <url>/2026/07/16/podman-rootless-host/</url>
-    <content><![CDATA[<p>本地运行容器的朋友应该都碰到过一个很常见的场景：容器内部部署的应用，需要调用我们电脑本机运行的各类服务。比如我平时搭建本地 AI 环境，会把 Open WebUI 部署在容器里，为了方便使用宿主机的GPU（我的是Mac M3），本地模型服务使用Ollama，并部署在宿主机中。一旦容器没法连通宿主机的 11434 端口，整个 AI 对话、模型调用链路就会直接断掉。在实际使用中，通过域名 <code>host.docker.internal</code> 就能快速实现容器与宿主机的互通，简单又好用。</p>
-<p>用归用，但我之前一直存有疑问：Podman 默认开启 Rootless 非特权模式，容器、虚拟机、宿主机三层网络是完全隔离的，正常情况下根本不允许跨层级通信。那为什么单单这一个域名，就能打破隔离，打通容器到宿主机回环接口的通信通道？</p>
-<p>网上大部分教程，只教大家怎么配置、怎么连通，但少有提及背后的原理。这篇文章将会简单介绍下 Podman Rootless 模式下的宿主机访问原理，同时列出 Mac 和 Windows 平台的差异。</p>
-<span id="more"></span>
-
-<h1 id="一、看似简单的互通，其实存在两类限制"><a href="#一、看似简单的互通，其实存在两类限制" class="headerlink" title="一、看似简单的互通，其实存在两类限制"></a>一、看似简单的互通，其实存在两类限制</h1><p>不管是 Mac 还是 Windows 系统，都没法原生直接运行 Linux 容器。我们日常使用的 Podman 容器环境，本质是依托轻量化虚拟机搭建的运行底座——Mac 依靠系统原生的虚拟化框架，Windows 则依赖 WSL2 环境。</p>
-<p>这种嵌套式的虚拟化架构，从根源上限制了容器与宿主机的直接互通，主要绕不开两类硬性限制。</p>
-<p>第一是网络隔离限制。容器内的 localhost、127.0.0.1 只对应容器自身的网络栈，虚拟机的回环地址也仅适用于虚拟机内部通信，双层隔离之下，数据包根本无法自动穿透到真实的宿主机网络。</p>
-<p>第二是权限限制。Podman 最大的安全亮点就是 Rootless 无特权运行，全程以普通用户权限工作，不会占用系统高危权限。但有利有弊，这也导致容器进程无法创建原始网络套接字，也没有权限操作底层路由规则，这也是 Rootless 容器默认 ping 不通宿主机的核心原因。</p>
-<p>想要在不关闭安全隔离、不提升运行权限的前提下，实现容器访问宿主机服务，Podman 没有用传统的 NAT 转发方案，而是使用了用户态代理机制，整套能力的核心，都依托运行在宿主机中的 <code>gvproxy（gVisor-tap-vsock）</code> 进程来实现。</p>
-<h1 id="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"><a href="#二、核心架构：虚拟机只透传，宿主机全权接管网络转发" class="headerlink" title="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"></a>二、核心架构：虚拟机只透传，宿主机全权接管网络转发</h1><p>很多人对这套转发逻辑都有误区，以为虚拟机承担了核心的代理转发工作。事实恰恰相反：整套网络翻译、数据解包、跨层级通信的核心逻辑，全部运行在真实宿主机上，虚拟机全程只负责转发数据，不会做任何主动的逻辑处理。完整的流量流转链路流程如下：</p>
-<figure class="highlight text"><table><tbody><tr><td class="code"><pre><span class="line">[ OPEN WEBUI 容器 ]</span><br><span class="line">        │</span><br><span class="line">        │ 1. 访问 http://host.docker.internal</span><br><span class="line">        │    内置 DNS 动态解析为 192.168.127.254 (或 .1)</span><br><span class="line">        ▼</span><br><span class="line">[ LINUX 虚拟机内核 ]</span><br><span class="line">        │</span><br><span class="line">        │ 2. TCP 数据包通过被动的 virtio-net / TAP 虚拟网卡发出</span><br><span class="line">        │    （虚拟机内部无任何网络代理进程）</span><br><span class="line">        ▼</span><br><span class="line">==================== 宿主机 / 虚拟机边界 ====================</span><br><span class="line">        │</span><br><span class="line">        │ 3. 虚拟化引擎拦截 TAP 流量，直接映射入 AF_VSOCK 管道</span><br><span class="line">        ▼</span><br><span class="line">[ macOS / Windows 宿主机 (gvproxy 进程) ]</span><br><span class="line">        │</span><br><span class="line">        │ 4. gvproxy 读取 VSOCK 数据，剥离虚拟化封装，提取原始 TCP 载荷</span><br><span class="line">        ▼</span><br><span class="line">[ 宿主机原生回环接口 (127.0.0.1:11434) ]</span><br><span class="line">        │</span><br><span class="line">        │ 5. gvproxy 代表容器向宿主机发起标准的 connect() 调用</span><br><span class="line">        ▼</span><br><span class="line">[ 原生 Ollama 应用程序 ]</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="1-自定义-DNS-解析，伪造虚拟网关地址"><a href="#1-自定义-DNS-解析，伪造虚拟网关地址" class="headerlink" title="1. 自定义 DNS 解析，伪造虚拟网关地址"></a>1. 自定义 DNS 解析，伪造虚拟网关地址</h2><p><code>host.docker.internal</code> 并不是公共互联网可解析的域名，而是 Podman 内置的专属解析规则。只要容器发起相关访问请求，Podman 的内置 DNS 就会直接拦截解析动作，固定返回专属虚拟网关 IP，常见地址为 <code>192.168.127.254</code> 或<code>192.168.127.1</code>。</p>
-<p>容器完全不用感知宿主机的真实 IP 地址，只需向这个虚拟网关发包即可，后续所有的转发、适配、通信逻辑，都由底层组件自动完成，对上层业务应用完全透明，开发者无需额外干预。</p>
-<h2 id="2-虚拟机无感透传，零代理开销"><a href="#2-虚拟机无感透传，零代理开销" class="headerlink" title="2. 虚拟机无感透传，零代理开销"></a>2. 虚拟机无感透传，零代理开销</h2><p>数据包抵达虚拟机内核后，系统会直接把这个虚拟网关当成外部物理设备，不会额外做 NAT 转换、流量过滤等多余操作。</p>
-<p>虚拟机内部全程没有任何转发进程，仅通过 virtio-net、TAP 虚拟网卡，将原始的二层以太网帧完整向外透出。这种极简的透传方式，最大程度保留了原始数据包特征，也彻底规避了虚拟机内部转发带来的性能损耗。</p>
-<h2 id="3-VSOCK-管道跨层通信，绕过传统网络栈"><a href="#3-VSOCK-管道跨层通信，绕过传统网络栈" class="headerlink" title="3. VSOCK 管道跨层通信，绕过传统网络栈"></a>3. VSOCK 管道跨层通信，绕过传统网络栈</h2><p>这也是 Podman 这套网络架构的巧妙之处。传统虚拟机互通大多依靠物理网卡 NAT 转发，不仅延迟偏高，还很容易被系统防火墙、本地网络策略拦截，稳定性很差。</p>
-<p>Podman 直接采用 <code>AF_VSOCK</code> 内核套接字方案，虚拟化引擎拦截虚拟网卡流出的流量后，直接封装送入 VSOCK 内存管道。这种通信方式绕开了物理网卡和繁琐的 TCP/IP 网络栈，直接在内存层面完成虚拟机与宿主机的数据交互，效率和稳定性都远优于传统转发方案。</p>
-<h2 id="4-gvproxy-用户态代理，完成最终流量落地"><a href="#4-gvproxy-用户态代理，完成最终流量落地" class="headerlink" title="4. gvproxy 用户态代理，完成最终流量落地"></a>4. gvproxy 用户态代理，完成最终流量落地</h2><p>宿主机后台常驻的 gvproxy 进程，是整套通信链路的核心枢纽，大家可以直接用进程检索命令查看它的运行状态。所有从 VSOCK 管道流出的数据，都会统一由这个进程接管处理。</p>
-<p>它会自动剥离虚拟化封装的数据包，还原出原始的 TCP 请求信息，精准识别出容器真正的访问目标端口。随后以宿主机普通进程的身份，发起标准的 connect 系统调用，将流量精准转发到宿主机 127.0.0.1 对应的服务端口。</p>
-<p>整个过程对宿主机原生服务完全无感。就拿我常用的 Ollama 来说，它只会判定是本地普通软件发起的连接，完全察觉不到流量是从虚拟机容器中穿透过来的。</p>
-<p>后续响应数据会沿着完全相反的路径，原路返回容器，就此完成一次完整的跨层级通信交互。</p>
-<h1 id="三、Mac-与-Windows-底层差异：安全机制决定转发逻辑"><a href="#三、Mac-与-Windows-底层差异：安全机制决定转发逻辑" class="headerlink" title="三、Mac 与 Windows 底层差异：安全机制决定转发逻辑"></a>三、Mac 与 Windows 底层差异：安全机制决定转发逻辑</h1><p>Mac 和 Windows 两套系统的最终连通效果一致，但底层安全策略差异很大，这也直接导致 <code>host.docker.internal</code> 的实现逻辑各不相同。</p>
-<p>Mac 的虚拟化沙箱管控极其严格，明令禁止虚拟机直接探测、绑定、访问宿主机的回环接口。也正因如此，Mac 环境下所有的跨层流量，<strong>必须 100% 经过 gvproxy 中转</strong>，没有任何旁路方案，转发逻辑最严谨，网络隔离性也最强。</p>
-<p>反观 Windows WSL2，系统网络融合度更高，新版 WSL2 支持镜像网络模式，虚拟机可以直接共享宿主机的完整网络栈。这让 Windows 下的宿主机访问更贴近原生网络效果，转发链路更短、延迟更低，但对应的网络隔离性会比 Mac 弱不少。</p>
-<h1 id="四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性"><a href="#四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性" class="headerlink" title="四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性"></a>四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性</h1><p>很多网上教程会一刀切建议大家把本地服务监听地址改成 <code>0.0.0.0</code>，但这套操作其实不适用于 macOS 下的 Podman Rootless 环境，盲目修改反而会增加端口暴露风险，得不偿失。这里纠正一个绝大多数开发者踩错的关键误区。</p>
-<p><strong>为什么 Podman 不需要绑定 0.0.0.0？</strong></p>
-<p>核心原因还是前文提到的<code>gvproxy</code> 转发机制。这个进程运行在宿主机后台，所有容器发起的访问请求，最终都是由它以<strong>本机身份</strong>向宿主机服务发起连接。简单来说，当我们通过 <code>host.docker.internal</code> 访问本地 Ollama 服务时，Ollama 识别到的请求来源就是纯净的 <code>127.0.0.1</code> 本地回环流量。</p>
-<p>因此在 Podman 这套架构下，即便 Ollama等本地服务默认只监听 <code>127.0.0.1</code>，容器依然可以正常连通，完全不会出现拒绝连接的情况。</p>
-<p><strong>那什么时候才需要绑定 0.0.0.0？</strong></p>
-<p>绑定全网监听地址 <code>0.0.0.0</code> 并非 Podman 环境的刚需，仅适用于特定容器场景。比如使用 Colima、部分旧版 Docker 环境时，容器流量依托虚拟网桥转发，系统会把虚拟机、容器的流量判定为<strong>外部局域网 IP 流量</strong>，而非本地回环流量。</p>
-<p>这种场景下，仅监听 <code>127.0.0.1</code> 会直接拦截外部流量，此时才需要修改为 <code>0.0.0.0</code> 放行请求。</p>
-<p><strong>最终实操结论</strong>：在 macOS 原生 Podman Rootless 架构中，<strong>保持服务默认监听 127.0.0.1 即可正常通信，也是最安全的配置</strong>。无需强行修改为 0.0.0.0，避免将本地服务端口暴露在物理局域网中，带来不必要的安全风险。</p>
-<h1 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h1><p>很多开发者只会熟练使用<code>host.docker.internal</code> 实现连通，却从未深究 Rootless 模式下的底层网络逻辑。看似简单的一行域名配置，背后是 Podman 为了平衡<strong>安全隔离性与开发便捷性</strong>，精心设计的一套用户态代理架构。</p>
-<p>吃透这套 VSOCK+gvproxy 的转发机制，不止能解决本地开发的连通性问题，更能帮我们理清容器安全隔离、权限管控、虚拟化网络的核心设计思路。后续遇到容器网络异常、访问超时、连接拒绝等问题，都能快速定位根因，不用再盲目排查、试错。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>容器</category>
-      </categories>
-      <tags>
-        <tag>Container</tag>
-        <tag>Network</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Git合并请求(Pull/Merge request)的本质</title>
     <url>/2020/01/29/pullrequest-essential/</url>
     <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull/merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull/merge request)合并到主分支上。合并请求(pull/merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull/merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull/merget request)的实现来阐明合并请求(pull/merge request)的本质。<span id="more"></span></p>
@@ -3495,6 +3429,72 @@
       </categories>
       <tags>
         <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Podman Rootless下容器访问宿主机服务的底层原理</title>
+    <url>/2026/07/16/podman-rootless-host/</url>
+    <content><![CDATA[<p>本地运行容器的朋友应该都碰到过一个很常见的场景：容器内部部署的应用，需要调用我们电脑本机运行的各类服务。比如我平时搭建本地 AI 环境，会把 Open WebUI 部署在容器里，为了方便使用宿主机的GPU（我的是Mac M3），本地模型服务使用Ollama，并部署在宿主机中。一旦容器没法连通宿主机的 11434 端口，整个 AI 对话、模型调用链路就会直接断掉。在实际使用中，通过域名 <code>host.docker.internal</code> 就能快速实现容器与宿主机的互通，简单又好用。</p>
+<p>用归用，但我之前一直存有疑问：Podman 默认开启 Rootless 非特权模式，容器、虚拟机、宿主机三层网络是完全隔离的，正常情况下根本不允许跨层级通信。那为什么单单这一个域名，就能打破隔离，打通容器到宿主机回环接口的通信通道？</p>
+<p>网上大部分教程，只教大家怎么配置、怎么连通，但少有提及背后的原理。这篇文章将会简单介绍下 Podman Rootless 模式下的宿主机访问原理，同时列出 Mac 和 Windows 平台的差异。</p>
+<span id="more"></span>
+
+<h1 id="一、看似简单的互通，其实存在两类限制"><a href="#一、看似简单的互通，其实存在两类限制" class="headerlink" title="一、看似简单的互通，其实存在两类限制"></a>一、看似简单的互通，其实存在两类限制</h1><p>不管是 Mac 还是 Windows 系统，都没法原生直接运行 Linux 容器。我们日常使用的 Podman 容器环境，本质是依托轻量化虚拟机搭建的运行底座——Mac 依靠系统原生的虚拟化框架，Windows 则依赖 WSL2 环境。</p>
+<p>这种嵌套式的虚拟化架构，从根源上限制了容器与宿主机的直接互通，主要绕不开两类硬性限制。</p>
+<p>第一是网络隔离限制。容器内的 localhost、127.0.0.1 只对应容器自身的网络栈，虚拟机的回环地址也仅适用于虚拟机内部通信，双层隔离之下，数据包根本无法自动穿透到真实的宿主机网络。</p>
+<p>第二是权限限制。Podman 最大的安全亮点就是 Rootless 无特权运行，全程以普通用户权限工作，不会占用系统高危权限。但有利有弊，这也导致容器进程无法创建原始网络套接字，也没有权限操作底层路由规则，这也是 Rootless 容器默认 ping 不通宿主机的核心原因。</p>
+<p>想要在不关闭安全隔离、不提升运行权限的前提下，实现容器访问宿主机服务，Podman 没有用传统的 NAT 转发方案，而是使用了用户态代理机制，整套能力的核心，都依托运行在宿主机中的 <code>gvproxy（gVisor-tap-vsock）</code> 进程来实现。</p>
+<h1 id="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"><a href="#二、核心架构：虚拟机只透传，宿主机全权接管网络转发" class="headerlink" title="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"></a>二、核心架构：虚拟机只透传，宿主机全权接管网络转发</h1><p>很多人对这套转发逻辑都有误区，以为虚拟机承担了核心的代理转发工作。事实恰恰相反：整套网络翻译、数据解包、跨层级通信的核心逻辑，全部运行在真实宿主机上，虚拟机全程只负责转发数据，不会做任何主动的逻辑处理。完整的流量流转链路流程如下：</p>
+<figure class="highlight text"><table><tbody><tr><td class="code"><pre><span class="line">[ OPEN WEBUI 容器 ]</span><br><span class="line">        │</span><br><span class="line">        │ 1. 访问 http://host.docker.internal</span><br><span class="line">        │    内置 DNS 动态解析为 192.168.127.254 (或 .1)</span><br><span class="line">        ▼</span><br><span class="line">[ LINUX 虚拟机内核 ]</span><br><span class="line">        │</span><br><span class="line">        │ 2. TCP 数据包通过被动的 virtio-net / TAP 虚拟网卡发出</span><br><span class="line">        │    （虚拟机内部无任何网络代理进程）</span><br><span class="line">        ▼</span><br><span class="line">==================== 宿主机 / 虚拟机边界 ====================</span><br><span class="line">        │</span><br><span class="line">        │ 3. 虚拟化引擎拦截 TAP 流量，直接映射入 AF_VSOCK 管道</span><br><span class="line">        ▼</span><br><span class="line">[ macOS / Windows 宿主机 (gvproxy 进程) ]</span><br><span class="line">        │</span><br><span class="line">        │ 4. gvproxy 读取 VSOCK 数据，剥离虚拟化封装，提取原始 TCP 载荷</span><br><span class="line">        ▼</span><br><span class="line">[ 宿主机原生回环接口 (127.0.0.1:11434) ]</span><br><span class="line">        │</span><br><span class="line">        │ 5. gvproxy 代表容器向宿主机发起标准的 connect() 调用</span><br><span class="line">        ▼</span><br><span class="line">[ 原生 Ollama 应用程序 ]</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="1-自定义-DNS-解析，伪造虚拟网关地址"><a href="#1-自定义-DNS-解析，伪造虚拟网关地址" class="headerlink" title="1. 自定义 DNS 解析，伪造虚拟网关地址"></a>1. 自定义 DNS 解析，伪造虚拟网关地址</h2><p><code>host.docker.internal</code> 并不是公共互联网可解析的域名，而是 Podman 内置的专属解析规则。只要容器发起相关访问请求，Podman 的内置 DNS 就会直接拦截解析动作，固定返回专属虚拟网关 IP，常见地址为 <code>192.168.127.254</code> 或<code>192.168.127.1</code>。</p>
+<p>容器完全不用感知宿主机的真实 IP 地址，只需向这个虚拟网关发包即可，后续所有的转发、适配、通信逻辑，都由底层组件自动完成，对上层业务应用完全透明，开发者无需额外干预。</p>
+<h2 id="2-虚拟机无感透传，零代理开销"><a href="#2-虚拟机无感透传，零代理开销" class="headerlink" title="2. 虚拟机无感透传，零代理开销"></a>2. 虚拟机无感透传，零代理开销</h2><p>数据包抵达虚拟机内核后，系统会直接把这个虚拟网关当成外部物理设备，不会额外做 NAT 转换、流量过滤等多余操作。</p>
+<p>虚拟机内部全程没有任何转发进程，仅通过 virtio-net、TAP 虚拟网卡，将原始的二层以太网帧完整向外透出。这种极简的透传方式，最大程度保留了原始数据包特征，也彻底规避了虚拟机内部转发带来的性能损耗。</p>
+<h2 id="3-VSOCK-管道跨层通信，绕过传统网络栈"><a href="#3-VSOCK-管道跨层通信，绕过传统网络栈" class="headerlink" title="3. VSOCK 管道跨层通信，绕过传统网络栈"></a>3. VSOCK 管道跨层通信，绕过传统网络栈</h2><p>这也是 Podman 这套网络架构的巧妙之处。传统虚拟机互通大多依靠物理网卡 NAT 转发，不仅延迟偏高，还很容易被系统防火墙、本地网络策略拦截，稳定性很差。</p>
+<p>Podman 直接采用 <code>AF_VSOCK</code> 内核套接字方案，虚拟化引擎拦截虚拟网卡流出的流量后，直接封装送入 VSOCK 内存管道。这种通信方式绕开了物理网卡和繁琐的 TCP/IP 网络栈，直接在内存层面完成虚拟机与宿主机的数据交互，效率和稳定性都远优于传统转发方案。</p>
+<h2 id="4-gvproxy-用户态代理，完成最终流量落地"><a href="#4-gvproxy-用户态代理，完成最终流量落地" class="headerlink" title="4. gvproxy 用户态代理，完成最终流量落地"></a>4. gvproxy 用户态代理，完成最终流量落地</h2><p>宿主机后台常驻的 gvproxy 进程，是整套通信链路的核心枢纽，大家可以直接用进程检索命令查看它的运行状态。所有从 VSOCK 管道流出的数据，都会统一由这个进程接管处理。</p>
+<p>它会自动剥离虚拟化封装的数据包，还原出原始的 TCP 请求信息，精准识别出容器真正的访问目标端口。随后以宿主机普通进程的身份，发起标准的 connect 系统调用，将流量精准转发到宿主机 127.0.0.1 对应的服务端口。</p>
+<p>整个过程对宿主机原生服务完全无感。就拿我常用的 Ollama 来说，它只会判定是本地普通软件发起的连接，完全察觉不到流量是从虚拟机容器中穿透过来的。</p>
+<p>后续响应数据会沿着完全相反的路径，原路返回容器，就此完成一次完整的跨层级通信交互。</p>
+<h1 id="三、Mac-与-Windows-底层差异：安全机制决定转发逻辑"><a href="#三、Mac-与-Windows-底层差异：安全机制决定转发逻辑" class="headerlink" title="三、Mac 与 Windows 底层差异：安全机制决定转发逻辑"></a>三、Mac 与 Windows 底层差异：安全机制决定转发逻辑</h1><p>Mac 和 Windows 两套系统的最终连通效果一致，但底层安全策略差异很大，这也直接导致 <code>host.docker.internal</code> 的实现逻辑各不相同。</p>
+<p>Mac 的虚拟化沙箱管控极其严格，明令禁止虚拟机直接探测、绑定、访问宿主机的回环接口。也正因如此，Mac 环境下所有的跨层流量，<strong>必须 100% 经过 gvproxy 中转</strong>，没有任何旁路方案，转发逻辑最严谨，网络隔离性也最强。</p>
+<p>反观 Windows WSL2，系统网络融合度更高，新版 WSL2 支持镜像网络模式，虚拟机可以直接共享宿主机的完整网络栈。这让 Windows 下的宿主机访问更贴近原生网络效果，转发链路更短、延迟更低，但对应的网络隔离性会比 Mac 弱不少。</p>
+<h1 id="四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性"><a href="#四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性" class="headerlink" title="四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性"></a>四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性</h1><p>很多网上教程会一刀切建议大家把本地服务监听地址改成 <code>0.0.0.0</code>，但这套操作其实不适用于 macOS 下的 Podman Rootless 环境，盲目修改反而会增加端口暴露风险，得不偿失。这里纠正一个绝大多数开发者踩错的关键误区。</p>
+<p><strong>为什么 Podman 不需要绑定 0.0.0.0？</strong></p>
+<p>核心原因还是前文提到的<code>gvproxy</code> 转发机制。这个进程运行在宿主机后台，所有容器发起的访问请求，最终都是由它以<strong>本机身份</strong>向宿主机服务发起连接。简单来说，当我们通过 <code>host.docker.internal</code> 访问本地 Ollama 服务时，Ollama 识别到的请求来源就是纯净的 <code>127.0.0.1</code> 本地回环流量。</p>
+<p>因此在 Podman 这套架构下，即便 Ollama等本地服务默认只监听 <code>127.0.0.1</code>，容器依然可以正常连通，完全不会出现拒绝连接的情况。</p>
+<p><strong>那什么时候才需要绑定 0.0.0.0？</strong></p>
+<p>绑定全网监听地址 <code>0.0.0.0</code> 并非 Podman 环境的刚需，仅适用于特定容器场景。比如使用 Colima、部分旧版 Docker 环境时，容器流量依托虚拟网桥转发，系统会把虚拟机、容器的流量判定为<strong>外部局域网 IP 流量</strong>，而非本地回环流量。</p>
+<p>这种场景下，仅监听 <code>127.0.0.1</code> 会直接拦截外部流量，此时才需要修改为 <code>0.0.0.0</code> 放行请求。</p>
+<p><strong>最终实操结论</strong>：在 macOS 原生 Podman Rootless 架构中，<strong>保持服务默认监听 127.0.0.1 即可正常通信，也是最安全的配置</strong>。无需强行修改为 0.0.0.0，避免将本地服务端口暴露在物理局域网中，带来不必要的安全风险。</p>
+<h1 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h1><p>很多开发者只会熟练使用<code>host.docker.internal</code> 实现连通，却从未深究 Rootless 模式下的底层网络逻辑。看似简单的一行域名配置，背后是 Podman 为了平衡<strong>安全隔离性与开发便捷性</strong>，精心设计的一套用户态代理架构。</p>
+<p>吃透这套 VSOCK+gvproxy 的转发机制，不止能解决本地开发的连通性问题，更能帮我们理清容器安全隔离、权限管控、虚拟化网络的核心设计思路。后续遇到容器网络异常、访问超时、连接拒绝等问题，都能快速定位根因，不用再盲目排查、试错。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>容器</category>
+      </categories>
+      <tags>
+        <tag>Container</tag>
+        <tag>Network</tag>
       </tags>
   </entry>
   <entry>
