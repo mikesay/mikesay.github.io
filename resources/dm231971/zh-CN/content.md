@@ -44,6 +44,7 @@ p & \xrightarrow{\text{Physical}} & p'
 \end{matrix}
 $$
 
+
 图1：实现交换图。在标准理论视角下，映射$f$（字符编码映射）将载体的物理演化过程（$p \to p'$），解读为抽象内容的逻辑演化过程（$A \to A'$）。
 
 假设物理系统在物理定律的支配下从状态 $p$ 演化到 $p'$（$p \to p'$）。与此同时，抽象计算根据其算法规则从逻辑状态 $A$ 推进到 $A'$（$A \to A'$）。
@@ -118,7 +119,7 @@ $$
 
 <div align="center">
 
-![](_media/the-abstraction-fallacy-2.jpg)
+![](../_media/the-abstraction-fallacy-2.jpg)
 
 </div>  
 
@@ -156,7 +157,7 @@ $$
 
 <div align="center">
 
-![](_media/the-abstraction-fallacy-3.jpg)
+![](../_media/the-abstraction-fallacy-3.jpg)
 
 </div>  
 

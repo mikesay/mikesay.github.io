@@ -68,9 +68,9 @@ After having established the physical grounding of abstract states (A), which re
 
 In the philosophical literature concerning semantics and the map-territory relation, this external anchor is traditionally referred to as an 'observer'. However, the term 'observer' implies a passive reception of information... We deliberately introduce the term mapmaker to explicitly correct this passive implication.The mapmaker is the active, metabolically vulnerable cognitive agent that must exist as a prerequisite to generate computation. It performs two active, constitutive roles: first, extracting invariants from continuous physical experience to construct the internal map (concepts); and second, executing the arbitrary assignment of physical tokens to construct the external computational map (symbols).Applying this insight fundamentally resolves the ontological status of the computational terms:
 
-1.  **The Physical States (p): These are the symbols (the vehicle). They are objective physical entities (e.g., voltage gradients), possessing zero intrinsic semantic content.**  
-2.  **The Abstract States (A): These are concepts (the content). As established, these are grounded physiological states existing exclusively within the mapmaker who holds the computation's meaning.**  
-3.  **The Mapping Function (f): This is the alphabetization. It represents the assigned association held in the mapmaker's mind, actively bridging the machine's blind physics (p) to the mapmaker's grounded concepts (A).**  
+1.  The Physical States (p): These are the symbols (the vehicle). They are objective physical entities (e.g., voltage gradients), possessing zero intrinsic semantic content.  
+2.  The Abstract States (A): These are concepts (the content). As established, these are grounded physiological states existing exclusively within the mapmaker who holds the computation's meaning.  
+3.  The Mapping Function (f): This is the alphabetization. It represents the assigned association held in the mapmaker's mind, actively bridging the machine's blind physics (p) to the mapmaker's grounded concepts (A).  
 
 The standard definition ($p \to p' \sim= A \to A'$) therefore describes a hybrid relationship: a physical object (p) linked to a mental concept (A) via the necessary mediation of the mapmaker (f).
 
@@ -78,11 +78,11 @@ It is important to note that identifying this indispensable mapmaker does not re
 
 Treating the logical progression ($A \to A'$) as an intrinsic property of the physical evolution ($p \to p'$) is the main functionalist error. Such a perspective conflates the cognitive interpretation of the mapmaker with the actual physical reality of the machine, ignoring the experiencing subject needed to ground the computation in the first place.
 
-## 2.4 Alphabetization: The Semantic Imposition Beyond Discretization / 字母表化：超越离散化的语义强加
+## 2.4 Alphabetization: The Semantic Imposition Beyond Discretization
 The mapping function $f$ serves as the actual locus of alphabetization. While often dismissed in the literature as just "reading" the system, alphabetizing is actually a metabolically demanding cognitive act.It imposes a discrete ontology onto continuous physics and is subject to the thermodynamic bounds of information processing (Attwell & Laughlin, 2001; Bennett, 1982; Landauer, 1961; Laughlin et al., 1998). Here it is important to separate two processes that are routinely conflated:
 
-*   **Discretization (Thermodynamic): A system physically settling into stable attractors, such as a transistor holding at 5V. This is a property of the vehicle (p) and functions only to suppress physical noise.**  
-*   **Alphabetization (Semantic): Explicitly assigning those stable states to a predefined finite set of symbols (like $\{0,1\}$ or $\{A, B, C\}$). This operation belongs exclusively to the mapmaker (f).**  
+*   Discretization (Thermodynamic): A system physically settling into stable attractors, such as a transistor holding at 5V. This is a property of the vehicle (p) and functions only to suppress physical noise.  
+*   Alphabetization (Semantic): Explicitly assigning those stable states to a predefined finite set of symbols (like $\{0,1\}$ or $\{A, B, C\}$). This operation belongs exclusively to the mapmaker (f).  
 
 Because physical reality is inherently continuous, thermodynamics can only yield stable macroscopic states—it can never provide a predefined finite alphabet.Constructing a computational system therefore requires intervention from a mapmaker. This external agent must enforce a semantic identity by treating vastly heterogeneous micro-states as one fungible symbol (e.g., "1").
 
@@ -93,8 +93,8 @@ Claiming these symbols exist independently of the observer exemplifies The Blind
 ## 2.5 Simulation vs. Instantiation
 After having established the distinct nature and differing roles of concepts versus symbols, we can apply our definitions to clarify why simulating a process is fundamentally different from instantiating it:
 
-*   **Simulation: The syntactic manipulation of physical vehicles (p) to track the abstract relationship between concepts (A).**  
-*   **Instantiation: The replication of the intrinsic, constitutive dynamics (P) of the process itself.**  
+*   Simulation: The syntactic manipulation of physical vehicles (p) to track the abstract relationship between concepts (A).  
+*   Instantiation: The replication of the intrinsic, constitutive dynamics (P) of the process itself.  
 
 Standard functionalism assumes that preserving the abstract topology of the map ($A \to A'$) is sufficient to generate the phenomenon of the territory (P), thereby overlooking the specific causal powers and constitutive mechanisms of the physical substrate (Craver, 2007).
 
@@ -108,21 +108,21 @@ This requirement for intrinsic causality follows directly from physicalist princ
 
 In a digital simulation, the causal chain is driven entirely by the vehicle (p). The logic gate does not switch because it 'hurts' (content causality driven by A). Instead, it switches because the voltage crosses a defined physical threshold (vehicle causality driven by p).The physical state of the system alone determines its evolution. The semantic content of the symbol (A) plays no causal role, since the machine would perform the same physical operations even if the symbol referred to nothing at all.Assuming otherwise would mean to fall victim to the abstraction fallacy.
 
-## 2.6 The Fallacy of Computational Emergence / 计算涌现的谬误
+## 2.6 The Fallacy of Computational Emergence
 When confronted with the distinction between simulation and instantiation, functionalists tend to retreat to complexity theory and emergence.They argue that just as "wetness" emerges from the interaction of water molecules, consciousness will emerge from computation once the system crosses a threshold of sufficient complexity.This objection fails because it conflates weak physical emergence with what we term the fallacy of computational emergence.
 
-*   **Weak Emergence (Physical): Macroscopic properties (like wetness) supervene directly on the intrinsic causal dynamics of the microscopic physical substrate (e.g., H2O).**  
-*   **Computational Emergence (Abstract): The claim that an abstract description of a process (the map) can, solely through a massive increase in syntactical complexity, transmute into the physical process itself (the territory).**  
+*   Weak Emergence (Physical): Macroscopic properties (like wetness) supervene directly on the intrinsic causal dynamics of the microscopic physical substrate (e.g., H2O).  
+*   Computational Emergence (Abstract): The claim that an abstract description of a process (the map) can, solely through a massive increase in syntactical complexity, transmute into the physical process itself (the territory).  
 
 Functionalists insist that consciousness is a unique case because it is purely "substrate independent information". But this argument assumes its own conclusion: it presumes the mental state is the abstract information (A), completely sidestepping the physical reality (P) that generates it.As we have established, syntax ($A \to A'$) possesses no intrinsic causal power; it is a mapmaker's attribution. To claim that an abstract syntax somehow "emerges" to become a physical cause falls outside scientific hypothesis entirely, as it requires violating the causal closure of the physical world.
 
 <div align="center">
 
-![](_media/the-abstraction-fallacy-2.jpg)
+![](../_media/the-abstraction-fallacy-2.jpg)
 
 </div>  
 
-图 2：抽象的因果拓扑结构。(A) 功能主义（Functionalism） 假设了一种线性层级结构，其中计算是连接物理世界与意识的桥梁。(B) 我们的框架 展现了一种分叉的拓扑结构。纵轴 代表内在链（intrinsic chain）：物理（$P$）实例化了经验，而经验通过抽象构成了概念（$A$）。思维与想象（$A \rightarrow A'$）在此处发生。横轴 代表外在链（extrinsic chain）：符号（$p$）是通过将物理标记与概念进行任意关联而创建的（如红色虚线箭头所示）。这一无法逾越的横向步骤构成了“因果关系鸿沟”（causality gap）。关于计算的说明：计算（$p \rightarrow p'$）是一个完全在这一横向分支上运行的过程。这种从概念到符号的横向移动——是一种任意的赋予，而非纵向的抽象——切断了从符号返回到源头经验的任何内在因果路径。
+Figure 2: The Causal Topology of Abstraction.(A) Functionalism assumes a linear hierarchy where computation is the bridge between physics and consciousness.(B) Our framework reveals a branching topology.The vertical axis represents the intrinsic chain: Physics ($P$) instantiates experience, which constitutes concepts ($A$) via abstraction. Thinking and imagination ($A \rightarrow A'$) occur here.The lateral axis represents the extrinsic chain: symbols ($p$) are created by arbitrarily associating a physical token with a concept (indicated by the red dashed arrow). This unbridgeable lateral step constitutes the causality gap.Note on Computation:Computation ($p \rightarrow p'$) is a process that operates solely on this lateral branch. This lateral move from concept to symbol—an arbitrary assignment rather than a vertical abstraction—severs any intrinsic causal path from the symbol back to the originating experience.中文版本 (Chinese Version)
 
 # 3 The Causal Circularity: Correcting the Chain
 By establishing this firm boundary between physical dynamics (P) and computational maps (A), we can locate the exact logical collapse within computational functionalism(illustrated in Figure 2).
@@ -136,10 +136,10 @@ This assumes consciousness will simply appear as a downstream byproduct once com
 Defining discrete symbols and giving them semantic meaning requires an already-conscious agent acting as a mapmaker (f). Consequently, we have to fundamentally reorder the causal sequence:**  
 **Physics $\to$ Consciousness $\to$ Concepts $\to$ Computation.
 
-1.  **Physics: The universe's intrinsic causal dynamics.**  
-2.  **Consciousness: Phenomenal experience arising directly out of specific thermodynamic organizations within that physics.**  
-3.  **Concepts: The internal map, formed by extracting invariants from raw experience.**  
-4.  **Computation: The external map, consisting of the syntactic manipulation of discrete symbols arbitrarily assigned to those concepts.**  
+1.  Physics: The universe's intrinsic causal dynamics.  
+2.  Consciousness: Phenomenal experience arising directly out of specific thermodynamic organizations within that physics.  
+3.  Concepts: The internal map, formed by extracting invariants from raw experience.  
+4.  Computation: The external map, consisting of the syntactic manipulation of discrete symbols arbitrarily assigned to those concepts.  
 
 This revised chain operates strictly unidirectionally. While concepts stay physically anchored in the subject’s intrinsic experience, the irreducible ‘what it is like’ to be that entity (Nagel, 1974), compu- tational symbols are just physical tokens with no inherent link to the concepts they represent. Moving from concepts to symbols is not a step in abstraction. It is a lateral act of assignment where a mapmaker forcibly binds a physical token to a mental concept. It is precisely this unbridgeable lateral step that exposes the causality gap, permanently cutting off any intrinsic path leading back from the symbol to the original experience.
 
@@ -156,7 +156,7 @@ To formalize this objection, we introduce a strict Shannon constraint: to proces
 
 <div align="center">
 
-![](_media/the-abstraction-fallacy-3.jpg)
+![](../_media/the-abstraction-fallacy-3.jpg)
 
 </div>  
 
@@ -170,13 +170,13 @@ Even if future AI systems abandon floating-point operations for fully analog neu
 The mechanistic view of computation, championed by Piccinini (2008), attempts to excise the mapmaker completely, arguing that computation can be defined without any appeal to representation.The idea is that computation can be defined solely by the manipulation of “digits”—macroscopic physical states distinguishable solely by the system’s functional organization. However, while this maneuver hides the mapmaker, it does not eliminate the need for one. As Sprevak (2018) notes in his analysis of triviality arguments, fixing the computational identity of any physical mechanism still requires an external specification of the relevant states.Physical mechanisms can certainly possess stable attractors (which we clarified as thermodynamic discretization in Section 2.4), but grouping these continuous attractors into a specific, finite computational alphabet remains a strictly extrinsic imposition by a mapmaker.
 
 We can consider a simple melody paradox (Figure 3) to expose this sleight of hand. Imagine a physical device stepping through a sequence of stable voltage states. The physical transitions ($p \rightarrow p'$) are fixed by the laws of electrodynamics. Yet, the computational identity ($A \rightarrow A'$) of this exact process remains entirely under-determined.Without an external mapmaker to supply the mapping key, that single sequence of physical states could represent:  
-1.  **A melody played forward (Mapping A).**
+1.  A melody played forward (Mapping A).
 
-2.  **The exact same melody played backward (Mapping B, e.g., a retrograde inversion).**
+2.  The exact same melody played backward (Mapping B, e.g., a retrograde inversion).
 
-3.  **A rapid stream of stock market prices (Mapping C).**
+3.  A rapid stream of stock market prices (Mapping C).
 
-4.  **Coherent noise (if the symbol set is defined with different granularity).**
+4.  Coherent noise (if the symbol set is defined with different granularity).
 
 There is no property inherent to the physical voltage ($p$) that privileges one of these finite symbol sets over the others. The “digit” is not a natural kind waiting to be discovered in the mechanism. It is an epistemic cut made by the mapmaker, forcing continuous physical dynamics into a finite logical set (Putnam, 1988).
 
