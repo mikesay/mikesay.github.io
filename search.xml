@@ -229,6 +229,137 @@
       </tags>
   </entry>
   <entry>
+    <title>打破“云无关”的乌托邦：现代企业必须看懂的云架构四级成熟度模型</title>
+    <url>/2026/06/29/cloud-architecture-portability-maturity-model/</url>
+    <content><![CDATA[<p>当 CXO 在管理层会议上高呼“我们要做到绝对的云无关，随时准备跨云搬家”时，一线的架构师和 SRE 往往只能暗自叹气。为什么盲目追求“云无关”往往会变成一场两败俱伤的空中楼阁游戏？本文将彻底厘清 Cloud-Native、Cloud-Agnostic、Cloud-Neutral 和 Cloud-Portability 这四个最易混淆的云指标，并为你梳理一套兼顾商业权衡与工程实际的“四级成熟度模型”，帮你算清技术解耦背后的真实财务与运维代价。  </p>
+<span id="more"></span>
+
+<h1 id="一、-前言：一场两败俱伤的“空中楼阁”游戏"><a href="#一、-前言：一场两败俱伤的“空中楼阁”游戏" class="headerlink" title="一、 前言：一场两败俱伤的“空中楼阁”游戏"></a>一、 前言：一场两败俱伤的“空中楼阁”游戏</h1><p>在今天的数字化转型过程中，我们经常能在企业内部看到这样一种技术认知上的冲突：</p>
+<p>管理型决策者（CXO 级别，包括 CEO、CFO 甚至部分脱离技术一线较久的 CTO/CIO）出于对“供应商锁定”和供应链风险的本能恐惧，会在管理层会议上拍板：“我们的系统必须做到绝对的 Cloud-Agnostic（云无关）！我们要保证业务随时能从 A 云搬到 B 云，或者搬回自己的物理机房。”</p>
+<p>然而在执行层，架构师们看着手里高度依赖云厂商托管数据库、AI 服务和 Serverless 的系统，往往很难落地。如果盲目去执行这个要求，DevOps 与 SRE 工程师只能硬着头皮拒绝使用云厂商提供的任何便利 PaaS 产品，在虚拟机上全栈开源自建基础设施。其结果通常是：业务上线周期被大幅拉长，日常运维成本高昂，且系统稳定性由于团队缺乏对底层开源中间件的深度调优能力而频繁发生故障。</p>
+<p>这场冲突的根源，在于管理层与执行层对云计算时代四个核心概念缺乏统一的认知边界。很多人分不清云原生、云无关、云中立和云可移植性之间的本质区别，误以为“云无关”是一个不需要付出代价就能直接享有的商业红利。</p>
+<p>为了厘清技术路线、减少内部无效消耗，本文将为云方案架构师、DevOps/SRE 工程师以及各级决策者定义这四个概念的技术内涵，并提供一套兼顾商业权衡与工程实际的“云架构可移植性四级成熟度模型”。</p>
+<h1 id="二、-概念澄清：这四个云指标的底层逻辑"><a href="#二、-概念澄清：这四个云指标的底层逻辑" class="headerlink" title="二、 概念澄清：这四个云指标的底层逻辑"></a>二、 概念澄清：这四个云指标的底层逻辑</h1><p>在探讨具体技术路线之前，我们需要在同一套技术话语体系下，明确以下四个容易被混淆的概念。</p>
+<h2 id="1-Cloud-Native（云原生）"><a href="#1-Cloud-Native（云原生）" class="headerlink" title="1. Cloud-Native（云原生）"></a>1. Cloud-Native（云原生）</h2><p>它不仅是一种在云计算时代构建和运行应用程序的方法（以容器化、微服务、DevOps 和自动化 CI/CD 为核心特征），在系统层面，它更代表着一种“最大化消费云服务”的策略。真正的云原生架构会尽量全面采用云平台提供的 PaaS、Serverless 及各类托管产品（如云数据库、托管消息队列、云原生网关）。其核心哲学是将非业务逻辑的底层高可用、运维和安全复杂度完全转嫁给云厂商，从而释放业务迭代效率与系统弹性。</p>
+<h2 id="2-Cloud-Agnostic（云无关）"><a href="#2-Cloud-Agnostic（云无关）" class="headerlink" title="2. Cloud-Agnostic（云无关）"></a>2. Cloud-Agnostic（云无关）</h2><p>指系统设计具备完全独立于任何特定云服务商的能力。在系统层面，它表现为将云平台降级为纯 IaaS 资源池。企业仅向云厂商购买最基础的计算（虚拟机/裸金属）、网络（VPC）和存储（块存储）等基础设施服务。而上层应用系统赖以生存的数据层、消息事件层、接入层以及容器调度层，则完全基于开源、跨云中立的技术方案进行自主构建与运维，以此消除单供应商锁定的风险。</p>
+<h2 id="3-Cloud-Neutral（云中立）"><a href="#3-Cloud-Neutral（云中立）" class="headerlink" title="3. Cloud-Neutral（云中立）"></a>3. Cloud-Neutral（云中立）</h2><p>这是一个商业与战略层面的考量指标。它用以衡量云厂商在提供基础设施的同时，是否通过非云技术业务（如电商、金融、物流、本地生活等）与客户构成直接或间接的竞争，从而形成隐性业务锁定。例如，亚马逊（AWS）旗下的电商业务与全球零售业客户存在天然的利害冲突，这导致许多零售与电商行业的企业在选择数字化底座时，会由于“云中立”考量而刻意避开 AWS。</p>
+<h2 id="4-Cloud-Portability（云可移植性）"><a href="#4-Cloud-Portability（云可移植性）" class="headerlink" title="4. Cloud-Portability（云可移植性）"></a>4. Cloud-Portability（云可移植性）</h2><p>指应用程序、数据及相关支撑环境在不同云厂商（或本地私有云）之间迁移的难易程度。从应用系统的视角来看，可移植性并不是一个孤立的指标，它正是衡量系统在 Cloud-Native（云原生）与 Cloud-Agnostic（云无关）能力之间进行技术权衡的标尺。整个架构设计呈现出清晰的“跷跷板”效应：</p>
+<ul>
+<li><strong>越偏向 Cloud-Native（云原生）</strong>，系统越倾向于全面消费云服务。此时应用的稳定性高、日常运维成本低，代价是云可移植性变弱，跨云迁移成本极高。</li>
+<li><strong>越偏向 Cloud-Agnostic（云无关）</strong>，系统越倾向于纯 IaaS 加全栈开源自建。此时应用的云可移植性极强，跨云迁移成本相对较低，但企业需要投入极高的人力与技术成本来独自维持系统的稳定性。</li>
+</ul>
+<h1 id="三、-演进与务实：云架构可移植性四级模型详解"><a href="#三、-演进与务实：云架构可移植性四级模型详解" class="headerlink" title="三、 演进与务实：云架构可移植性四级模型详解"></a>三、 演进与务实：云架构可移植性四级模型详解</h1><p>既然云可移植性是一把带有平衡性质的标尺，那么企业在实际工程落地中，到底应该把自己定位在哪一个刻度？以下表格从技术边界到现实局限，拆解了四个不同的技术演进段位。</p>
+<table>
+<thead>
+<tr>
+<th align="left">成熟度级别</th>
+<th align="left">架构定义说明</th>
+<th align="left">典型技术特征</th>
+<th align="left">跨云可移植性评级与技术边界</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>Level 1：纯云原生模式</strong><br><em>(Pure 100% Cloud-Native)</em></td>
+<td align="left">应用程序及系统底座全盘采用云厂商特有的非标准、闭源专有产品构建，跳过所有开源标准或通用技术，换取极致的上线速度。</td>
+<td align="left">核心业务逻辑深度依赖厂商特有的无标准接口服务。例如：使用 AWS Lambda 或阿里云 FC 等各自独立的 Serverless 函数，或者调用特定的低代码平台与专有 AI/大数据分析引擎。</td>
+<td align="left"><strong>评级：零（Zero）</strong><br>跨云时必须重写大量核心业务代码，由于接口完全不通用，系统在跨云迁移时无异于推倒重来。</td>
+</tr>
+<tr>
+<td align="left"><strong>Level 2：混合共存模式</strong><br><em>(解耦与绑定并存的现状)</em></td>
+<td align="left"><strong>属于企业现实架构中最普遍的务实现状。</strong> 系统技术栈出现分层：在存在公认开源标准接口的领域（如数据库、容器、缓存）直接享受托管便利与可移植性；而在缺乏行业标准接口的创新领域（如原生 Serverless、特殊事件总线），则主动选择放弃部分可移植性，向云厂商深度绑定。</td>
+<td align="left">微服务应用跑在托管的标准 K8s 容器中，数据存储在支持标准 PostgreSQL / MySQL 协议的云数据库里（此时数据库代码天然解耦，不需要额外编写 Adapter）；但是，某些高并发的边缘业务或异步流处理，则直接接入了云厂商专属的、互不兼容的 Serverless 架构（如 AWS Lambda / 阿里云 FC）。</td>
+<td align="left"><strong>评级：中等（Medium）</strong><br>系统的核心资产（数据库、容器计算）可以较低成本迁移，但由于系统局部消费了云厂商无开源标准接口的私有 PaaS 产品，迁移时这些绑定的业务模块需要局部重构。</td>
+</tr>
+<tr>
+<td align="left"><strong>Level 3：接口层解耦，实现层原生</strong><br><em>(黄金理想态)</em></td>
+<td align="left"><strong>源自软件工程的“六边形架构”思想，属于追求全栈可移植性的黄金理想态。</strong> 对于存在标准接口的组件直接进行消费。而对于缺乏公认开源标准接口的服务（如 Serverless），则必须在系统层或代码层引入跨云中立工具、或者自主编写统一的适配器（Adapter）实现接口层全盘解耦。</td>
+<td align="left">容器调度、数据库和存储层继续享用标准的开源协议托管（如 K8s, PostgreSQL, S3）。针对缺乏标准接口的 Serverless 计算，系统不再直接对接云厂商的私有 API，而是采用多云通用的开源抽象框架（如自建 Knative 或 OpenFaaS），或者通过六边形架构为各云厂商的 Serverless 接口编写统一的代码适配层。</td>
+<td align="left"><strong>评级：高（High）</strong><br>整个系统在应用层实现完全的“接口无关性”。跨云迁移时，核心业务代码无需任何改动，仅需要修改底层的具体基础设施配置和注解（Annotations），通常在几天内即可完成割接。</td>
+</tr>
+<tr>
+<td align="left"><strong>Level 4：绝对云无关模式</strong><br><em>(Pure 100% Cloud-Agnostic)</em></td>
+<td align="left">技术可移植性的最高境界。系统彻底将云厂商降级为纯 IaaS 算力批发商，应用程序及其所有的配套基础设施，仅依赖开源且版权中立的软件，由企业团队自建和自运维全栈技术。</td>
+<td align="left">纯虚拟机 + 自建开源 K8s + 自建开源 PostgreSQL + 自建开源 Apache Kafka + 自建开源 MinIO + 自建开源 Envoy。整套系统不依赖任何厂商的任何托管服务。</td>
+<td align="left"><strong>评级：100%（Instant）</strong><br>整套系统具备绝对的技术与商务自由，可以整体打包、无缝在任何云或企业自建的物理机房里毫无差别地跑起来。</td>
+</tr>
+</tbody></table>
+<h1 id="四、-权衡与共识：用于团队技术评审的决策矩阵"><a href="#四、-权衡与共识：用于团队技术评审的决策矩阵" class="headerlink" title="四、 权衡与共识：用于团队技术评审的决策矩阵"></a>四、 权衡与共识：用于团队技术评审的决策矩阵</h1><p>在企业制定云战略或举行架构技术评审会时，管理层应当停止虚空索要“云无关”，执行层也应停止盲目抵抗。我们可以通过以下矩阵，算清每一条技术路线背后隐藏的真实商业代价与技术代价（Trade-offs）：</p>
+<table>
+<thead>
+<tr>
+<th align="left">成熟度级别</th>
+<th align="left">技术可移植性</th>
+<th align="left">开发与上线速度</th>
+<th align="left">日常运维成本（O&amp;M）</th>
+<th align="left">稳定性维持成本</th>
+<th align="left">最佳应用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>Level 1</strong><br>(纯云原生)</td>
+<td align="left">极低（深度绑定）</td>
+<td align="left">🚀 极快（无需重复造轮子）</td>
+<td align="left">📉 极低（技术细节由云厂商全包）</td>
+<td align="left">💰 极低（直接享受厂商专家级运维红利）</td>
+<td align="left">创新业务探索、初创产品孵化、MVP快速验证</td>
+</tr>
+<tr>
+<td align="left"><strong>Level 2</strong><br>(混合共存)</td>
+<td align="left">中等（主干自由，局部受限）</td>
+<td align="left">⚡ 较快（核心自研，创新绑定）</td>
+<td align="left">📉 较低（标准组件免运维，私有组件享红利）</td>
+<td align="left">🪙 较低（压力主要在无标准接口模块的跨云重构上）</td>
+<td align="left">90% 中大型企业当下的主流技术路线。核心架构标准化，局部利用特殊云服务进行快速创新的系统</td>
+</tr>
+<tr>
+<td align="left"><strong>Level 3</strong><br>(接口层解耦)</td>
+<td align="left">稳定且高（迁移无代码改动）</td>
+<td align="left">🚶 较慢（需额外投入精力搭建通用框架或编写Adapter）</td>
+<td align="left">📈 较高（非标准组件需团队自主维护通用中间层，如 Knative）</td>
+<td align="left">⚖️ 中等（由厂商提供底层高可用保障，应用层通过适配器隔离风险）</td>
+<td align="left">对跨云和防单供应商锁定有高度商业追求，同时具备较强技术抽象能力的大中型企业核心系统</td>
+</tr>
+<tr>
+<td align="left"><strong>Level 4</strong><br>(绝对云无关)</td>
+<td align="left">🏆 完美（100% 自由迁移）</td>
+<td align="left">🐢 极慢（全栈基础设施均需自行搭建）</td>
+<td align="left">📈 极高（所有中间件与标准数据库均需团队全责自运维）</td>
+<td align="left">🚨 极高（需雇佣高级 DBA 和 SRE 专家应对突发故障）</td>
+<td align="left">高合规性行业（金融/医疗）、政府项目、大型跨国跨云 SaaS 平台</td>
+</tr>
+</tbody></table>
+<h1 id="五、-结语：世界上没有免费的“解耦”"><a href="#五、-结语：世界上没有免费的“解耦”" class="headerlink" title="五、 结语：世界上没有免费的“解耦”"></a>五、 结语：世界上没有免费的“解耦”</h1><p>在软件工程中，任何一种架构设计都不是灵丹妙药，所有的选择都是权衡（Trade-offs）的结果。</p>
+<p>当决策层试图追求极致的“Cloud-Agnostic（云无关）”与完美的可移植性时，它并不是在凭空消灭风险，而是在进行风险的物理转移——将系统被云厂商锁定的供应链风险，转移为企业自身团队能否兜得住全栈开源自建的技术运维风险。</p>
+<p>对于管理型决策者（CXO 级别）而言，应当明白“云无关”在 Level 4 意味着要批下数倍的基础设施研发和高级 SRE 人力预算；对于技术决策者和架构师而言，在有标准接口的领域（如数据库、标准 K8s）拥抱托管服务（Level 2），在没有标准接口的领域谨慎评估商业回报、并利用适配器隔离设计（Level 3），才是目前最符合商业利益与研发效率的务实方案。</p>
+<p>看清这四个概念的技术光谱，企业才能在多云时代既保留关键的迁移底牌，又不至于陷入盲目自建的技术内耗中。  </p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>架构</category>
+      </categories>
+      <tags>
+        <tag>Architecture</tag>
+        <tag>Cloud-Native</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>云计算巨头如何用“软件韧性”重构基础设施</title>
     <url>/2026/06/19/cloud-base-resiliency/</url>
     <content><![CDATA[<blockquote>
@@ -684,137 +815,6 @@
       <tags>
         <tag>Kubernetes</tag>
         <tag>Kind</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>打破“云无关”的乌托邦：现代企业必须看懂的云架构四级成熟度模型</title>
-    <url>/2026/06/29/cloud-architecture-portability-maturity-model/</url>
-    <content><![CDATA[<p>当 CXO 在管理层会议上高呼“我们要做到绝对的云无关，随时准备跨云搬家”时，一线的架构师和 SRE 往往只能暗自叹气。为什么盲目追求“云无关”往往会变成一场两败俱伤的空中楼阁游戏？本文将彻底厘清 Cloud-Native、Cloud-Agnostic、Cloud-Neutral 和 Cloud-Portability 这四个最易混淆的云指标，并为你梳理一套兼顾商业权衡与工程实际的“四级成熟度模型”，帮你算清技术解耦背后的真实财务与运维代价。  </p>
-<span id="more"></span>
-
-<h1 id="一、-前言：一场两败俱伤的“空中楼阁”游戏"><a href="#一、-前言：一场两败俱伤的“空中楼阁”游戏" class="headerlink" title="一、 前言：一场两败俱伤的“空中楼阁”游戏"></a>一、 前言：一场两败俱伤的“空中楼阁”游戏</h1><p>在今天的数字化转型过程中，我们经常能在企业内部看到这样一种技术认知上的冲突：</p>
-<p>管理型决策者（CXO 级别，包括 CEO、CFO 甚至部分脱离技术一线较久的 CTO/CIO）出于对“供应商锁定”和供应链风险的本能恐惧，会在管理层会议上拍板：“我们的系统必须做到绝对的 Cloud-Agnostic（云无关）！我们要保证业务随时能从 A 云搬到 B 云，或者搬回自己的物理机房。”</p>
-<p>然而在执行层，架构师们看着手里高度依赖云厂商托管数据库、AI 服务和 Serverless 的系统，往往很难落地。如果盲目去执行这个要求，DevOps 与 SRE 工程师只能硬着头皮拒绝使用云厂商提供的任何便利 PaaS 产品，在虚拟机上全栈开源自建基础设施。其结果通常是：业务上线周期被大幅拉长，日常运维成本高昂，且系统稳定性由于团队缺乏对底层开源中间件的深度调优能力而频繁发生故障。</p>
-<p>这场冲突的根源，在于管理层与执行层对云计算时代四个核心概念缺乏统一的认知边界。很多人分不清云原生、云无关、云中立和云可移植性之间的本质区别，误以为“云无关”是一个不需要付出代价就能直接享有的商业红利。</p>
-<p>为了厘清技术路线、减少内部无效消耗，本文将为云方案架构师、DevOps/SRE 工程师以及各级决策者定义这四个概念的技术内涵，并提供一套兼顾商业权衡与工程实际的“云架构可移植性四级成熟度模型”。</p>
-<h1 id="二、-概念澄清：这四个云指标的底层逻辑"><a href="#二、-概念澄清：这四个云指标的底层逻辑" class="headerlink" title="二、 概念澄清：这四个云指标的底层逻辑"></a>二、 概念澄清：这四个云指标的底层逻辑</h1><p>在探讨具体技术路线之前，我们需要在同一套技术话语体系下，明确以下四个容易被混淆的概念。</p>
-<h2 id="1-Cloud-Native（云原生）"><a href="#1-Cloud-Native（云原生）" class="headerlink" title="1. Cloud-Native（云原生）"></a>1. Cloud-Native（云原生）</h2><p>它不仅是一种在云计算时代构建和运行应用程序的方法（以容器化、微服务、DevOps 和自动化 CI/CD 为核心特征），在系统层面，它更代表着一种“最大化消费云服务”的策略。真正的云原生架构会尽量全面采用云平台提供的 PaaS、Serverless 及各类托管产品（如云数据库、托管消息队列、云原生网关）。其核心哲学是将非业务逻辑的底层高可用、运维和安全复杂度完全转嫁给云厂商，从而释放业务迭代效率与系统弹性。</p>
-<h2 id="2-Cloud-Agnostic（云无关）"><a href="#2-Cloud-Agnostic（云无关）" class="headerlink" title="2. Cloud-Agnostic（云无关）"></a>2. Cloud-Agnostic（云无关）</h2><p>指系统设计具备完全独立于任何特定云服务商的能力。在系统层面，它表现为将云平台降级为纯 IaaS 资源池。企业仅向云厂商购买最基础的计算（虚拟机/裸金属）、网络（VPC）和存储（块存储）等基础设施服务。而上层应用系统赖以生存的数据层、消息事件层、接入层以及容器调度层，则完全基于开源、跨云中立的技术方案进行自主构建与运维，以此消除单供应商锁定的风险。</p>
-<h2 id="3-Cloud-Neutral（云中立）"><a href="#3-Cloud-Neutral（云中立）" class="headerlink" title="3. Cloud-Neutral（云中立）"></a>3. Cloud-Neutral（云中立）</h2><p>这是一个商业与战略层面的考量指标。它用以衡量云厂商在提供基础设施的同时，是否通过非云技术业务（如电商、金融、物流、本地生活等）与客户构成直接或间接的竞争，从而形成隐性业务锁定。例如，亚马逊（AWS）旗下的电商业务与全球零售业客户存在天然的利害冲突，这导致许多零售与电商行业的企业在选择数字化底座时，会由于“云中立”考量而刻意避开 AWS。</p>
-<h2 id="4-Cloud-Portability（云可移植性）"><a href="#4-Cloud-Portability（云可移植性）" class="headerlink" title="4. Cloud-Portability（云可移植性）"></a>4. Cloud-Portability（云可移植性）</h2><p>指应用程序、数据及相关支撑环境在不同云厂商（或本地私有云）之间迁移的难易程度。从应用系统的视角来看，可移植性并不是一个孤立的指标，它正是衡量系统在 Cloud-Native（云原生）与 Cloud-Agnostic（云无关）能力之间进行技术权衡的标尺。整个架构设计呈现出清晰的“跷跷板”效应：</p>
-<ul>
-<li><strong>越偏向 Cloud-Native（云原生）</strong>，系统越倾向于全面消费云服务。此时应用的稳定性高、日常运维成本低，代价是云可移植性变弱，跨云迁移成本极高。</li>
-<li><strong>越偏向 Cloud-Agnostic（云无关）</strong>，系统越倾向于纯 IaaS 加全栈开源自建。此时应用的云可移植性极强，跨云迁移成本相对较低，但企业需要投入极高的人力与技术成本来独自维持系统的稳定性。</li>
-</ul>
-<h1 id="三、-演进与务实：云架构可移植性四级模型详解"><a href="#三、-演进与务实：云架构可移植性四级模型详解" class="headerlink" title="三、 演进与务实：云架构可移植性四级模型详解"></a>三、 演进与务实：云架构可移植性四级模型详解</h1><p>既然云可移植性是一把带有平衡性质的标尺，那么企业在实际工程落地中，到底应该把自己定位在哪一个刻度？以下表格从技术边界到现实局限，拆解了四个不同的技术演进段位。</p>
-<table>
-<thead>
-<tr>
-<th align="left">成熟度级别</th>
-<th align="left">架构定义说明</th>
-<th align="left">典型技术特征</th>
-<th align="left">跨云可移植性评级与技术边界</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>Level 1：纯云原生模式</strong><br><em>(Pure 100% Cloud-Native)</em></td>
-<td align="left">应用程序及系统底座全盘采用云厂商特有的非标准、闭源专有产品构建，跳过所有开源标准或通用技术，换取极致的上线速度。</td>
-<td align="left">核心业务逻辑深度依赖厂商特有的无标准接口服务。例如：使用 AWS Lambda 或阿里云 FC 等各自独立的 Serverless 函数，或者调用特定的低代码平台与专有 AI/大数据分析引擎。</td>
-<td align="left"><strong>评级：零（Zero）</strong><br>跨云时必须重写大量核心业务代码，由于接口完全不通用，系统在跨云迁移时无异于推倒重来。</td>
-</tr>
-<tr>
-<td align="left"><strong>Level 2：混合共存模式</strong><br><em>(解耦与绑定并存的现状)</em></td>
-<td align="left"><strong>属于企业现实架构中最普遍的务实现状。</strong> 系统技术栈出现分层：在存在公认开源标准接口的领域（如数据库、容器、缓存）直接享受托管便利与可移植性；而在缺乏行业标准接口的创新领域（如原生 Serverless、特殊事件总线），则主动选择放弃部分可移植性，向云厂商深度绑定。</td>
-<td align="left">微服务应用跑在托管的标准 K8s 容器中，数据存储在支持标准 PostgreSQL / MySQL 协议的云数据库里（此时数据库代码天然解耦，不需要额外编写 Adapter）；但是，某些高并发的边缘业务或异步流处理，则直接接入了云厂商专属的、互不兼容的 Serverless 架构（如 AWS Lambda / 阿里云 FC）。</td>
-<td align="left"><strong>评级：中等（Medium）</strong><br>系统的核心资产（数据库、容器计算）可以较低成本迁移，但由于系统局部消费了云厂商无开源标准接口的私有 PaaS 产品，迁移时这些绑定的业务模块需要局部重构。</td>
-</tr>
-<tr>
-<td align="left"><strong>Level 3：接口层解耦，实现层原生</strong><br><em>(黄金理想态)</em></td>
-<td align="left"><strong>源自软件工程的“六边形架构”思想，属于追求全栈可移植性的黄金理想态。</strong> 对于存在标准接口的组件直接进行消费。而对于缺乏公认开源标准接口的服务（如 Serverless），则必须在系统层或代码层引入跨云中立工具、或者自主编写统一的适配器（Adapter）实现接口层全盘解耦。</td>
-<td align="left">容器调度、数据库和存储层继续享用标准的开源协议托管（如 K8s, PostgreSQL, S3）。针对缺乏标准接口的 Serverless 计算，系统不再直接对接云厂商的私有 API，而是采用多云通用的开源抽象框架（如自建 Knative 或 OpenFaaS），或者通过六边形架构为各云厂商的 Serverless 接口编写统一的代码适配层。</td>
-<td align="left"><strong>评级：高（High）</strong><br>整个系统在应用层实现完全的“接口无关性”。跨云迁移时，核心业务代码无需任何改动，仅需要修改底层的具体基础设施配置和注解（Annotations），通常在几天内即可完成割接。</td>
-</tr>
-<tr>
-<td align="left"><strong>Level 4：绝对云无关模式</strong><br><em>(Pure 100% Cloud-Agnostic)</em></td>
-<td align="left">技术可移植性的最高境界。系统彻底将云厂商降级为纯 IaaS 算力批发商，应用程序及其所有的配套基础设施，仅依赖开源且版权中立的软件，由企业团队自建和自运维全栈技术。</td>
-<td align="left">纯虚拟机 + 自建开源 K8s + 自建开源 PostgreSQL + 自建开源 Apache Kafka + 自建开源 MinIO + 自建开源 Envoy。整套系统不依赖任何厂商的任何托管服务。</td>
-<td align="left"><strong>评级：100%（Instant）</strong><br>整套系统具备绝对的技术与商务自由，可以整体打包、无缝在任何云或企业自建的物理机房里毫无差别地跑起来。</td>
-</tr>
-</tbody></table>
-<h1 id="四、-权衡与共识：用于团队技术评审的决策矩阵"><a href="#四、-权衡与共识：用于团队技术评审的决策矩阵" class="headerlink" title="四、 权衡与共识：用于团队技术评审的决策矩阵"></a>四、 权衡与共识：用于团队技术评审的决策矩阵</h1><p>在企业制定云战略或举行架构技术评审会时，管理层应当停止虚空索要“云无关”，执行层也应停止盲目抵抗。我们可以通过以下矩阵，算清每一条技术路线背后隐藏的真实商业代价与技术代价（Trade-offs）：</p>
-<table>
-<thead>
-<tr>
-<th align="left">成熟度级别</th>
-<th align="left">技术可移植性</th>
-<th align="left">开发与上线速度</th>
-<th align="left">日常运维成本（O&amp;M）</th>
-<th align="left">稳定性维持成本</th>
-<th align="left">最佳应用场景</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>Level 1</strong><br>(纯云原生)</td>
-<td align="left">极低（深度绑定）</td>
-<td align="left">🚀 极快（无需重复造轮子）</td>
-<td align="left">📉 极低（技术细节由云厂商全包）</td>
-<td align="left">💰 极低（直接享受厂商专家级运维红利）</td>
-<td align="left">创新业务探索、初创产品孵化、MVP快速验证</td>
-</tr>
-<tr>
-<td align="left"><strong>Level 2</strong><br>(混合共存)</td>
-<td align="left">中等（主干自由，局部受限）</td>
-<td align="left">⚡ 较快（核心自研，创新绑定）</td>
-<td align="left">📉 较低（标准组件免运维，私有组件享红利）</td>
-<td align="left">🪙 较低（压力主要在无标准接口模块的跨云重构上）</td>
-<td align="left">90% 中大型企业当下的主流技术路线。核心架构标准化，局部利用特殊云服务进行快速创新的系统</td>
-</tr>
-<tr>
-<td align="left"><strong>Level 3</strong><br>(接口层解耦)</td>
-<td align="left">稳定且高（迁移无代码改动）</td>
-<td align="left">🚶 较慢（需额外投入精力搭建通用框架或编写Adapter）</td>
-<td align="left">📈 较高（非标准组件需团队自主维护通用中间层，如 Knative）</td>
-<td align="left">⚖️ 中等（由厂商提供底层高可用保障，应用层通过适配器隔离风险）</td>
-<td align="left">对跨云和防单供应商锁定有高度商业追求，同时具备较强技术抽象能力的大中型企业核心系统</td>
-</tr>
-<tr>
-<td align="left"><strong>Level 4</strong><br>(绝对云无关)</td>
-<td align="left">🏆 完美（100% 自由迁移）</td>
-<td align="left">🐢 极慢（全栈基础设施均需自行搭建）</td>
-<td align="left">📈 极高（所有中间件与标准数据库均需团队全责自运维）</td>
-<td align="left">🚨 极高（需雇佣高级 DBA 和 SRE 专家应对突发故障）</td>
-<td align="left">高合规性行业（金融/医疗）、政府项目、大型跨国跨云 SaaS 平台</td>
-</tr>
-</tbody></table>
-<h1 id="五、-结语：世界上没有免费的“解耦”"><a href="#五、-结语：世界上没有免费的“解耦”" class="headerlink" title="五、 结语：世界上没有免费的“解耦”"></a>五、 结语：世界上没有免费的“解耦”</h1><p>在软件工程中，任何一种架构设计都不是灵丹妙药，所有的选择都是权衡（Trade-offs）的结果。</p>
-<p>当决策层试图追求极致的“Cloud-Agnostic（云无关）”与完美的可移植性时，它并不是在凭空消灭风险，而是在进行风险的物理转移——将系统被云厂商锁定的供应链风险，转移为企业自身团队能否兜得住全栈开源自建的技术运维风险。</p>
-<p>对于管理型决策者（CXO 级别）而言，应当明白“云无关”在 Level 4 意味着要批下数倍的基础设施研发和高级 SRE 人力预算；对于技术决策者和架构师而言，在有标准接口的领域（如数据库、标准 K8s）拥抱托管服务（Level 2），在没有标准接口的领域谨慎评估商业回报、并利用适配器隔离设计（Level 3），才是目前最符合商业利益与研发效率的务实方案。</p>
-<p>看清这四个概念的技术光谱，企业才能在多云时代既保留关键的迁移底牌，又不至于陷入盲目自建的技术内耗中。  </p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>架构</category>
-      </categories>
-      <tags>
-        <tag>Architecture</tag>
-        <tag>Cloud-Native</tag>
       </tags>
   </entry>
   <entry>
@@ -1354,6 +1354,128 @@
       </tags>
   </entry>
   <entry>
+    <title>从Git仓库中永久清理脏数据</title>
+    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
+    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
+<span id="more"></span>
+<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
+<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
+<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
+</li>
+<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
+<ul>
+<li>替换文件中的敏感信息</li>
+<li>删除文件或文件夹</li>
+</ul>
+<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
+<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
+<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
+<li><p>通过mirror的方式克隆代码仓库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
+
+<p>比如：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+<p>或者：</p>
+<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
+</blockquote>
+<ul>
+<li><p>替换所有文件中的指定的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>需要打开强制推送到Git仓库的功能</p>
+</blockquote>
+</li>
+<li><p>替换指定文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
+<blockquote>
+<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
+</blockquote>
+<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
+<ul>
+<li>获取指定文件在所有变更历史中对应的blob id号</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>从变更历史中删除指定的文件(Blob)</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
+</blockquote>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Git加密存储文件</title>
     <url>/2020/12/16/git-encrypt-file-in-repository/</url>
     <content><![CDATA[<p>不要将包含用户名、密码、API令牌(Token)等各类敏感信息放在Git代码仓库中已经成为了大家的共识，尤其是代码仓库托管在GitHub、GitLab、Bitbucket等提供公共代码仓库服务的平台上时，更需要且值得任何的代价去尽量避免这种事情的发生。本文介绍并使用<a href="https://git-secret.io/">git-secret</a>将文件加密后存储在Git代码仓库中，以及基于git-secret的多人协同工作的流程。</p>
@@ -1661,128 +1783,6 @@
 <p>  设置Windows中的Git命令支持长路径（大于260字节）。</p>
 </li>
 </ul>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>从Git仓库中永久清理脏数据</title>
-    <url>/2020/09/26/git-clean-bad-data-from-history/</url>
-    <content><![CDATA[<p>在代码开发的过程中，有时会将不该提交的文件误提交到Git仓库中，比如编译产生的临时二进制文件（忘了添加.gitignore），或者包含账号，密码等敏感信息的文件。临时的二进制文件放在Git仓库中没有意义，而且如果频繁改动的话，也会导致Git仓库逐渐变大，而敏感信息会导致信息泄露且不符合信息安全标准。这些不该提交的文件或内容被称为Git仓库的脏数据，需要被清理掉。重新提交一个新的变更来清理这些脏数据是远远不够的，因为从历史版本中仍然能够找到它们。本文将介绍如何使用开源工具<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>从Git仓库的变更历史中永久清除这些脏数据。</p>
-<span id="more"></span>
-<p>如果不借助第三方工具，要实现从Git仓库中永久清理脏数据，就需要使用Git的高级命令<a href="https://git-scm.com/docs/git-filter-branch">“git-filter-branch”</a>重写历史记录。”git-filter-branch”功能强大，但也相对较复杂，所以就出现了第三方的开源工具封装”git-filter-branch”并提供简单易用的接口，<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>就是其中比较出色的一个。仅管<a href="https://rtyley.github.io/bfg-repo-cleaner">BFG Repo-Cleaner</a>没有”git-filter-branch”的功能强大，但是它相对简洁、高效，并且基本上能满足日常大部分的需求。</p>
-<h1 id="安装BFG-Repo-Cleaner"><a href="#安装BFG-Repo-Cleaner" class="headerlink" title="安装BFG Repo-Cleaner"></a>安装BFG Repo-Cleaner</h1><ul>
-<li><p>从<a href="https://rtyley.github.io/bfg-repo-cleaner">官网</a>中下载BFG Repo-Cleaner(jar file)到某个路径下，并命名为bfg.jar</p>
-</li>
-<li><p>执行以下命令创建BFG Repo-Cleaner命令的别名，或者将下面的命令添加到shell的初始化文件中，以便自动添加这个命令的别名</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> bfg=<span class="string">'java -jar /xxxx/bfg.jar'</span></span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="使用BFG-Repo-Cleaner"><a href="#使用BFG-Repo-Cleaner" class="headerlink" title="使用BFG Repo-Cleaner"></a>使用BFG Repo-Cleaner</h1><p>BFG Repo-Cleaner主要有以下两种类型的应用：</p>
-<ul>
-<li>替换文件中的敏感信息</li>
-<li>删除文件或文件夹</li>
-</ul>
-<p>可以执行命令获取BFG Repo-Cleaner的帮助信息：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --<span class="built_in">help</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>BFG Repo-Cleaner缺省不会清理最新版本代码里的脏数据，因为你的最新代码可能已经部署到生产环境，而且可能会依赖于这些已经存在的敏感信息或文件，所以你需要手动地清理这些敏感信息或文件并修复代码运行时可能存在的错误。如果你确认清理最新版本代码里的脏数据对代码运行不会产生影响，则可以在命令中显式地加上参数“–no-blob-protection”。</p>
-<h2 id="替换文件中的敏感信息"><a href="#替换文件中的敏感信息" class="headerlink" title="替换文件中的敏感信息"></a>替换文件中的敏感信息</h2><p>这个操作主要是把文件中的敏感信息用指定的文本替换掉。比如文件中包含password=123456，我们需要用文本”***hidden***“去替换”123456”。</p>
-<h3 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h3><ul>
-<li><p>通过mirror的方式克隆代码仓库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">clone</span> --mirror https://github.com/xxxx/test-history-clean.git</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>创建文本替换文件（例如replace-text.txt）<br>如果使用BFG缺省的替换文本”***REMOVED***“，文本替换文件中只需要列出需要替换的敏感信息的文本，一行一个，比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">123456</span><br><span class="line">89fsafaaf</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果需要使用自定义的替换文本，文本替换文件的格式如下：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:xxxx==&gt;yyyy</span><br></pre></td></tr></tbody></table></figure>
-
-<p>比如：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">regex:123.*==&gt;***hidden***</span><br><span class="line">regex:test123==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-<p>或者：</p>
-<figure class="highlight txt"><table><tbody><tr><td class="code"><pre><span class="line">glob:123*==&gt;***hidden***</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>Regex和Glob的区别可以参考<a href="https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different">https://www.linuxjournal.com/content/globbing-and-regex-so-similar-so-different</a></p>
-</blockquote>
-</li>
-</ul>
-<h3 id="常用的敏感信息替换操作"><a href="#常用的敏感信息替换操作" class="headerlink" title="常用的敏感信息替换操作"></a>常用的敏感信息替换操作</h3><blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的敏感信息已经被替换（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的敏感信息也会被替换。</p>
-</blockquote>
-<ul>
-<li><p>替换所有文件中的指定的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>需要打开强制推送到Git仓库的功能</p>
-</blockquote>
-</li>
-<li><p>替换指定文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -<span class="keyword">fi</span> test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fi参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-<li><p>替换除了指定的文件外的所有文件中的敏感信息</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -rt replace-text.txt -fe test3.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>bfg不能指定具体文件的路径<br>-fe参数可以通过过glob语法指定某一类文件，比如*.{txt,properties}</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="删除文件或文件夹"><a href="#删除文件或文件夹" class="headerlink" title="删除文件或文件夹"></a>删除文件或文件夹</h2><p>如果Git仓库中不小心提交了比较大的文件，或者整个文件夹，可以通过下面的操作从变更历史中把他们清理掉。</p>
-<blockquote>
-<p>在执行bfg命令前，请先确保最新代码里的文件或文件夹已经被删除（手工提交一个新的Git提交），否则在执行bfg命令时需要显式地加上参数“–no-blob-protection”以确保最新代码里的文件或文件夹也会被删除。</p>
-</blockquote>
-<h3 id="删除文件名为“test3-tar-gz”的文件"><a href="#删除文件名为“test3-tar-gz”的文件" class="headerlink" title="删除文件名为“test3.tar.gz”的文件"></a>删除文件名为“test3.tar.gz”的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D test3.tar.gz test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某一类文件"><a href="#删除某一类文件" class="headerlink" title="删除某一类文件"></a>删除某一类文件</h3><p>BFG Repo-Cleaner的-D参数可以通过glob格式指定某一类型的文件，例如删除后缀为dll或bin的文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -D *{dll,bin} test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="从变更历史中精确地删除某个文件"><a href="#从变更历史中精确地删除某个文件" class="headerlink" title="从变更历史中精确地删除某个文件"></a>从变更历史中精确地删除某个文件</h3><p>BFG Repo-Cleaner可以删除某个blob（git仓库的变更历史中存储的文件称为blob），而参数-bi(–strip-blobs-with-ids)可以用来指定待删除的blob id号。</p>
-<ul>
-<li>获取指定文件在所有变更历史中对应的blob id号</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">git <span class="built_in">log</span> --all --pretty=format:%H -- a/b/c/test1.txt  | xargs -n 1 -I {} sh -c <span class="string">"git ls-tree  {} a/b/c/test1.txt"</span> | awk <span class="string">'{print $3}'</span> &gt; blob-ids.txt</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>从变更历史中删除指定的文件(Blob)</li>
-</ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -bi blob-ids.txt test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除超过某个大小的文件"><a href="#删除超过某个大小的文件" class="headerlink" title="删除超过某个大小的文件"></a>删除超过某个大小的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -b 500M test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除前几个最大的文件"><a href="#删除前几个最大的文件" class="headerlink" title="删除前几个最大的文件"></a>删除前几个最大的文件</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg -B 5 test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="删除某个文件夹"><a href="#删除某个文件夹" class="headerlink" title="删除某个文件夹"></a>删除某个文件夹</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">bfg --delete-folders .svn test-history-clean.git</span><br><span class="line"><span class="built_in">cd</span> test-history-clean.git</span><br><span class="line">git reflog expire --expire=now --all &amp;&amp; git gc --prune=now --aggressive</span><br><span class="line">git push --force</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>可以通过glob格式指定一类文件夹，例如*-tmp。</p>
-</blockquote>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -3167,147 +3167,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Podman介绍和使用</title>
-    <url>/2021/10/10/podman-introduction-and-usage/</url>
-    <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022/1/31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
-<span id="more"></span>
-
-<h1 id="Podman"><a href="#Podman" class="headerlink" title="Podman"></a>Podman</h1><p><a href="https://podman.io/">Podman</a>是一个无守护进程的开源Linux 原生工具，旨在使用开放容器协议 (OCI) 容器和容器镜像轻松查找、运行、构建、共享和部署应用程序。对于无守护进程这一说法，主要是针对运行在Linux系统中的Podman，因为Podman原生是支持Linux系统的，而在Mac和Windows系统中，仍然需要启动一个Linux虚拟机来管理和运行容器。Podman的架构如下：<br><img src="/2021/10/10/podman-introduction-and-usage/1.jpg"></p>
-<p>Podman是从CRI-O独立出来的一个项目，目的是让CRI-O和Podman能够独立发展。Podman主要包含一个兼容Docker命令的CLI模块和libpod，libpod通过runc创建和执行容器进程。由于Podman底层使用的runc运行时，所以Podman能够使用任何符合OCI标准的镜像包括Docker镜像。</p>
-<h1 id="在Mac上安装Podman"><a href="#在Mac上安装Podman" class="headerlink" title="在Mac上安装Podman"></a>在Mac上安装Podman</h1><p>通过brew命令来安装Podman：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install podman</span><br></pre></td></tr></tbody></table></figure>
-
-<p>通过以下命令在Mac主机上启动一个Podman管理的虚拟机：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine init</span><br><span class="line">podman machine start</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以通过一下命令列出Podman管理的虚拟机：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine list</span><br></pre></td></tr></tbody></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/2.jpg"></p>
-<h1 id="拉取和执行Docker镜像"><a href="#拉取和执行Docker镜像" class="headerlink" title="拉取和执行Docker镜像"></a>拉取和执行Docker镜像</h1><p>通过以下命令拉取Docker镜像：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman pull nginx</span><br></pre></td></tr></tbody></table></figure>
-
-<p>通过以下命令检查所有Podman管理的镜像：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman images</span><br></pre></td></tr></tbody></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/3.jpg"></p>
-<p>通过以下命令启动镜像：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman run --name nginx -d -p 8000:80 nginx:latest</span><br></pre></td></tr></tbody></table></figure>
-<p>通过以下命令列出运行的容器：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman ps</span><br></pre></td></tr></tbody></table></figure>
-<p><img src="/2021/10/10/podman-introduction-and-usage/4.jpg"></p>
-<p>停止，删除运行的容器：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman stop nginx</span><br><span class="line">podman <span class="built_in">rm</span> nginx</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="设置docker别名"><a href="#设置docker别名" class="headerlink" title="设置docker别名"></a>设置docker别名</h1><p>由于podman与Docker CLI命令具有一对多映射，因此建议按如下所示设置docker别名。这样也可以确保继续使用之前的Docker命令经验。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> docker=podman</span><br></pre></td></tr></tbody></table></figure>
-
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>Kubernetes</category>
-      </categories>
-      <tags>
-        <tag>Kubernetes</tag>
-        <tag>Docker</tag>
-        <tag>Podman</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Git合并请求(Pull/Merge request)的本质</title>
-    <url>/2020/01/29/pullrequest-essential/</url>
-    <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull/merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull/merge request)合并到主分支上。合并请求(pull/merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull/merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull/merget request)的实现来阐明合并请求(pull/merge request)的本质。<span id="more"></span></p>
-<p>实际上，合并请求(pull/merge request)在代码层面上是Git仓库中的一个特殊分支。当开发在代码协作平台上创建并提交合并请求(pull/merge request)后，代码协作平台在服务器端将私有分支和主分支临时合并产生一个合并提交(merge commit)，同时创建一个特殊分支指向这个合并提交(merge commit)。如果临时合并出现冲突，则在Web层面显示有冲突，需要开发提交新的代码到个人分支以消除冲突。</p>
-<p>要真正的理解合并请求(pull/merge request)这一特殊分支，我们需要先理解下Git的分支。</p>
-<h1 id="Git分支"><a href="#Git分支" class="headerlink" title="Git分支"></a>Git分支</h1><p>相对于传统的版本管理工具创建分支的操作，Git的分支方式及其轻巧，分支操作几乎是实时的，并且在分支之前切换也非常快。许多人认为Git这一分支模式算得上是一个“杀手级”功能。下图描述了一个含有三个文件的文件夹，且只有一个提交的Git仓库：</p>
-<p><img src="/2020/01/29/pullrequest-essential/1.png"></p>
-<p>在Git中，数据是以树形结构存储，每个文件对应着一个blob对象，每个文件夹对应着一个tree对象。每一次Git提交(commit)，都会根据文件或路径的变化创建一系列新的blog对象或tree对象，checksum不变的对象会被重复引用，其中最顶层的tree对象由于每次都需要变化，所以每次都会创建新的顶层tree对象，同时会创建一个commit对象指向新的顶层tree对象，整个过程犹如给数据做了个快照，而当前的commit对象则是这个快照的标签。如果要获取这个快照对应的代码，只要git checkout到这个commit对象即可。</p>
-<p>当再次提交时，新创建的commit对象会保存一个指针指向前面的一个commit对象形成一个提交链(快照链)。下图就是Git仓库中的一个提交链：</p>
-<p><img src="/2020/01/29/pullrequest-essential/2.png"></p>
-<p>而Git中的分支则是一个轻量的可移动的指针指向其中一个commit对象。缺省的分支名字叫master，每一次新的提交master分支都会移动并指向到最新的commit对象。下图是Git中的分支和提交历史：</p>
-<p><img src="/2020/01/29/pullrequest-essential/3.png"></p>
-<p>HEAD对象是指针的指针，它指向当前所在的分支。切换分支时，只要将HEAD指向新的分支即可，所以说Git切换分支的操作是相当轻量的。</p>
-<p>所以正如前文所说，合并请求(pull/merge request)也是个分支，也就是指针，它是指向私有分支和主分支临时合并后产生的合并提交(commit)对象。下图是Git中的合并请求(pull/merge request)分支：</p>
-<p><img src="/2020/01/29/pullrequest-essential/4.png"></p>
-<p>如图”defect235”分支是为了修复defect235而创建的私有分支，commit”f40ac”是代码协作平台临时合并分支”defect235”和”master”而创建的合并提交对象，分支”refs/pull/1/merge”则是那个特殊的分支，指向合并提交对象”f40ac”。不过,常规的Git克隆或者拉取是无法获取这个分支信息的，因为常规Git只会认为在缺省路径“refs/heads/“下的分支是Git分支。当开发在Web界面中合并合并请求(pull/merge request)后，私有分支”defect235”和特殊的分支也会被删除掉(通常代码协作平台会提供一些设置来控制是否要删除私有分支和合并请求分支)。下图是Git中合并请求被合并后的分支情况：</p>
-<p><img src="/2020/01/29/pullrequest-essential/5.png"></p>
-<p>不同的代码协作平台在实现合并请求(pull/merget request)的原理上是相同的，但是也有一些细微的差别。</p>
-<h1 id="GitHub合并请求-Pull-Request"><a href="#GitHub合并请求-Pull-Request" class="headerlink" title="GitHub合并请求(Pull Request)"></a>GitHub合并请求(Pull Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  add_test</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/add_test</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/head</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
-<p>origin/pr/1/head: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="GitLab合并请求-Merge-Request"><a href="#GitLab合并请求-Merge-Request" class="headerlink" title="GitLab合并请求(Merge Request)"></a>GitLab合并请求(Merge Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(merge request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/merge-requests/*:refs/remotes/origin/mr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  change2</span><br><span class="line">  change_readme</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/change2</span><br><span class="line">  remotes/origin/change_readme</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/mr/1/head</span><br><span class="line">  remotes/origin/mr/2/head</span><br><span class="line"></span><br><span class="line">  git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure>
-<p>origin/mr/1/head: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/merge-requests/2/*:refs/remotes/origin/mr/2/*</span><br><span class="line">git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="Bitbuckt合并请求-pull-Request"><a href="#Bitbuckt合并请求-pull-Request" class="headerlink" title="Bitbuckt合并请求(pull Request)"></a>Bitbuckt合并请求(pull Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull-requests/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/from</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
-<p>origin/pr/1/from: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull-requests/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="TFS-Git合并请求-pull-Request"><a href="#TFS-Git合并请求-pull-Request" class="headerlink" title="TFS Git合并请求(pull Request)"></a>TFS Git合并请求(pull Request)</h1><ul>
-<li>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</li>
-</ul>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
-
-<p>  origin/pr/1/merge: 指向临时合并的提交对象</p>
-<ul>
-<li>仅拉取某个合并请求(pull request)的信息<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<p>当然，除了上面四个基于Git的代码协作平台外，还有许多优秀的平台，比如国内的码云<a href="https://gitee.com/">https://gitee.com/</a>，各大公有云平台也都提供了自己的代码协作平台。读者可以根据本文的说明自行研究合并请求(pull/merge request)。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>什么是GitOps?</title>
     <url>/2019/07/21/gitops/</url>
     <content><![CDATA[<p>[原文] <a href="https://www.weave.works/technologies/gitops/">https://www.weave.works/technologies/gitops/</a></p>
@@ -3429,6 +3288,213 @@
       </categories>
       <tags>
         <tag>GitOps</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Podman介绍和使用</title>
+    <url>/2021/10/10/podman-introduction-and-usage/</url>
+    <content><![CDATA[<p>最近Docker公司改变了Docker桌面版（Docker for Mac和Docker for Windows）的商业策略：最晚到2022/1/31号，需要购买付费订阅了，但对于员工人数小于250，且年收入少于1000万美元的公司仍然免费。虽说对于个人使用Docker桌面版没有影响，但在公司里还是要谨慎使用。 作为对Docker桌面版的替换，本文将对Podman及其使用做一简单的介绍。</p>
+<span id="more"></span>
+
+<h1 id="Podman"><a href="#Podman" class="headerlink" title="Podman"></a>Podman</h1><p><a href="https://podman.io/">Podman</a>是一个无守护进程的开源Linux 原生工具，旨在使用开放容器协议 (OCI) 容器和容器镜像轻松查找、运行、构建、共享和部署应用程序。对于无守护进程这一说法，主要是针对运行在Linux系统中的Podman，因为Podman原生是支持Linux系统的，而在Mac和Windows系统中，仍然需要启动一个Linux虚拟机来管理和运行容器。Podman的架构如下：<br><img src="/2021/10/10/podman-introduction-and-usage/1.jpg"></p>
+<p>Podman是从CRI-O独立出来的一个项目，目的是让CRI-O和Podman能够独立发展。Podman主要包含一个兼容Docker命令的CLI模块和libpod，libpod通过runc创建和执行容器进程。由于Podman底层使用的runc运行时，所以Podman能够使用任何符合OCI标准的镜像包括Docker镜像。</p>
+<h1 id="在Mac上安装Podman"><a href="#在Mac上安装Podman" class="headerlink" title="在Mac上安装Podman"></a>在Mac上安装Podman</h1><p>通过brew命令来安装Podman：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">brew install podman</span><br></pre></td></tr></tbody></table></figure>
+
+<p>通过以下命令在Mac主机上启动一个Podman管理的虚拟机：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine init</span><br><span class="line">podman machine start</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以通过一下命令列出Podman管理的虚拟机：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman machine list</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/2.jpg"></p>
+<h1 id="拉取和执行Docker镜像"><a href="#拉取和执行Docker镜像" class="headerlink" title="拉取和执行Docker镜像"></a>拉取和执行Docker镜像</h1><p>通过以下命令拉取Docker镜像：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman pull nginx</span><br></pre></td></tr></tbody></table></figure>
+
+<p>通过以下命令检查所有Podman管理的镜像：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman images</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/3.jpg"></p>
+<p>通过以下命令启动镜像：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman run --name nginx -d -p 8000:80 nginx:latest</span><br></pre></td></tr></tbody></table></figure>
+<p>通过以下命令列出运行的容器：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman ps</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2021/10/10/podman-introduction-and-usage/4.jpg"></p>
+<p>停止，删除运行的容器：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">podman stop nginx</span><br><span class="line">podman <span class="built_in">rm</span> nginx</span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="设置docker别名"><a href="#设置docker别名" class="headerlink" title="设置docker别名"></a>设置docker别名</h1><p>由于podman与Docker CLI命令具有一对多映射，因此建议按如下所示设置docker别名。这样也可以确保继续使用之前的Docker命令经验。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">alias</span> docker=podman</span><br></pre></td></tr></tbody></table></figure>
+
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>Kubernetes</category>
+      </categories>
+      <tags>
+        <tag>Kubernetes</tag>
+        <tag>Docker</tag>
+        <tag>Podman</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Podman Rootless下容器访问宿主机服务的底层原理</title>
+    <url>/2026/07/16/podman-rootless-host/</url>
+    <content><![CDATA[<p>本地运行容器的朋友应该都碰到过一个很常见的场景：容器内部部署的应用，需要调用我们电脑本机运行的各类服务。比如我平时搭建本地 AI 环境，会把 Open WebUI 部署在容器里，为了方便使用宿主机的GPU（我的是Mac M3），本地模型服务使用Ollama，并部署在宿主机中。一旦容器没法连通宿主机的 11434 端口，整个 AI 对话、模型调用链路就会直接断掉。在实际使用中，通过域名 <code>host.docker.internal</code> 就能快速实现容器与宿主机的互通，简单又好用。</p>
+<p>用归用，但我之前一直存有疑问：Podman 默认开启 Rootless 非特权模式，容器、虚拟机、宿主机三层网络是完全隔离的，正常情况下根本不允许跨层级通信。那为什么单单这一个域名，就能打破隔离，打通容器到宿主机回环接口的通信通道？</p>
+<p>网上大部分教程，只教大家怎么配置、怎么连通，但少有提及背后的原理。这篇文章将会简单介绍下 Podman Rootless 模式下的宿主机访问原理，同时列出 Mac 和 Windows 平台的差异。</p>
+<span id="more"></span>
+
+<h1 id="一、看似简单的互通，其实存在两类限制"><a href="#一、看似简单的互通，其实存在两类限制" class="headerlink" title="一、看似简单的互通，其实存在两类限制"></a>一、看似简单的互通，其实存在两类限制</h1><p>不管是 Mac 还是 Windows 系统，都没法原生直接运行 Linux 容器。我们日常使用的 Podman 容器环境，本质是依托轻量化虚拟机搭建的运行底座——Mac 依靠系统原生的虚拟化框架，Windows 则依赖 WSL2 环境。</p>
+<p>这种嵌套式的虚拟化架构，从根源上限制了容器与宿主机的直接互通，主要绕不开两类硬性限制。</p>
+<p>第一是网络隔离限制。容器内的 localhost、127.0.0.1 只对应容器自身的网络栈，虚拟机的回环地址也仅适用于虚拟机内部通信，双层隔离之下，数据包根本无法自动穿透到真实的宿主机网络。</p>
+<p>第二是权限限制。Podman 最大的安全亮点就是 Rootless 无特权运行，全程以普通用户权限工作，不会占用系统高危权限。但有利有弊，这也导致容器进程无法创建原始网络套接字，也没有权限操作底层路由规则，这也是 Rootless 容器默认 ping 不通宿主机的核心原因。</p>
+<p>想要在不关闭安全隔离、不提升运行权限的前提下，实现容器访问宿主机服务，Podman 没有用传统的 NAT 转发方案，而是使用了用户态代理机制，整套能力的核心，都依托运行在宿主机中的 <code>gvproxy（gVisor-tap-vsock）</code> 进程来实现。</p>
+<h1 id="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"><a href="#二、核心架构：虚拟机只透传，宿主机全权接管网络转发" class="headerlink" title="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"></a>二、核心架构：虚拟机只透传，宿主机全权接管网络转发</h1><p>很多人对这套转发逻辑都有误区，以为虚拟机承担了核心的代理转发工作。事实恰恰相反：整套网络翻译、数据解包、跨层级通信的核心逻辑，全部运行在真实宿主机上，虚拟机全程只负责转发数据，不会做任何主动的逻辑处理。完整的流量流转链路流程如下：</p>
+<figure class="highlight text"><table><tbody><tr><td class="code"><pre><span class="line">[ OPEN WEBUI 容器 ]</span><br><span class="line">        │</span><br><span class="line">        │ 1. 访问 http://host.docker.internal</span><br><span class="line">        │    内置 DNS 动态解析为 192.168.127.254 (或 .1)</span><br><span class="line">        ▼</span><br><span class="line">[ LINUX 虚拟机内核 ]</span><br><span class="line">        │</span><br><span class="line">        │ 2. TCP 数据包通过被动的 virtio-net / TAP 虚拟网卡发出</span><br><span class="line">        │    （虚拟机内部无任何网络代理进程）</span><br><span class="line">        ▼</span><br><span class="line">==================== 宿主机 / 虚拟机边界 ====================</span><br><span class="line">        │</span><br><span class="line">        │ 3. 虚拟化引擎拦截 TAP 流量，直接映射入 AF_VSOCK 管道</span><br><span class="line">        ▼</span><br><span class="line">[ macOS / Windows 宿主机 (gvproxy 进程) ]</span><br><span class="line">        │</span><br><span class="line">        │ 4. gvproxy 读取 VSOCK 数据，剥离虚拟化封装，提取原始 TCP 载荷</span><br><span class="line">        ▼</span><br><span class="line">[ 宿主机原生回环接口 (127.0.0.1:11434) ]</span><br><span class="line">        │</span><br><span class="line">        │ 5. gvproxy 代表容器向宿主机发起标准的 connect() 调用</span><br><span class="line">        ▼</span><br><span class="line">[ 原生 Ollama 应用程序 ]</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="1-自定义-DNS-解析，伪造虚拟网关地址"><a href="#1-自定义-DNS-解析，伪造虚拟网关地址" class="headerlink" title="1. 自定义 DNS 解析，伪造虚拟网关地址"></a>1. 自定义 DNS 解析，伪造虚拟网关地址</h2><p><code>host.docker.internal</code> 并不是公共互联网可解析的域名，而是 Podman 内置的专属解析规则。只要容器发起相关访问请求，Podman 的内置 DNS 就会直接拦截解析动作，固定返回专属虚拟网关 IP，常见地址为 <code>192.168.127.254</code> 或<code>192.168.127.1</code>。</p>
+<p>容器完全不用感知宿主机的真实 IP 地址，只需向这个虚拟网关发包即可，后续所有的转发、适配、通信逻辑，都由底层组件自动完成，对上层业务应用完全透明，开发者无需额外干预。</p>
+<h2 id="2-虚拟机无感透传，零代理开销"><a href="#2-虚拟机无感透传，零代理开销" class="headerlink" title="2. 虚拟机无感透传，零代理开销"></a>2. 虚拟机无感透传，零代理开销</h2><p>数据包抵达虚拟机内核后，系统会直接把这个虚拟网关当成外部物理设备，不会额外做 NAT 转换、流量过滤等多余操作。</p>
+<p>虚拟机内部全程没有任何转发进程，仅通过 virtio-net、TAP 虚拟网卡，将原始的二层以太网帧完整向外透出。这种极简的透传方式，最大程度保留了原始数据包特征，也彻底规避了虚拟机内部转发带来的性能损耗。</p>
+<h2 id="3-VSOCK-管道跨层通信，绕过传统网络栈"><a href="#3-VSOCK-管道跨层通信，绕过传统网络栈" class="headerlink" title="3. VSOCK 管道跨层通信，绕过传统网络栈"></a>3. VSOCK 管道跨层通信，绕过传统网络栈</h2><p>这也是 Podman 这套网络架构的巧妙之处。传统虚拟机互通大多依靠物理网卡 NAT 转发，不仅延迟偏高，还很容易被系统防火墙、本地网络策略拦截，稳定性很差。</p>
+<p>Podman 直接采用 <code>AF_VSOCK</code> 内核套接字方案，虚拟化引擎拦截虚拟网卡流出的流量后，直接封装送入 VSOCK 内存管道。这种通信方式绕开了物理网卡和繁琐的 TCP/IP 网络栈，直接在内存层面完成虚拟机与宿主机的数据交互，效率和稳定性都远优于传统转发方案。</p>
+<h2 id="4-gvproxy-用户态代理，完成最终流量落地"><a href="#4-gvproxy-用户态代理，完成最终流量落地" class="headerlink" title="4. gvproxy 用户态代理，完成最终流量落地"></a>4. gvproxy 用户态代理，完成最终流量落地</h2><p>宿主机后台常驻的 gvproxy 进程，是整套通信链路的核心枢纽，大家可以直接用进程检索命令查看它的运行状态。所有从 VSOCK 管道流出的数据，都会统一由这个进程接管处理。</p>
+<p>它会自动剥离虚拟化封装的数据包，还原出原始的 TCP 请求信息，精准识别出容器真正的访问目标端口。随后以宿主机普通进程的身份，发起标准的 connect 系统调用，将流量精准转发到宿主机 127.0.0.1 对应的服务端口。</p>
+<p>整个过程对宿主机原生服务完全无感。就拿我常用的 Ollama 来说，它只会判定是本地普通软件发起的连接，完全察觉不到流量是从虚拟机容器中穿透过来的。</p>
+<p>后续响应数据会沿着完全相反的路径，原路返回容器，就此完成一次完整的跨层级通信交互。</p>
+<h1 id="三、Mac-与-Windows-底层差异：安全机制决定转发逻辑"><a href="#三、Mac-与-Windows-底层差异：安全机制决定转发逻辑" class="headerlink" title="三、Mac 与 Windows 底层差异：安全机制决定转发逻辑"></a>三、Mac 与 Windows 底层差异：安全机制决定转发逻辑</h1><p>Mac 和 Windows 两套系统的最终连通效果一致，但底层安全策略差异很大，这也直接导致 <code>host.docker.internal</code> 的实现逻辑各不相同。</p>
+<p>Mac 的虚拟化沙箱管控极其严格，明令禁止虚拟机直接探测、绑定、访问宿主机的回环接口。也正因如此，Mac 环境下所有的跨层流量，<strong>必须 100% 经过 gvproxy 中转</strong>，没有任何旁路方案，转发逻辑最严谨，网络隔离性也最强。</p>
+<p>反观 Windows WSL2，系统网络融合度更高，新版 WSL2 支持镜像网络模式，虚拟机可以直接共享宿主机的完整网络栈。这让 Windows 下的宿主机访问更贴近原生网络效果，转发链路更短、延迟更低，但对应的网络隔离性会比 Mac 弱不少。</p>
+<h1 id="四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性"><a href="#四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性" class="headerlink" title="四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性"></a>四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性</h1><p>很多网上教程会一刀切建议大家把本地服务监听地址改成 <code>0.0.0.0</code>，但这套操作其实不适用于 macOS 下的 Podman Rootless 环境，盲目修改反而会增加端口暴露风险，得不偿失。这里纠正一个绝大多数开发者踩错的关键误区。</p>
+<p><strong>为什么 Podman 不需要绑定 0.0.0.0？</strong></p>
+<p>核心原因还是前文提到的<code>gvproxy</code> 转发机制。这个进程运行在宿主机后台，所有容器发起的访问请求，最终都是由它以<strong>本机身份</strong>向宿主机服务发起连接。简单来说，当我们通过 <code>host.docker.internal</code> 访问本地 Ollama 服务时，Ollama 识别到的请求来源就是纯净的 <code>127.0.0.1</code> 本地回环流量。</p>
+<p>因此在 Podman 这套架构下，即便 Ollama等本地服务默认只监听 <code>127.0.0.1</code>，容器依然可以正常连通，完全不会出现拒绝连接的情况。</p>
+<p><strong>那什么时候才需要绑定 0.0.0.0？</strong></p>
+<p>绑定全网监听地址 <code>0.0.0.0</code> 并非 Podman 环境的刚需，仅适用于特定容器场景。比如使用 Colima、部分旧版 Docker 环境时，容器流量依托虚拟网桥转发，系统会把虚拟机、容器的流量判定为<strong>外部局域网 IP 流量</strong>，而非本地回环流量。</p>
+<p>这种场景下，仅监听 <code>127.0.0.1</code> 会直接拦截外部流量，此时才需要修改为 <code>0.0.0.0</code> 放行请求。</p>
+<p><strong>最终实操结论</strong>：在 macOS 原生 Podman Rootless 架构中，<strong>保持服务默认监听 127.0.0.1 即可正常通信，也是最安全的配置</strong>。无需强行修改为 0.0.0.0，避免将本地服务端口暴露在物理局域网中，带来不必要的安全风险。</p>
+<h1 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h1><p>很多开发者只会熟练使用<code>host.docker.internal</code> 实现连通，却从未深究 Rootless 模式下的底层网络逻辑。看似简单的一行域名配置，背后是 Podman 为了平衡<strong>安全隔离性与开发便捷性</strong>，精心设计的一套用户态代理架构。</p>
+<p>吃透这套 VSOCK+gvproxy 的转发机制，不止能解决本地开发的连通性问题，更能帮我们理清容器安全隔离、权限管控、虚拟化网络的核心设计思路。后续遇到容器网络异常、访问超时、连接拒绝等问题，都能快速定位根因，不用再盲目排查、试错。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>容器</category>
+      </categories>
+      <tags>
+        <tag>Container</tag>
+        <tag>Network</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git合并请求(Pull/Merge request)的本质</title>
+    <url>/2020/01/29/pullrequest-essential/</url>
+    <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull/merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull/merge request)合并到主分支上。合并请求(pull/merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull/merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull/merget request)的实现来阐明合并请求(pull/merge request)的本质。<span id="more"></span></p>
+<p>实际上，合并请求(pull/merge request)在代码层面上是Git仓库中的一个特殊分支。当开发在代码协作平台上创建并提交合并请求(pull/merge request)后，代码协作平台在服务器端将私有分支和主分支临时合并产生一个合并提交(merge commit)，同时创建一个特殊分支指向这个合并提交(merge commit)。如果临时合并出现冲突，则在Web层面显示有冲突，需要开发提交新的代码到个人分支以消除冲突。</p>
+<p>要真正的理解合并请求(pull/merge request)这一特殊分支，我们需要先理解下Git的分支。</p>
+<h1 id="Git分支"><a href="#Git分支" class="headerlink" title="Git分支"></a>Git分支</h1><p>相对于传统的版本管理工具创建分支的操作，Git的分支方式及其轻巧，分支操作几乎是实时的，并且在分支之前切换也非常快。许多人认为Git这一分支模式算得上是一个“杀手级”功能。下图描述了一个含有三个文件的文件夹，且只有一个提交的Git仓库：</p>
+<p><img src="/2020/01/29/pullrequest-essential/1.png"></p>
+<p>在Git中，数据是以树形结构存储，每个文件对应着一个blob对象，每个文件夹对应着一个tree对象。每一次Git提交(commit)，都会根据文件或路径的变化创建一系列新的blog对象或tree对象，checksum不变的对象会被重复引用，其中最顶层的tree对象由于每次都需要变化，所以每次都会创建新的顶层tree对象，同时会创建一个commit对象指向新的顶层tree对象，整个过程犹如给数据做了个快照，而当前的commit对象则是这个快照的标签。如果要获取这个快照对应的代码，只要git checkout到这个commit对象即可。</p>
+<p>当再次提交时，新创建的commit对象会保存一个指针指向前面的一个commit对象形成一个提交链(快照链)。下图就是Git仓库中的一个提交链：</p>
+<p><img src="/2020/01/29/pullrequest-essential/2.png"></p>
+<p>而Git中的分支则是一个轻量的可移动的指针指向其中一个commit对象。缺省的分支名字叫master，每一次新的提交master分支都会移动并指向到最新的commit对象。下图是Git中的分支和提交历史：</p>
+<p><img src="/2020/01/29/pullrequest-essential/3.png"></p>
+<p>HEAD对象是指针的指针，它指向当前所在的分支。切换分支时，只要将HEAD指向新的分支即可，所以说Git切换分支的操作是相当轻量的。</p>
+<p>所以正如前文所说，合并请求(pull/merge request)也是个分支，也就是指针，它是指向私有分支和主分支临时合并后产生的合并提交(commit)对象。下图是Git中的合并请求(pull/merge request)分支：</p>
+<p><img src="/2020/01/29/pullrequest-essential/4.png"></p>
+<p>如图”defect235”分支是为了修复defect235而创建的私有分支，commit”f40ac”是代码协作平台临时合并分支”defect235”和”master”而创建的合并提交对象，分支”refs/pull/1/merge”则是那个特殊的分支，指向合并提交对象”f40ac”。不过,常规的Git克隆或者拉取是无法获取这个分支信息的，因为常规Git只会认为在缺省路径“refs/heads/“下的分支是Git分支。当开发在Web界面中合并合并请求(pull/merge request)后，私有分支”defect235”和特殊的分支也会被删除掉(通常代码协作平台会提供一些设置来控制是否要删除私有分支和合并请求分支)。下图是Git中合并请求被合并后的分支情况：</p>
+<p><img src="/2020/01/29/pullrequest-essential/5.png"></p>
+<p>不同的代码协作平台在实现合并请求(pull/merget request)的原理上是相同的，但是也有一些细微的差别。</p>
+<h1 id="GitHub合并请求-Pull-Request"><a href="#GitHub合并请求-Pull-Request" class="headerlink" title="GitHub合并请求(Pull Request)"></a>GitHub合并请求(Pull Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  add_test</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/add_test</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/head</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
+<p>origin/pr/1/head: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
+</li>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="GitLab合并请求-Merge-Request"><a href="#GitLab合并请求-Merge-Request" class="headerlink" title="GitLab合并请求(Merge Request)"></a>GitLab合并请求(Merge Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(merge request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/merge-requests/*:refs/remotes/origin/mr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  change2</span><br><span class="line">  change_readme</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/change2</span><br><span class="line">  remotes/origin/change_readme</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/mr/1/head</span><br><span class="line">  remotes/origin/mr/2/head</span><br><span class="line"></span><br><span class="line">  git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure>
+<p>origin/mr/1/head: 指向临时合并的提交对象</p>
+</li>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/merge-requests/2/*:refs/remotes/origin/mr/2/*</span><br><span class="line">git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="Bitbuckt合并请求-pull-Request"><a href="#Bitbuckt合并请求-pull-Request" class="headerlink" title="Bitbuckt合并请求(pull Request)"></a>Bitbuckt合并请求(pull Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull-requests/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/from</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
+<p>origin/pr/1/from: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
+</li>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull-requests/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="TFS-Git合并请求-pull-Request"><a href="#TFS-Git合并请求-pull-Request" class="headerlink" title="TFS Git合并请求(pull Request)"></a>TFS Git合并请求(pull Request)</h1><ul>
+<li>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</li>
+</ul>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
+
+<p>  origin/pr/1/merge: 指向临时合并的提交对象</p>
+<ul>
+<li>仅拉取某个合并请求(pull request)的信息<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<p>当然，除了上面四个基于Git的代码协作平台外，还有许多优秀的平台，比如国内的码云<a href="https://gitee.com/">https://gitee.com/</a>，各大公有云平台也都提供了自己的代码协作平台。读者可以根据本文的说明自行研究合并请求(pull/merge request)。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>Git</tag>
       </tags>
   </entry>
   <entry>
@@ -3734,6 +3800,93 @@
       </tags>
   </entry>
   <entry>
+    <title>Terraform如何调用Ansible配置虚拟机资源</title>
+    <url>/2018/11/14/terraform-call-ansible/</url>
+    <content><![CDATA[<p>Terraform（<a href="https://www.terraform.io/">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
+<span id="more"></span>
+
+<h1 id="Terraform架构简介"><a href="#Terraform架构简介" class="headerlink" title="Terraform架构简介"></a>Terraform架构简介</h1><p>为了方便后续步骤的理解，在这里对Terraform及其相关组件做一简单介绍。这是Terraform的架构图：<br><img src="/2018/11/14/terraform-call-ansible/1.jpg"></p>
+<p>Terraform调用不同云平台（公有或私有）的“Provider”创建和编排基础架构资源，调用不同的“Provisioner”配置新生成的资源。并不是所有的资源都支持“Provisioner”，可以参考对应资源的帮助文档来了解是否支持。基本上，虚拟机资源，比如ECS, EC2等，都支持调用“Provisioner”去配置。</p>
+<h1 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h1><p>组合利用Terraform现有的Provisioner为新创建的虚拟机生成动态的Ansible资源文件，加入到Ansible当前资源文件夹中（Ansible在执行时会合并当前资源文件加下的所有资源文件），最后基于动态资源执行Ansible脚本配置新创建的虚拟机。</p>
+<h1 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h1><p>以自动创建一台虚拟机资源并安装和配置Artifactory软件为例，下图是Terraform+Ansible的代码结构：<br>.<br>├── ansible<br>│&nbsp;&nbsp; ├── handlers<br>│&nbsp;&nbsp; ├── inventory<br>│&nbsp;&nbsp; │&nbsp;&nbsp; ├── devops<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── group_vars<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── host_vars<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; └── hosts<br>│&nbsp;&nbsp; │&nbsp;&nbsp; └── devops-disconf<br>│&nbsp;&nbsp; │&nbsp;&nbsp;     └── hosts<br>│&nbsp;&nbsp; ├── roles<br>│&nbsp;&nbsp; ├── templates<br>│&nbsp;&nbsp; │&nbsp;&nbsp; ├── artifactory<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; └── hosts.temp.j2<br>│&nbsp;&nbsp; ├── configure-ansible-node.sh<br>│&nbsp;&nbsp; ├── ansible.cfg<br>│&nbsp;&nbsp; ├── terraform-ansible-inventory.yaml<br>│&nbsp;&nbsp; ├── artifactory.yaml<br>├── iac<br>│&nbsp;&nbsp; └── cicd<br>│&nbsp;&nbsp;     ├── vsphere_virtual_machine_art1.tf</p>
+<blockquote>
+<p>Artifactory是一款统一制品管理工具，支持多种标准的软件包格式：Maven（Gradle），Nuget，NPM，Bower，CocoaPods，Docker，Debian，RPM…，也支持自定义存储格式。Artifactory是构建CI/CD流程必不可少的一个工具。</p>
+</blockquote>
+<h2 id="ansible目录"><a href="#ansible目录" class="headerlink" title="ansible目录"></a>ansible目录</h2><p>这个目录是典型的Ansible工程目录，有handlers，inventory，roles，templates，ansible.cfg，*.yaml（Ansible playbook）。</p>
+<ul>
+<li><p>ansible.cfg</p>
+<p>设置缺省的资源文件夹，比如：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="string">defaults</span>]</span><br><span class="line"><span class="string">inventory</span> <span class="string">=</span> <span class="string">./inventory/devops</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>在资源文件夹中，一般会有一个缺省的资源文件hosts，另外还有组变量文件和主机变量文件。</p>
+</li>
+<li><p>configure-ansible-node.sh</p>
+<p>Shell脚本，用来在新创建的虚拟机中（Ubuntu）安装Python，以便将这台虚拟机配置成Ansible的管理节点。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash -il</span></span><br><span class="line"></span><br><span class="line">py_version=2.7.12-1~16.04</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ -f /var/lib/apt/lists/lock ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">  <span class="built_in">rm</span> -f /var/lib/apt/lists/lock</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line">result=$(dpkg-query -W  python | awk <span class="string">'{print $2}'</span>)</span><br><span class="line"><span class="keyword">if</span> [ -z <span class="string">"<span class="variable">${result}</span>"</span> ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">"Installing python=<span class="variable">${py_version}</span>"</span></span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">"python was already installed!"</span></span><br><span class="line">  <span class="built_in">exit</span> 0</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> http_proxy=http://xxxx</span><br><span class="line"><span class="built_in">export</span> https_proxy=<span class="variable">${http_proxy}</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cat</span> &gt; /etc/apt/apt.conf.d/apt-temp.conf &lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">Acquire::http::Proxy "${http_proxy}";</span></span><br><span class="line"><span class="string">Acquire::https::Proxy "${http_proxy}";</span></span><br><span class="line"><span class="string">Acquire::ftp::Proxy "${http_proxy}";</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line">apt-get update</span><br><span class="line">apt-get -y --no-upgrade install python=<span class="variable">${py_version}</span></span><br><span class="line"></span><br><span class="line">curl https://bootstrap.pypa.io/get-pip.py | python</span><br><span class="line">pip install -U pip</span><br><span class="line"></span><br><span class="line"><span class="built_in">rm</span> -f /etc/apt/apt.conf.d/apt-temp.conf</span><br></pre></td></tr></tbody></table></figure>
+
+<p>如果代码是运行在防火墙后面，比如在公司的网络中，需要line 19 - line 26的代码配置apt代理。</p>
+</li>
+<li><p>terraform-ansible-inventory.yaml</p>
+<p>Ansible脚本，用来生成当前虚拟机的动态资源文件：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">name:</span>  <span class="string">Create</span> <span class="string">temp</span> <span class="string">inventory</span> <span class="string">file</span></span><br><span class="line">  <span class="attr">hosts:</span> <span class="string">"<span class="template-variable">{{ host | default('localhost') }}</span>"</span></span><br><span class="line">  <span class="attr">vars:</span></span><br><span class="line">    <span class="attr">host_name:</span> <span class="string">default-temp</span></span><br><span class="line">    <span class="attr">host_ip:</span> <span class="string">xxx.xxx.xxx.xxx</span></span><br><span class="line">    <span class="attr">host_user:</span> <span class="string">xxx</span></span><br><span class="line">    <span class="attr">host_password:</span> <span class="string">xxx</span></span><br><span class="line">  <span class="attr">tasks:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Create</span> <span class="string">temp</span> <span class="string">inventory</span> <span class="string">file</span></span><br><span class="line">      <span class="attr">template:</span> <span class="string">src=artifactory/hosts.temp.j2</span> <span class="string">dest=inventory/devops/{{host_name}}</span> <span class="string">mode=644</span></span><br><span class="line">      <span class="attr">delegate_to:</span> <span class="string">localhost</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>本地执行这个Ansible脚本从以下模板（hosts.temp.j2）实例化出Ansible的资源文件。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line">{{<span class="string">host_name</span>}} <span class="string">ansible_host={{host_ip}}</span> <span class="string">ansible_user={{host_user}}</span> <span class="string">ansible_password={{host_password}}</span> <span class="string">ansible_ssh_common_args='-o</span> <span class="string">StrictHostKeyChecking=no'</span></span><br><span class="line"></span><br><span class="line">[<span class="string">packer_node</span>]</span><br><span class="line">{{<span class="string">host_name</span>}}</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>因为在动态资源文件中使用了用户名和密码的方式访问虚拟机。需要在Ansible控制机上安装sshpass。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id="iac目录"><a href="#iac目录" class="headerlink" title="iac目录"></a>iac目录</h2><p>这个目录用来存放Terraform配置文件。</p>
+<ul>
+<li><p>vsphere_virtual_machine_art1.tf</p>
+<p>Terraform配置文件，在vsphere中从某个虚拟机模板克隆创建一台新的虚拟机资源。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="string">provider</span> <span class="string">"vsphere"</span> {</span><br><span class="line">  <span class="string">vsphere_server</span> <span class="string">=</span> <span class="string">"xxx.xxx.xxx.xxx"</span></span><br><span class="line">  <span class="string">user</span>           <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">  <span class="string">password</span>       <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">  <span class="string">allow_unverified_ssl</span> <span class="string">=</span> <span class="literal">true</span></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="string">resource</span> <span class="string">"vsphere_virtual_machine"</span> <span class="string">"art1"</span> {</span><br><span class="line">  <span class="string">...</span></span><br><span class="line"></span><br><span class="line">  <span class="string">clone</span> {</span><br><span class="line">    <span class="string">template_uuid</span> <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">    <span class="string">...</span></span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"file"</span> {</span><br><span class="line">    <span class="string">source</span>      <span class="string">=</span> <span class="string">"../../ansible/configure-ansible-node.sh"</span></span><br><span class="line">    <span class="string">destination</span> <span class="string">=</span> <span class="string">"/tmp/configure-ansible-node.sh"</span></span><br><span class="line"></span><br><span class="line">    <span class="string">connection</span> {</span><br><span class="line">      <span class="string">type</span>        <span class="string">=</span> <span class="string">"ssh"</span></span><br><span class="line">      <span class="string">user</span>        <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">password</span>    <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">agent</span>       <span class="string">=</span> <span class="literal">false</span></span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"remote-exec"</span> {</span><br><span class="line">    <span class="string">inline</span> <span class="string">=</span> [<span class="string">"chmod a+x /tmp/configure-ansible-node.sh"</span>,</span><br><span class="line">              <span class="string">"/tmp/configure-ansible-node.sh"</span>,</span><br><span class="line">              <span class="string">"rm -f /tmp/configure-ansible-node.sh"</span>]</span><br><span class="line"></span><br><span class="line">    <span class="string">connection</span> {</span><br><span class="line">      <span class="string">type</span>        <span class="string">=</span> <span class="string">"ssh"</span></span><br><span class="line">      <span class="string">user</span>        <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">password</span>    <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">agent</span>       <span class="string">=</span> <span class="literal">false</span></span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> {</span><br><span class="line">    <span class="string">command</span> <span class="string">=</span> <span class="string">"ansible-playbook -e host_name=default_art1 -e host_ip=${vsphere_virtual_machine.art1.default_ip_address} terraform-ansible-inventory.yaml"</span>,</span><br><span class="line">    <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> {</span><br><span class="line">    <span class="string">command</span> <span class="string">=</span> <span class="string">"ansible-playbook  -e host=default_art1 artifactory.yaml"</span>,</span><br><span class="line">    <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> {</span><br><span class="line">      <span class="string">command</span> <span class="string">=</span> <span class="string">"rm -f inventory/devops/default_art1"</span>,</span><br><span class="line">      <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">    }</span><br><span class="line">  }</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><p>line16 - line26：利用Terraform的”file“provisioner上传安装Python的Shell脚本</p>
+</li>
+<li><p>line28 - line39：利用Terraform的”remote-exec“provisioner执行安装Python的Shell脚本</p>
+</li>
+<li><p>line41 - line44：获取新生成的虚拟机IP地址，利用Terraform的”local-exec“provisioner本地执行“terraform-ansible-inventory.yaml”生成Ansible的动态资源文件</p>
+</li>
+<li><p>line46 - line49：利用Terraform的”local-exec“provisioner基于Ansible的动态资源文件执行Ansible脚本完成应用的部署和配置</p>
+</li>
+<li><p>line51 - line54：利用Terraform的”local-exec“provisioner执行Shell命令删除动态资源文件</p>
+</li>
+</ul>
+</li>
+</ul>
+<h1 id="结束"><a href="#结束" class="headerlink" title="结束"></a>结束</h1><p>这个方法同样也适用于在公有云平台上创建虚拟机实例并调用Ansible脚本完成配置，但需要为虚拟机实例绑定一个动态的公网IP地址。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>架构即代码</category>
+      </categories>
+      <tags>
+        <tag>Terraform</tag>
+        <tag>Ansible</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>AI辅助编程：从“复制粘贴”到“氛围编程 (Vibe Coding)”</title>
     <url>/2026/04/08/vibe-coding/</url>
     <content><![CDATA[<p>大语言模型 (LLM) 的迅速崛起从根本上改变了软件工程的格局。随着这些模型变得越来越强大（特别是针对大规模代码库进行的微调），它们已从简单的聊天机器人转变为强大的<strong>编程助手</strong>。如今，AI 不再仅仅是一个参考工具，它已成为 IDE 中不可或缺的参与者。</p>
@@ -3850,93 +4003,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Terraform如何调用Ansible配置虚拟机资源</title>
-    <url>/2018/11/14/terraform-call-ansible/</url>
-    <content><![CDATA[<p>Terraform（<a href="https://www.terraform.io/">https://www.terraform.io/</a>）是一款开源的基础架构即代码(Infrastructure As Code - IAC)工具，通过代码来构建和变更基础架构，并且能够管理变更的版本。Terraform在构建出虚拟机资源后，往往会调用与其关联的provisoner来配置虚拟机资源，比如变更某个系统配置，设置环境变量或者部署某个应用，但是Terraform目前并没有提供开箱即用的支持Ansible的provisioner（也许随着版本的升级，会提供）。本文基于vSphere数据中心和Ubuntu系统实现一种Terraform调用Ansible配置虚拟机资源的方法。</p>
-<span id="more"></span>
-
-<h1 id="Terraform架构简介"><a href="#Terraform架构简介" class="headerlink" title="Terraform架构简介"></a>Terraform架构简介</h1><p>为了方便后续步骤的理解，在这里对Terraform及其相关组件做一简单介绍。这是Terraform的架构图：<br><img src="/2018/11/14/terraform-call-ansible/1.jpg"></p>
-<p>Terraform调用不同云平台（公有或私有）的“Provider”创建和编排基础架构资源，调用不同的“Provisioner”配置新生成的资源。并不是所有的资源都支持“Provisioner”，可以参考对应资源的帮助文档来了解是否支持。基本上，虚拟机资源，比如ECS, EC2等，都支持调用“Provisioner”去配置。</p>
-<h1 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h1><p>组合利用Terraform现有的Provisioner为新创建的虚拟机生成动态的Ansible资源文件，加入到Ansible当前资源文件夹中（Ansible在执行时会合并当前资源文件加下的所有资源文件），最后基于动态资源执行Ansible脚本配置新创建的虚拟机。</p>
-<h1 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h1><p>以自动创建一台虚拟机资源并安装和配置Artifactory软件为例，下图是Terraform+Ansible的代码结构：<br>.<br>├── ansible<br>│&nbsp;&nbsp; ├── handlers<br>│&nbsp;&nbsp; ├── inventory<br>│&nbsp;&nbsp; │&nbsp;&nbsp; ├── devops<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── group_vars<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; ├── host_vars<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; └── hosts<br>│&nbsp;&nbsp; │&nbsp;&nbsp; └── devops-disconf<br>│&nbsp;&nbsp; │&nbsp;&nbsp;     └── hosts<br>│&nbsp;&nbsp; ├── roles<br>│&nbsp;&nbsp; ├── templates<br>│&nbsp;&nbsp; │&nbsp;&nbsp; ├── artifactory<br>│&nbsp;&nbsp; │&nbsp;&nbsp; │&nbsp;&nbsp; └── hosts.temp.j2<br>│&nbsp;&nbsp; ├── configure-ansible-node.sh<br>│&nbsp;&nbsp; ├── ansible.cfg<br>│&nbsp;&nbsp; ├── terraform-ansible-inventory.yaml<br>│&nbsp;&nbsp; ├── artifactory.yaml<br>├── iac<br>│&nbsp;&nbsp; └── cicd<br>│&nbsp;&nbsp;     ├── vsphere_virtual_machine_art1.tf</p>
-<blockquote>
-<p>Artifactory是一款统一制品管理工具，支持多种标准的软件包格式：Maven（Gradle），Nuget，NPM，Bower，CocoaPods，Docker，Debian，RPM…，也支持自定义存储格式。Artifactory是构建CI/CD流程必不可少的一个工具。</p>
-</blockquote>
-<h2 id="ansible目录"><a href="#ansible目录" class="headerlink" title="ansible目录"></a>ansible目录</h2><p>这个目录是典型的Ansible工程目录，有handlers，inventory，roles，templates，ansible.cfg，*.yaml（Ansible playbook）。</p>
-<ul>
-<li><p>ansible.cfg</p>
-<p>设置缺省的资源文件夹，比如：</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="string">defaults</span>]</span><br><span class="line"><span class="string">inventory</span> <span class="string">=</span> <span class="string">./inventory/devops</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>在资源文件夹中，一般会有一个缺省的资源文件hosts，另外还有组变量文件和主机变量文件。</p>
-</li>
-<li><p>configure-ansible-node.sh</p>
-<p>Shell脚本，用来在新创建的虚拟机中（Ubuntu）安装Python，以便将这台虚拟机配置成Ansible的管理节点。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash -il</span></span><br><span class="line"></span><br><span class="line">py_version=2.7.12-1~16.04</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> [ -f /var/lib/apt/lists/lock ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">  <span class="built_in">rm</span> -f /var/lib/apt/lists/lock</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line">result=$(dpkg-query -W  python | awk <span class="string">'{print $2}'</span>)</span><br><span class="line"><span class="keyword">if</span> [ -z <span class="string">"<span class="variable">${result}</span>"</span> ]</span><br><span class="line"><span class="keyword">then</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">"Installing python=<span class="variable">${py_version}</span>"</span></span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">  <span class="built_in">echo</span> <span class="string">"python was already installed!"</span></span><br><span class="line">  <span class="built_in">exit</span> 0</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> http_proxy=http://xxxx</span><br><span class="line"><span class="built_in">export</span> https_proxy=<span class="variable">${http_proxy}</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cat</span> &gt; /etc/apt/apt.conf.d/apt-temp.conf &lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">Acquire::http::Proxy "${http_proxy}";</span></span><br><span class="line"><span class="string">Acquire::https::Proxy "${http_proxy}";</span></span><br><span class="line"><span class="string">Acquire::ftp::Proxy "${http_proxy}";</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line">apt-get update</span><br><span class="line">apt-get -y --no-upgrade install python=<span class="variable">${py_version}</span></span><br><span class="line"></span><br><span class="line">curl https://bootstrap.pypa.io/get-pip.py | python</span><br><span class="line">pip install -U pip</span><br><span class="line"></span><br><span class="line"><span class="built_in">rm</span> -f /etc/apt/apt.conf.d/apt-temp.conf</span><br></pre></td></tr></tbody></table></figure>
-
-<p>如果代码是运行在防火墙后面，比如在公司的网络中，需要line 19 - line 26的代码配置apt代理。</p>
-</li>
-<li><p>terraform-ansible-inventory.yaml</p>
-<p>Ansible脚本，用来生成当前虚拟机的动态资源文件：</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">name:</span>  <span class="string">Create</span> <span class="string">temp</span> <span class="string">inventory</span> <span class="string">file</span></span><br><span class="line">  <span class="attr">hosts:</span> <span class="string">"<span class="template-variable">{{ host | default('localhost') }}</span>"</span></span><br><span class="line">  <span class="attr">vars:</span></span><br><span class="line">    <span class="attr">host_name:</span> <span class="string">default-temp</span></span><br><span class="line">    <span class="attr">host_ip:</span> <span class="string">xxx.xxx.xxx.xxx</span></span><br><span class="line">    <span class="attr">host_user:</span> <span class="string">xxx</span></span><br><span class="line">    <span class="attr">host_password:</span> <span class="string">xxx</span></span><br><span class="line">  <span class="attr">tasks:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Create</span> <span class="string">temp</span> <span class="string">inventory</span> <span class="string">file</span></span><br><span class="line">      <span class="attr">template:</span> <span class="string">src=artifactory/hosts.temp.j2</span> <span class="string">dest=inventory/devops/{{host_name}}</span> <span class="string">mode=644</span></span><br><span class="line">      <span class="attr">delegate_to:</span> <span class="string">localhost</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>本地执行这个Ansible脚本从以下模板（hosts.temp.j2）实例化出Ansible的资源文件。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line">{{<span class="string">host_name</span>}} <span class="string">ansible_host={{host_ip}}</span> <span class="string">ansible_user={{host_user}}</span> <span class="string">ansible_password={{host_password}}</span> <span class="string">ansible_ssh_common_args='-o</span> <span class="string">StrictHostKeyChecking=no'</span></span><br><span class="line"></span><br><span class="line">[<span class="string">packer_node</span>]</span><br><span class="line">{{<span class="string">host_name</span>}}</span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>因为在动态资源文件中使用了用户名和密码的方式访问虚拟机。需要在Ansible控制机上安装sshpass。</p>
-</blockquote>
-</li>
-</ul>
-<h2 id="iac目录"><a href="#iac目录" class="headerlink" title="iac目录"></a>iac目录</h2><p>这个目录用来存放Terraform配置文件。</p>
-<ul>
-<li><p>vsphere_virtual_machine_art1.tf</p>
-<p>Terraform配置文件，在vsphere中从某个虚拟机模板克隆创建一台新的虚拟机资源。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="string">provider</span> <span class="string">"vsphere"</span> {</span><br><span class="line">  <span class="string">vsphere_server</span> <span class="string">=</span> <span class="string">"xxx.xxx.xxx.xxx"</span></span><br><span class="line">  <span class="string">user</span>           <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">  <span class="string">password</span>       <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">  <span class="string">allow_unverified_ssl</span> <span class="string">=</span> <span class="literal">true</span></span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="string">resource</span> <span class="string">"vsphere_virtual_machine"</span> <span class="string">"art1"</span> {</span><br><span class="line">  <span class="string">...</span></span><br><span class="line"></span><br><span class="line">  <span class="string">clone</span> {</span><br><span class="line">    <span class="string">template_uuid</span> <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">    <span class="string">...</span></span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"file"</span> {</span><br><span class="line">    <span class="string">source</span>      <span class="string">=</span> <span class="string">"../../ansible/configure-ansible-node.sh"</span></span><br><span class="line">    <span class="string">destination</span> <span class="string">=</span> <span class="string">"/tmp/configure-ansible-node.sh"</span></span><br><span class="line"></span><br><span class="line">    <span class="string">connection</span> {</span><br><span class="line">      <span class="string">type</span>        <span class="string">=</span> <span class="string">"ssh"</span></span><br><span class="line">      <span class="string">user</span>        <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">password</span>    <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">agent</span>       <span class="string">=</span> <span class="literal">false</span></span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"remote-exec"</span> {</span><br><span class="line">    <span class="string">inline</span> <span class="string">=</span> [<span class="string">"chmod a+x /tmp/configure-ansible-node.sh"</span>,</span><br><span class="line">              <span class="string">"/tmp/configure-ansible-node.sh"</span>,</span><br><span class="line">              <span class="string">"rm -f /tmp/configure-ansible-node.sh"</span>]</span><br><span class="line"></span><br><span class="line">    <span class="string">connection</span> {</span><br><span class="line">      <span class="string">type</span>        <span class="string">=</span> <span class="string">"ssh"</span></span><br><span class="line">      <span class="string">user</span>        <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">password</span>    <span class="string">=</span> <span class="string">"..."</span></span><br><span class="line">      <span class="string">agent</span>       <span class="string">=</span> <span class="literal">false</span></span><br><span class="line">    }</span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> {</span><br><span class="line">    <span class="string">command</span> <span class="string">=</span> <span class="string">"ansible-playbook -e host_name=default_art1 -e host_ip=${vsphere_virtual_machine.art1.default_ip_address} terraform-ansible-inventory.yaml"</span>,</span><br><span class="line">    <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> {</span><br><span class="line">    <span class="string">command</span> <span class="string">=</span> <span class="string">"ansible-playbook  -e host=default_art1 artifactory.yaml"</span>,</span><br><span class="line">    <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">  }</span><br><span class="line"></span><br><span class="line">  <span class="string">provisioner</span> <span class="string">"local-exec"</span> {</span><br><span class="line">      <span class="string">command</span> <span class="string">=</span> <span class="string">"rm -f inventory/devops/default_art1"</span>,</span><br><span class="line">      <span class="string">working_dir</span> <span class="string">=</span> <span class="string">"../../ansible"</span></span><br><span class="line">    }</span><br><span class="line">  }</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li><p>line16 - line26：利用Terraform的”file“provisioner上传安装Python的Shell脚本</p>
-</li>
-<li><p>line28 - line39：利用Terraform的”remote-exec“provisioner执行安装Python的Shell脚本</p>
-</li>
-<li><p>line41 - line44：获取新生成的虚拟机IP地址，利用Terraform的”local-exec“provisioner本地执行“terraform-ansible-inventory.yaml”生成Ansible的动态资源文件</p>
-</li>
-<li><p>line46 - line49：利用Terraform的”local-exec“provisioner基于Ansible的动态资源文件执行Ansible脚本完成应用的部署和配置</p>
-</li>
-<li><p>line51 - line54：利用Terraform的”local-exec“provisioner执行Shell命令删除动态资源文件</p>
-</li>
-</ul>
-</li>
-</ul>
-<h1 id="结束"><a href="#结束" class="headerlink" title="结束"></a>结束</h1><p>这个方法同样也适用于在公有云平台上创建虚拟机实例并调用Ansible脚本完成配置，但需要为虚拟机实例绑定一个动态的公网IP地址。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>架构即代码</category>
-      </categories>
-      <tags>
-        <tag>Terraform</tag>
-        <tag>Ansible</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>命令方式设置Windows Server网络代理</title>
     <url>/2020/02/03/windows-core-proxy/</url>
     <content><![CDATA[<p>在公司里的服务器往往需要配置网络代理才能访问外网，不同的操作系统设置代理的方式也不同，同一个操作系统在图形化和非图形化下的设置方式也不同。本文将详细介绍如何用命令的方式来设置Windows Server的网络代理，这种方式非常适合于非图形化的Windows Server Core的网络代理的设置，对图形化的Windows Server也同样适用。</p>
@@ -4011,72 +4077,6 @@
       </categories>
       <tags>
         <tag>Windows</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Podman Rootless下容器访问宿主机服务的底层原理</title>
-    <url>/2026/07/16/podman-rootless-host/</url>
-    <content><![CDATA[<p>本地运行容器的朋友应该都碰到过一个很常见的场景：容器内部部署的应用，需要调用我们电脑本机运行的各类服务。比如我平时搭建本地 AI 环境，会把 Open WebUI 部署在容器里，为了方便使用宿主机的GPU（我的是Mac M3），本地模型服务使用Ollama，并部署在宿主机中。一旦容器没法连通宿主机的 11434 端口，整个 AI 对话、模型调用链路就会直接断掉。在实际使用中，通过域名 <code>host.docker.internal</code> 就能快速实现容器与宿主机的互通，简单又好用。</p>
-<p>用归用，但我之前一直存有疑问：Podman 默认开启 Rootless 非特权模式，容器、虚拟机、宿主机三层网络是完全隔离的，正常情况下根本不允许跨层级通信。那为什么单单这一个域名，就能打破隔离，打通容器到宿主机回环接口的通信通道？</p>
-<p>网上大部分教程，只教大家怎么配置、怎么连通，但少有提及背后的原理。这篇文章将会简单介绍下 Podman Rootless 模式下的宿主机访问原理，同时列出 Mac 和 Windows 平台的差异。</p>
-<span id="more"></span>
-
-<h1 id="一、看似简单的互通，其实存在两类限制"><a href="#一、看似简单的互通，其实存在两类限制" class="headerlink" title="一、看似简单的互通，其实存在两类限制"></a>一、看似简单的互通，其实存在两类限制</h1><p>不管是 Mac 还是 Windows 系统，都没法原生直接运行 Linux 容器。我们日常使用的 Podman 容器环境，本质是依托轻量化虚拟机搭建的运行底座——Mac 依靠系统原生的虚拟化框架，Windows 则依赖 WSL2 环境。</p>
-<p>这种嵌套式的虚拟化架构，从根源上限制了容器与宿主机的直接互通，主要绕不开两类硬性限制。</p>
-<p>第一是网络隔离限制。容器内的 localhost、127.0.0.1 只对应容器自身的网络栈，虚拟机的回环地址也仅适用于虚拟机内部通信，双层隔离之下，数据包根本无法自动穿透到真实的宿主机网络。</p>
-<p>第二是权限限制。Podman 最大的安全亮点就是 Rootless 无特权运行，全程以普通用户权限工作，不会占用系统高危权限。但有利有弊，这也导致容器进程无法创建原始网络套接字，也没有权限操作底层路由规则，这也是 Rootless 容器默认 ping 不通宿主机的核心原因。</p>
-<p>想要在不关闭安全隔离、不提升运行权限的前提下，实现容器访问宿主机服务，Podman 没有用传统的 NAT 转发方案，而是使用了用户态代理机制，整套能力的核心，都依托运行在宿主机中的 <code>gvproxy（gVisor-tap-vsock）</code> 进程来实现。</p>
-<h1 id="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"><a href="#二、核心架构：虚拟机只透传，宿主机全权接管网络转发" class="headerlink" title="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"></a>二、核心架构：虚拟机只透传，宿主机全权接管网络转发</h1><p>很多人对这套转发逻辑都有误区，以为虚拟机承担了核心的代理转发工作。事实恰恰相反：整套网络翻译、数据解包、跨层级通信的核心逻辑，全部运行在真实宿主机上，虚拟机全程只负责转发数据，不会做任何主动的逻辑处理。完整的流量流转链路流程如下：</p>
-<figure class="highlight text"><table><tbody><tr><td class="code"><pre><span class="line">[ OPEN WEBUI 容器 ]</span><br><span class="line">        │</span><br><span class="line">        │ 1. 访问 http://host.docker.internal</span><br><span class="line">        │    内置 DNS 动态解析为 192.168.127.254 (或 .1)</span><br><span class="line">        ▼</span><br><span class="line">[ LINUX 虚拟机内核 ]</span><br><span class="line">        │</span><br><span class="line">        │ 2. TCP 数据包通过被动的 virtio-net / TAP 虚拟网卡发出</span><br><span class="line">        │    （虚拟机内部无任何网络代理进程）</span><br><span class="line">        ▼</span><br><span class="line">==================== 宿主机 / 虚拟机边界 ====================</span><br><span class="line">        │</span><br><span class="line">        │ 3. 虚拟化引擎拦截 TAP 流量，直接映射入 AF_VSOCK 管道</span><br><span class="line">        ▼</span><br><span class="line">[ macOS / Windows 宿主机 (gvproxy 进程) ]</span><br><span class="line">        │</span><br><span class="line">        │ 4. gvproxy 读取 VSOCK 数据，剥离虚拟化封装，提取原始 TCP 载荷</span><br><span class="line">        ▼</span><br><span class="line">[ 宿主机原生回环接口 (127.0.0.1:11434) ]</span><br><span class="line">        │</span><br><span class="line">        │ 5. gvproxy 代表容器向宿主机发起标准的 connect() 调用</span><br><span class="line">        ▼</span><br><span class="line">[ 原生 Ollama 应用程序 ]</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="1-自定义-DNS-解析，伪造虚拟网关地址"><a href="#1-自定义-DNS-解析，伪造虚拟网关地址" class="headerlink" title="1. 自定义 DNS 解析，伪造虚拟网关地址"></a>1. 自定义 DNS 解析，伪造虚拟网关地址</h2><p><code>host.docker.internal</code> 并不是公共互联网可解析的域名，而是 Podman 内置的专属解析规则。只要容器发起相关访问请求，Podman 的内置 DNS 就会直接拦截解析动作，固定返回专属虚拟网关 IP，常见地址为 <code>192.168.127.254</code> 或<code>192.168.127.1</code>。</p>
-<p>容器完全不用感知宿主机的真实 IP 地址，只需向这个虚拟网关发包即可，后续所有的转发、适配、通信逻辑，都由底层组件自动完成，对上层业务应用完全透明，开发者无需额外干预。</p>
-<h2 id="2-虚拟机无感透传，零代理开销"><a href="#2-虚拟机无感透传，零代理开销" class="headerlink" title="2. 虚拟机无感透传，零代理开销"></a>2. 虚拟机无感透传，零代理开销</h2><p>数据包抵达虚拟机内核后，系统会直接把这个虚拟网关当成外部物理设备，不会额外做 NAT 转换、流量过滤等多余操作。</p>
-<p>虚拟机内部全程没有任何转发进程，仅通过 virtio-net、TAP 虚拟网卡，将原始的二层以太网帧完整向外透出。这种极简的透传方式，最大程度保留了原始数据包特征，也彻底规避了虚拟机内部转发带来的性能损耗。</p>
-<h2 id="3-VSOCK-管道跨层通信，绕过传统网络栈"><a href="#3-VSOCK-管道跨层通信，绕过传统网络栈" class="headerlink" title="3. VSOCK 管道跨层通信，绕过传统网络栈"></a>3. VSOCK 管道跨层通信，绕过传统网络栈</h2><p>这也是 Podman 这套网络架构的巧妙之处。传统虚拟机互通大多依靠物理网卡 NAT 转发，不仅延迟偏高，还很容易被系统防火墙、本地网络策略拦截，稳定性很差。</p>
-<p>Podman 直接采用 <code>AF_VSOCK</code> 内核套接字方案，虚拟化引擎拦截虚拟网卡流出的流量后，直接封装送入 VSOCK 内存管道。这种通信方式绕开了物理网卡和繁琐的 TCP/IP 网络栈，直接在内存层面完成虚拟机与宿主机的数据交互，效率和稳定性都远优于传统转发方案。</p>
-<h2 id="4-gvproxy-用户态代理，完成最终流量落地"><a href="#4-gvproxy-用户态代理，完成最终流量落地" class="headerlink" title="4. gvproxy 用户态代理，完成最终流量落地"></a>4. gvproxy 用户态代理，完成最终流量落地</h2><p>宿主机后台常驻的 gvproxy 进程，是整套通信链路的核心枢纽，大家可以直接用进程检索命令查看它的运行状态。所有从 VSOCK 管道流出的数据，都会统一由这个进程接管处理。</p>
-<p>它会自动剥离虚拟化封装的数据包，还原出原始的 TCP 请求信息，精准识别出容器真正的访问目标端口。随后以宿主机普通进程的身份，发起标准的 connect 系统调用，将流量精准转发到宿主机 127.0.0.1 对应的服务端口。</p>
-<p>整个过程对宿主机原生服务完全无感。就拿我常用的 Ollama 来说，它只会判定是本地普通软件发起的连接，完全察觉不到流量是从虚拟机容器中穿透过来的。</p>
-<p>后续响应数据会沿着完全相反的路径，原路返回容器，就此完成一次完整的跨层级通信交互。</p>
-<h1 id="三、Mac-与-Windows-底层差异：安全机制决定转发逻辑"><a href="#三、Mac-与-Windows-底层差异：安全机制决定转发逻辑" class="headerlink" title="三、Mac 与 Windows 底层差异：安全机制决定转发逻辑"></a>三、Mac 与 Windows 底层差异：安全机制决定转发逻辑</h1><p>Mac 和 Windows 两套系统的最终连通效果一致，但底层安全策略差异很大，这也直接导致 <code>host.docker.internal</code> 的实现逻辑各不相同。</p>
-<p>Mac 的虚拟化沙箱管控极其严格，明令禁止虚拟机直接探测、绑定、访问宿主机的回环接口。也正因如此，Mac 环境下所有的跨层流量，<strong>必须 100% 经过 gvproxy 中转</strong>，没有任何旁路方案，转发逻辑最严谨，网络隔离性也最强。</p>
-<p>反观 Windows WSL2，系统网络融合度更高，新版 WSL2 支持镜像网络模式，虚拟机可以直接共享宿主机的完整网络栈。这让 Windows 下的宿主机访问更贴近原生网络效果，转发链路更短、延迟更低，但对应的网络隔离性会比 Mac 弱不少。</p>
-<h1 id="四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性"><a href="#四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性" class="headerlink" title="四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性"></a>四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性</h1><p>很多网上教程会一刀切建议大家把本地服务监听地址改成 <code>0.0.0.0</code>，但这套操作其实不适用于 macOS 下的 Podman Rootless 环境，盲目修改反而会增加端口暴露风险，得不偿失。这里纠正一个绝大多数开发者踩错的关键误区。</p>
-<p><strong>为什么 Podman 不需要绑定 0.0.0.0？</strong></p>
-<p>核心原因还是前文提到的<code>gvproxy</code> 转发机制。这个进程运行在宿主机后台，所有容器发起的访问请求，最终都是由它以<strong>本机身份</strong>向宿主机服务发起连接。简单来说，当我们通过 <code>host.docker.internal</code> 访问本地 Ollama 服务时，Ollama 识别到的请求来源就是纯净的 <code>127.0.0.1</code> 本地回环流量。</p>
-<p>因此在 Podman 这套架构下，即便 Ollama等本地服务默认只监听 <code>127.0.0.1</code>，容器依然可以正常连通，完全不会出现拒绝连接的情况。</p>
-<p><strong>那什么时候才需要绑定 0.0.0.0？</strong></p>
-<p>绑定全网监听地址 <code>0.0.0.0</code> 并非 Podman 环境的刚需，仅适用于特定容器场景。比如使用 Colima、部分旧版 Docker 环境时，容器流量依托虚拟网桥转发，系统会把虚拟机、容器的流量判定为<strong>外部局域网 IP 流量</strong>，而非本地回环流量。</p>
-<p>这种场景下，仅监听 <code>127.0.0.1</code> 会直接拦截外部流量，此时才需要修改为 <code>0.0.0.0</code> 放行请求。</p>
-<p><strong>最终实操结论</strong>：在 macOS 原生 Podman Rootless 架构中，<strong>保持服务默认监听 127.0.0.1 即可正常通信，也是最安全的配置</strong>。无需强行修改为 0.0.0.0，避免将本地服务端口暴露在物理局域网中，带来不必要的安全风险。</p>
-<h1 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h1><p>很多开发者只会熟练使用<code>host.docker.internal</code> 实现连通，却从未深究 Rootless 模式下的底层网络逻辑。看似简单的一行域名配置，背后是 Podman 为了平衡<strong>安全隔离性与开发便捷性</strong>，精心设计的一套用户态代理架构。</p>
-<p>吃透这套 VSOCK+gvproxy 的转发机制，不止能解决本地开发的连通性问题，更能帮我们理清容器安全隔离、权限管控、虚拟化网络的核心设计思路。后续遇到容器网络异常、访问超时、连接拒绝等问题，都能快速定位根因，不用再盲目排查、试错。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>容器</category>
-      </categories>
-      <tags>
-        <tag>Container</tag>
-        <tag>Network</tag>
       </tags>
   </entry>
 </search>
