@@ -1,111 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>阿里云通过RAM角色管理多云账号下的资源</title>
-    <url>/2021/01/05/aliyun-ram-role-multi-accounts/</url>
-    <content><![CDATA[<p>云计算经过十几年的发展已经变得很成熟，无论是传统企业还是初创企业都将云计算平台作为其数字化策略的支撑平台。在国内，阿里云是使用最广泛的公有云平台，很多本土企业和外资企业在华的分支机构都是首选阿里云来构建和运行他们的数字化方案。为了能够高效地使用阿里云，同时又能对接阿里云产品服务团队，在这些公司里逐渐地出现了一个新的角色或团队来统一规划、管理阿里云平台，我们就暂且称这个团队为云团队。大部分公司云团队往往需要管理多个阿里云账号，而在不同的账号里的用户创建、登录、登出的操作往往会变的很麻烦。本文介绍通过切换身份的方式扮演<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">RAM角色</a>来管理多云账号下的资源。</p>
-<span id="more"></span>
-
-<h1 id="多云账号"><a href="#多云账号" class="headerlink" title="多云账号"></a>多云账号</h1><p>公司在使用阿里云的过程中，基于不同的目的或者受组织架构的约束，或多或少都会创建多个云账号。传统的公司或者绝大部分外资公司在财务上都会为不同的部门或团队创建不同的成本中心(cost center)并分配对应的预算，部门或团队的开支都是走自己的成本中心。这就决定了当某个部门或团队在使用阿里云的时候，必定会创建自己的云账号，而不会去使用别的成本中心下的阿里云账号。一些中小型的互联网公司或者创业公司的财务不会那么复杂，研发可能就一个成本中心，但是往往需要多个阿里云账号来隔离不同的环境，例如开发，测试，预生产和和生产环境。</p>
-<p>使用多个阿里云账号有以下一些优点：</p>
-<ul>
-<li>不同账号的云资源是完全隔离的，相互之间不受影响。</li>
-<li>可以单独出账单，做到按不同成本中心核算。</li>
-<li>如果构建的微服务系统涉及到多个业务部门或团队，各个业务部门或团队在自己的阿里云账号里只维护或运行自己负责的微服务，这样可以降低单个阿里云账号下架构的复杂性。</li>
-</ul>
-<p>但是云团队在管理多个阿里云账号时也会遇到很多麻烦：</p>
-<ul>
-<li>需要重复地登录，登出和双因素认证来切换不同的账号。</li>
-<li>阿里云支持单点登录(SSO)，这样可以省掉双因素认证的步骤，但当出现问题时，无法创建一个非SSO账号给阿里云技术支持用来临时登录进账号调试问题。</li>
-<li>团队成员入职，离职时都需要通知产品拥有者在阿里云账号里创建和删除RAM用户。</li>
-<li>每个云团队成员都需要需要记住很多云账号。</li>
-</ul>
-<h1 id="通过RAM角色管理多云账号"><a href="#通过RAM角色管理多云账号" class="headerlink" title="通过RAM角色管理多云账号"></a>通过RAM角色管理多云账号</h1><p>为了解决多云账号管理的痛点，可以通过RAM用户扮演RAM角色的方式来登录阿里云其它账号。</p>
-<h2 id="什么是RAM角色"><a href="#什么是RAM角色" class="headerlink" title="什么是RAM角色"></a>什么是RAM角色</h2><p>RAM角色（RAM role）与RAM用户一样，都是RAM身份类型的一种。RAM角色是一种虚拟用户，没有确定的身份认证密钥，需要被一个受信的实体用户扮演才能正常使用。</p>
-<p>RAM角色是一种虚拟用户，与实体用户（云账号、RAM用户和云服务）和教科书式角色（Textbook role）不同。</p>
-<ul>
-<li>实体用户：拥有确定的登录密码或访问密钥。</li>
-<li>教科书式角色：教科书式角色或传统意义上的角色是指一组权限集合，类似于RAM里的权限策略。如果一个用户被赋予了这种角色，也就意味着该用户被赋予了一组权限，可以访问被授权的资源。</li>
-<li>RAM角色：RAM角色有确定的身份，可以被赋予一组权限策略，但没有确定的登录密码或访问密钥。RAM角色需要被一个受信的实体用户扮演，扮演成功后实体用户将获得RAM角色的安全令牌，使用这个安全令牌就能以角色身份访问被授权的资源。</li>
-</ul>
-<h2 id="RAM角色使用方法"><a href="#RAM角色使用方法" class="headerlink" title="RAM角色使用方法"></a>RAM角色使用方法</h2><ul>
-<li><p>RAM角色指定可信实体，即指定可以扮演角色的实体用户身份。</p>
-</li>
-<li><p>可信实体通过控制台或调用API扮演角色并获取角色令牌。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/6.png"></p>
-</li>
-<li><p>为RAM角色绑定权限策略。</p>
-</li>
-<li><p>受信实体通过扮演角色，使用角色令牌访问阿里云资源。</p>
-</li>
-</ul>
-<h2 id="RAM角色类型"><a href="#RAM角色类型" class="headerlink" title="RAM角色类型"></a>RAM角色类型</h2><p>根据RAM可信实体的不同，RAM支持以下三种类型的角色：</p>
-<ul>
-<li><p>阿里云账号：允许RAM用户所扮演的角色。扮演角色的RAM用户可以属于自己的云账号，也可以属于其他云账号。此类角色主要用来解决跨账号访问和临时授权问题。</p>
-</li>
-<li><p>阿里云服务：允许云服务所扮演的角色。此类角色主要用于授权云服务代理您进行资源操作。</p>
-</li>
-<li><p>身份提供商：允许受信身份提供商下的用户所扮演的角色。此类角色主要用于实现与阿里云的SSO。</p>
-</li>
-</ul>
-<h2 id="RAM角色切换的方式管理多云账号的实现"><a href="#RAM角色切换的方式管理多云账号的实现" class="headerlink" title="RAM角色切换的方式管理多云账号的实现"></a>RAM角色切换的方式管理多云账号的实现</h2><p>实现多云账号管理需要满足以下的前提条件：</p>
-<ul>
-<li><p>云团队拥有自己的云账号，假设账号ID为123456789012****，每个成员都有对应的RAM用户。</p>
-</li>
-<li><p>假设某个业务部门的云账号为128888789012****。</p>
-</li>
-</ul>
-<h3 id="实现架构"><a href="#实现架构" class="headerlink" title="实现架构"></a>实现架构</h3><p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/7.png" alt="RAM用户通过扮演不同云账号里的RAM角色来管理账号里的资源"></p>
-<h3 id="实现步骤"><a href="#实现步骤" class="headerlink" title="实现步骤"></a>实现步骤</h3><ul>
-<li><p>产品拥有者参考“<a href="https://help.aliyun.com/document_detail/93691.html?spm=a2c4g.11186623.6.584.312068f9HVtYvh">创建可信实体为阿里云账号的RAM角色</a>”，在自己的云账号下为云团队的账号123456789012****创建RAM角色”CloudAdmin”，并给角色分配”AdministratorAccess”权限<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/1.png" alt="选择授信实体为阿里云账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/2.png" alt="选择其它云账号，并输入云团队的账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/3.png" alt="给这个RAM角色授予管理员权限"></p>
-</li>
-<li><p>设置以下授信策略。授信实体为云团队的账号“123456789012****”，并开放给有“AliyunSTSAssumeRoleAccess”权限的RAM用户</p>
-<figure class="highlight json"><table><tbody><tr><td class="code"><pre><span class="line"><span class="punctuation">{</span></span><br><span class="line">    <span class="attr">"Statement"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">{</span></span><br><span class="line">            <span class="attr">"Action"</span><span class="punctuation">:</span> <span class="string">"sts:AssumeRole"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Effect"</span><span class="punctuation">:</span> <span class="string">"Allow"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Principal"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span><br><span class="line">                <span class="attr">"RAM"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                    <span class="string">"acs:ram::123456789012****:root"</span></span><br><span class="line">                <span class="punctuation">]</span></span><br><span class="line">            <span class="punctuation">}</span></span><br><span class="line">        <span class="punctuation">}</span></span><br><span class="line">    <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">"Version"</span><span class="punctuation">:</span> <span class="string">"1"</span></span><br><span class="line"><span class="punctuation">}</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>也可以将某个授信实体限制为账号下的某个RAM用户，比如mikejianzhang</p>
-<figure class="highlight json"><table><tbody><tr><td class="code"><pre><span class="line"><span class="punctuation">{</span></span><br><span class="line">    <span class="attr">"Statement"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">{</span></span><br><span class="line">            <span class="attr">"Action"</span><span class="punctuation">:</span> <span class="string">"sts:AssumeRole"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Effect"</span><span class="punctuation">:</span> <span class="string">"Allow"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Principal"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span><br><span class="line">                <span class="attr">"RAM"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                    <span class="string">"acs:ram::123456789012****:user/mikejianzhang"</span></span><br><span class="line">                <span class="punctuation">]</span></span><br><span class="line">            <span class="punctuation">}</span></span><br><span class="line">        <span class="punctuation">}</span></span><br><span class="line">    <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">"Version"</span><span class="punctuation">:</span> <span class="string">"1"</span></span><br><span class="line"><span class="punctuation">}</span></span><br></pre></td></tr></tbody></table></figure></blockquote>
-</li>
-<li><p>云团队在自己的云账号里为RAM用户授予角色扮演权限”AliyunSTSAssumeRoleAccess”。</p>
-</li>
-<li><p>云团队的某个RAM用户首先登录云团队的账号，然后通过切换角色并输入业务部门云账号或者别名，以及对应的角色”CloudAdmin”就能切换进业务部门云账号里。</p>
-<p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/4.png"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/5.png"></p>
-</li>
-<li><p>完成管理任务后点击“返回登录身份”退回到自己的账号。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/8.png"></p>
-</li>
-<li><p>当有云团队成员入职或离职时，只需要在云团队的阿里云账号里添加和删除对应的RAM用户即可。</p>
-</li>
-</ul>
-<p>这样，通过RAM角色切换的方法，云团队就可以管理多个业务部门的云账号。另外，RAM角色切换的方法还有以下两个使用场景：</p>
-<ul>
-<li>通过RAM角色临时授权给阿里云的技术支持帮助调试问题，尤其是在云账号开启了单点登录(SSO)的情况下，只有通过这种方法才能让阿里云的技术支持登录进来。</li>
-<li>当一个企业希望将部分业务授权给另一个企业时，也可以通过RAM角色进行跨阿里云账号授权来管理资源的访问。例如，企业A购买了多种阿里云资源（ECS实例、RDS实例、SLB实例等），但是企业A希望能专注于业务，仅作为资源拥有者。企业A希望可以授权企业B账号来对云资源进行运维，监控和管理，企业A也希望企业B的员工入职和离职时，无需做任何权限变更，同时也希望合同终止时，可以随时撤销对企业B的授权。这种情况下，企业A可以创建一定权限的角色并授权给企业B的阿里云账号，企业B的RAM用户可以通过角色切换的方法登录进企业A的账号对资源进行运维管理。</li>
-</ul>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>阿里云</category>
-      </categories>
-      <tags>
-        <tag>AliCloud</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>记一次阿里云Kubernetes集群内部服务域名解析不稳定的排查</title>
     <url>/2021/09/06/aliyun-coredns-issue-tracking/</url>
     <content><![CDATA[<p>最近，由于项目需求新建了一个阿里云托管版Kubernetes集群(Managed ACK)，但是发现部署在集群中的微服务相互调用不稳定，导致业务不可用。经过排查，最终发现添加在集群工作节点上的安全组与当前集群的安全组不一致，使得跨节点的Pod访问流量被阻止掉了。本文将详细介绍这一问题的排查过程。</p>
@@ -224,83 +119,89 @@
         <category>Kubernetes</category>
       </categories>
       <tags>
-        <tag>AliCloud</tag>
         <tag>Kubernetes</tag>
+        <tag>AliCloud</tag>
       </tags>
   </entry>
   <entry>
-    <title>云计算巨头如何用“软件韧性”重构基础设施</title>
-    <url>/2026/06/19/cloud-base-resiliency/</url>
-    <content><![CDATA[<blockquote>
-<p><strong>“云计算厂商在构建平台时，更多依赖的是韧性思维（Resilience Thinking），而非在硬件层盲目追求极高的可靠性。”</strong></p>
-</blockquote>
-<p>这句话精准地击中了现代云计算最底层的商业与工程逻辑。这不仅是应用开发者的共识，更是 AWS、阿里云、微软 Azure 等巨头得以实现规模化盈利的基石。</p>
+    <title>阿里云通过RAM角色管理多云账号下的资源</title>
+    <url>/2021/01/05/aliyun-ram-role-multi-accounts/</url>
+    <content><![CDATA[<p>云计算经过十几年的发展已经变得很成熟，无论是传统企业还是初创企业都将云计算平台作为其数字化策略的支撑平台。在国内，阿里云是使用最广泛的公有云平台，很多本土企业和外资企业在华的分支机构都是首选阿里云来构建和运行他们的数字化方案。为了能够高效地使用阿里云，同时又能对接阿里云产品服务团队，在这些公司里逐渐地出现了一个新的角色或团队来统一规划、管理阿里云平台，我们就暂且称这个团队为云团队。大部分公司云团队往往需要管理多个阿里云账号，而在不同的账号里的用户创建、登录、登出的操作往往会变的很麻烦。本文介绍通过切换身份的方式扮演<a href="https://help.aliyun.com/document_detail/93689.html?spm=a2c4g.11186623.6.581.77ae30b7l5Hupx">RAM角色</a>来管理多云账号下的资源。</p>
 <span id="more"></span>
 
-<p>如果云厂商试图在硬件层面追求绝对的可靠性——比如使用军工级抗震机架或昂贵的专用容错芯片——结果将是灾难性的：<strong>成本会高到无法商业化</strong>，且依然无法对抗地震、海啸或“挖掘机挖断光缆”这类物理世界的不可抗力。</p>
-<p>那么，云计算是如何做到 <strong>既便宜又可靠</strong> 的？<br>答案是：<strong>用“软件定义的韧性”屏蔽“硬件固有的缺陷”。</strong></p>
-<h2 id="一、-云厂商的工程哲学：商用硬件-智能软件"><a href="#一、-云厂商的工程哲学：商用硬件-智能软件" class="headerlink" title="一、 云厂商的工程哲学：商用硬件 + 智能软件"></a>一、 云厂商的工程哲学：商用硬件 + 智能软件</h2><p>云厂商的数据中心由无数商用级（Commodity）、廉价、标准化的硬件组装而成。他们的核心竞争力不在于硬件“不坏”，而在于<strong>当硬件“坏了”的时候，用户感知不到</strong>。</p>
-<p>以下是云厂商在基础设施层（IaaS）构建韧性的 5 个核心具体落地方式：</p>
-<h3 id="1-接入与流量控制层-Gateway-Traffic"><a href="#1-接入与流量控制层-Gateway-Traffic" class="headerlink" title="1. 接入与流量控制层 (Gateway &amp; Traffic)"></a>1. 接入与流量控制层 (Gateway &amp; Traffic)</h3><ul>
-<li><strong>硬件现状</strong>：单台负载均衡器（SLB）或边缘交换机可能因高温或网卡故障随时宕机。</li>
-<li><strong>韧性手段</strong>：<strong>Anycast BGP（任播）与分布式路由</strong>。</li>
-<li><strong>效果</strong>：当某个接入点失效，路由表会在毫秒级自动切换，将用户流量无缝引流至最近的健康节点，全程无感知。</li>
+<h1 id="多云账号"><a href="#多云账号" class="headerlink" title="多云账号"></a>多云账号</h1><p>公司在使用阿里云的过程中，基于不同的目的或者受组织架构的约束，或多或少都会创建多个云账号。传统的公司或者绝大部分外资公司在财务上都会为不同的部门或团队创建不同的成本中心(cost center)并分配对应的预算，部门或团队的开支都是走自己的成本中心。这就决定了当某个部门或团队在使用阿里云的时候，必定会创建自己的云账号，而不会去使用别的成本中心下的阿里云账号。一些中小型的互联网公司或者创业公司的财务不会那么复杂，研发可能就一个成本中心，但是往往需要多个阿里云账号来隔离不同的环境，例如开发，测试，预生产和和生产环境。</p>
+<p>使用多个阿里云账号有以下一些优点：</p>
+<ul>
+<li>不同账号的云资源是完全隔离的，相互之间不受影响。</li>
+<li>可以单独出账单，做到按不同成本中心核算。</li>
+<li>如果构建的微服务系统涉及到多个业务部门或团队，各个业务部门或团队在自己的阿里云账号里只维护或运行自己负责的微服务，这样可以降低单个阿里云账号下架构的复杂性。</li>
 </ul>
-<h3 id="2-控制面治理层-Control-Plane"><a href="#2-控制面治理层-Control-Plane" class="headerlink" title="2. 控制面治理层 (Control Plane)"></a>2. 控制面治理层 (Control Plane)</h3><ul>
-<li><strong>硬件现状</strong>：管理云资源的控制面服务器（如 K8s Master、控制台后端）可能突发 OOM（内存溢出）或硬件损坏。</li>
-<li><strong>韧性手段</strong>：<strong>解耦与无状态化 + Raft 协议</strong>。</li>
-<li><strong>效果</strong>：控制面全面分布式部署，跨机房多活。一台服务器倒下，新的 Leader 秒级选举产生，确保对外 API 持续可用。</li>
+<p>但是云团队在管理多个阿里云账号时也会遇到很多麻烦：</p>
+<ul>
+<li>需要重复地登录，登出和双因素认证来切换不同的账号。</li>
+<li>阿里云支持单点登录(SSO)，这样可以省掉双因素认证的步骤，但当出现问题时，无法创建一个非SSO账号给阿里云技术支持用来临时登录进账号调试问题。</li>
+<li>团队成员入职，离职时都需要通知产品拥有者在阿里云账号里创建和删除RAM用户。</li>
+<li>每个云团队成员都需要需要记住很多云账号。</li>
 </ul>
-<h3 id="3-计算编排层-Compute-ECS-VM"><a href="#3-计算编排层-Compute-ECS-VM" class="headerlink" title="3. 计算编排层 (Compute - ECS/VM)"></a>3. 计算编排层 (Compute - ECS/VM)</h3><ul>
-<li><strong>硬件现状</strong>：物理机的主板、内存条经常发生硬件报错（MCE），电源也可能突然损坏。</li>
-<li><strong>韧性手段</strong>：<strong>热迁移（Live Migration）与自动撤离</strong>。</li>
-<li><strong>效果</strong>：监控系统一旦侦测到物理机隐患，在不中断业务的前提下，将整台虚拟机毫秒级“搬家”到健康物理机上。</li>
+<h1 id="通过RAM角色管理多云账号"><a href="#通过RAM角色管理多云账号" class="headerlink" title="通过RAM角色管理多云账号"></a>通过RAM角色管理多云账号</h1><p>为了解决多云账号管理的痛点，可以通过RAM用户扮演RAM角色的方式来登录阿里云其它账号。</p>
+<h2 id="什么是RAM角色"><a href="#什么是RAM角色" class="headerlink" title="什么是RAM角色"></a>什么是RAM角色</h2><p>RAM角色（RAM role）与RAM用户一样，都是RAM身份类型的一种。RAM角色是一种虚拟用户，没有确定的身份认证密钥，需要被一个受信的实体用户扮演才能正常使用。</p>
+<p>RAM角色是一种虚拟用户，与实体用户（云账号、RAM用户和云服务）和教科书式角色（Textbook role）不同。</p>
+<ul>
+<li>实体用户：拥有确定的登录密码或访问密钥。</li>
+<li>教科书式角色：教科书式角色或传统意义上的角色是指一组权限集合，类似于RAM里的权限策略。如果一个用户被赋予了这种角色，也就意味着该用户被赋予了一组权限，可以访问被授权的资源。</li>
+<li>RAM角色：RAM角色有确定的身份，可以被赋予一组权限策略，但没有确定的登录密码或访问密钥。RAM角色需要被一个受信的实体用户扮演，扮演成功后实体用户将获得RAM角色的安全令牌，使用这个安全令牌就能以角色身份访问被授权的资源。</li>
 </ul>
-<h3 id="4-网络与内部总线-Networking"><a href="#4-网络与内部总线-Networking" class="headerlink" title="4. 网络与内部总线 (Networking)"></a>4. 网络与内部总线 (Networking)</h3><ul>
-<li><strong>硬件现状</strong>：内部高速交换机或光纤可能发生单路中断、老化或丢包。</li>
-<li><strong>韧性手段</strong>：<strong>Clos 架构（多路径网络）</strong>。</li>
-<li><strong>效果</strong>：任何两点间都有无数条冗余路径。单根光纤断裂，数据包瞬间动态重路由（Dynamic Re-routing），自动绕过故障点。</li>
+<h2 id="RAM角色使用方法"><a href="#RAM角色使用方法" class="headerlink" title="RAM角色使用方法"></a>RAM角色使用方法</h2><ul>
+<li><p>RAM角色指定可信实体，即指定可以扮演角色的实体用户身份。</p>
+</li>
+<li><p>可信实体通过控制台或调用API扮演角色并获取角色令牌。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/6.png"></p>
+</li>
+<li><p>为RAM角色绑定权限策略。</p>
+</li>
+<li><p>受信实体通过扮演角色，使用角色令牌访问阿里云资源。</p>
+</li>
 </ul>
-<h3 id="5-持久化存储层-Storage-OSS-EBS"><a href="#5-持久化存储层-Storage-OSS-EBS" class="headerlink" title="5. 持久化存储层 (Storage - OSS/EBS)"></a>5. 持久化存储层 (Storage - OSS/EBS)</h3><ul>
-<li><strong>硬件现状</strong>：硬盘是数据中心损坏率最高的部件，每天都有成百上千块硬盘报废。</li>
-<li><strong>韧性手段</strong>：<strong>三副本与纠删码（Erasure Coding）</strong>。</li>
-<li><strong>效果</strong>：数据写入时自动切片，分布在不同机架甚至不同机房。硬盘坏了？系统会自动利用剩余分片在后台“自愈”数据，完全不影响前端读写。</li>
+<h2 id="RAM角色类型"><a href="#RAM角色类型" class="headerlink" title="RAM角色类型"></a>RAM角色类型</h2><p>根据RAM可信实体的不同，RAM支持以下三种类型的角色：</p>
+<ul>
+<li><p>阿里云账号：允许RAM用户所扮演的角色。扮演角色的RAM用户可以属于自己的云账号，也可以属于其他云账号。此类角色主要用来解决跨账号访问和临时授权问题。</p>
+</li>
+<li><p>阿里云服务：允许云服务所扮演的角色。此类角色主要用于授权云服务代理您进行资源操作。</p>
+</li>
+<li><p>身份提供商：允许受信身份提供商下的用户所扮演的角色。此类角色主要用于实现与阿里云的SSO。</p>
+</li>
 </ul>
-<h2 id="二、-认知的统一：这就解释了什么是“云原生”思维"><a href="#二、-认知的统一：这就解释了什么是“云原生”思维" class="headerlink" title="二、 认知的统一：这就解释了什么是“云原生”思维"></a>二、 认知的统一：这就解释了什么是“云原生”思维</h2><p>当云厂商用软件韧性构建了这套体系后，他们售卖的不再是“永不损坏的物理机”，而是 <strong>“允许局部瞬时故障，但保证整体高可用”</strong> 的云服务。</p>
-<p>这就倒逼了作为用户的我们，必须彻底改变思维模式：</p>
-<table>
-<thead>
-<tr>
-<th align="left">维度</th>
-<th align="left">传统 IT 思维 (Legacy)</th>
-<th align="left">云原生思维 (Cloud Native)</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left"><strong>底层假设</strong></td>
-<td align="left">硬件是可靠的，坏了是重大事故。</td>
-<td align="left"><strong>硬件是会坏的，故障才是常态。</strong></td>
-</tr>
-<tr>
-<td align="left"><strong>硬件依赖</strong></td>
-<td align="left">依赖昂贵的高端存储和小机（Mainframe）。</td>
-<td align="left"><strong>依赖廉价商用硬件 + 软件容错。</strong></td>
-</tr>
-<tr>
-<td align="left"><strong>应用架构</strong></td>
-<td align="left">应用假设底层环境绝对稳定。</td>
-<td align="left"><strong>应用假设底层随时可能发生抖动。</strong></td>
-</tr>
-</tbody></table>
-<h2 id="三、-现代云原生的“套娃式韧性设计”"><a href="#三、-现代云原生的“套娃式韧性设计”" class="headerlink" title="三、 现代云原生的“套娃式韧性设计”"></a>三、 现代云原生的“套娃式韧性设计”</h2><p>理解了上述逻辑，我们就能看清现代云原生体系的演进路径。这其实是一个精妙的 <strong>“三层重构循环”</strong>：</p>
-<ol>
-<li><strong>第一层</strong>：云厂商用<strong>软件韧性</strong>屏蔽底层物理硬件故障。</li>
-<li><strong>第二层</strong>：从不确定性的硬件中，提炼出相对标准、弹性的<strong>云资源</strong>。</li>
-<li><strong>第三层</strong>：用户的业务应用，再用<strong>韧性架构</strong>（如重试、降级、熔断）去屏蔽云资源的偶发性抖动。</li>
-</ol>
-<p>这就是现代云原生体系的 <strong>“套娃式韧性设计”</strong>（Nested Resilience）。</p>
-<p>如果你还在试图向云厂商购买一台“永不宕机”的云服务器，或者在云上试图全盘复刻传统物理机的高可用架构，而不去利用云原生的弹性和容灾特性，那么：<br><strong>你既没有享受到云计算带来的成本红利，也没有真正获得云原生的弹性优势。</strong></p>
-<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p><strong>接受失败是常态。</strong><br>放弃对单点绝对可靠的执念，通过分布式协同与软件智慧来解决单点不可靠的问题，这才是云计算真正的技术护城河，也是每一位现代架构师的必修课。</p>
+<h2 id="RAM角色切换的方式管理多云账号的实现"><a href="#RAM角色切换的方式管理多云账号的实现" class="headerlink" title="RAM角色切换的方式管理多云账号的实现"></a>RAM角色切换的方式管理多云账号的实现</h2><p>实现多云账号管理需要满足以下的前提条件：</p>
+<ul>
+<li><p>云团队拥有自己的云账号，假设账号ID为123456789012****，每个成员都有对应的RAM用户。</p>
+</li>
+<li><p>假设某个业务部门的云账号为128888789012****。</p>
+</li>
+</ul>
+<h3 id="实现架构"><a href="#实现架构" class="headerlink" title="实现架构"></a>实现架构</h3><p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/7.png" alt="RAM用户通过扮演不同云账号里的RAM角色来管理账号里的资源"></p>
+<h3 id="实现步骤"><a href="#实现步骤" class="headerlink" title="实现步骤"></a>实现步骤</h3><ul>
+<li><p>产品拥有者参考“<a href="https://help.aliyun.com/document_detail/93691.html?spm=a2c4g.11186623.6.584.312068f9HVtYvh">创建可信实体为阿里云账号的RAM角色</a>”，在自己的云账号下为云团队的账号123456789012****创建RAM角色”CloudAdmin”，并给角色分配”AdministratorAccess”权限<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/1.png" alt="选择授信实体为阿里云账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/2.png" alt="选择其它云账号，并输入云团队的账号"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/3.png" alt="给这个RAM角色授予管理员权限"></p>
+</li>
+<li><p>设置以下授信策略。授信实体为云团队的账号“123456789012****”，并开放给有“AliyunSTSAssumeRoleAccess”权限的RAM用户</p>
+<figure class="highlight json"><table><tbody><tr><td class="code"><pre><span class="line"><span class="punctuation">{</span></span><br><span class="line">    <span class="attr">"Statement"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">{</span></span><br><span class="line">            <span class="attr">"Action"</span><span class="punctuation">:</span> <span class="string">"sts:AssumeRole"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Effect"</span><span class="punctuation">:</span> <span class="string">"Allow"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Principal"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span><br><span class="line">                <span class="attr">"RAM"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                    <span class="string">"acs:ram::123456789012****:root"</span></span><br><span class="line">                <span class="punctuation">]</span></span><br><span class="line">            <span class="punctuation">}</span></span><br><span class="line">        <span class="punctuation">}</span></span><br><span class="line">    <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">"Version"</span><span class="punctuation">:</span> <span class="string">"1"</span></span><br><span class="line"><span class="punctuation">}</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>也可以将某个授信实体限制为账号下的某个RAM用户，比如mikejianzhang</p>
+<figure class="highlight json"><table><tbody><tr><td class="code"><pre><span class="line"><span class="punctuation">{</span></span><br><span class="line">    <span class="attr">"Statement"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">{</span></span><br><span class="line">            <span class="attr">"Action"</span><span class="punctuation">:</span> <span class="string">"sts:AssumeRole"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Effect"</span><span class="punctuation">:</span> <span class="string">"Allow"</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">"Principal"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span><br><span class="line">                <span class="attr">"RAM"</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">                    <span class="string">"acs:ram::123456789012****:user/mikejianzhang"</span></span><br><span class="line">                <span class="punctuation">]</span></span><br><span class="line">            <span class="punctuation">}</span></span><br><span class="line">        <span class="punctuation">}</span></span><br><span class="line">    <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">"Version"</span><span class="punctuation">:</span> <span class="string">"1"</span></span><br><span class="line"><span class="punctuation">}</span></span><br></pre></td></tr></tbody></table></figure></blockquote>
+</li>
+<li><p>云团队在自己的云账号里为RAM用户授予角色扮演权限”AliyunSTSAssumeRoleAccess”。</p>
+</li>
+<li><p>云团队的某个RAM用户首先登录云团队的账号，然后通过切换角色并输入业务部门云账号或者别名，以及对应的角色”CloudAdmin”就能切换进业务部门云账号里。</p>
+<p><img src="/2021/01/05/aliyun-ram-role-multi-accounts/4.png"><br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/5.png"></p>
+</li>
+<li><p>完成管理任务后点击“返回登录身份”退回到自己的账号。<br><img src="/2021/01/05/aliyun-ram-role-multi-accounts/8.png"></p>
+</li>
+<li><p>当有云团队成员入职或离职时，只需要在云团队的阿里云账号里添加和删除对应的RAM用户即可。</p>
+</li>
+</ul>
+<p>这样，通过RAM角色切换的方法，云团队就可以管理多个业务部门的云账号。另外，RAM角色切换的方法还有以下两个使用场景：</p>
+<ul>
+<li>通过RAM角色临时授权给阿里云的技术支持帮助调试问题，尤其是在云账号开启了单点登录(SSO)的情况下，只有通过这种方法才能让阿里云的技术支持登录进来。</li>
+<li>当一个企业希望将部分业务授权给另一个企业时，也可以通过RAM角色进行跨阿里云账号授权来管理资源的访问。例如，企业A购买了多种阿里云资源（ECS实例、RDS实例、SLB实例等），但是企业A希望能专注于业务，仅作为资源拥有者。企业A希望可以授权企业B账号来对云资源进行运维，监控和管理，企业A也希望企业B的员工入职和离职时，无需做任何权限变更，同时也希望合同终止时，可以随时撤销对企业B的授权。这种情况下，企业A可以创建一定权限的角色并授权给企业B的阿里云账号，企业B的RAM用户可以通过角色切换的方法登录进企业A的账号对资源进行运维管理。</li>
+</ul>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -321,12 +222,10 @@
           });
       </script>]]></content>
       <categories>
-        <category>架构</category>
+        <category>阿里云</category>
       </categories>
       <tags>
-        <tag>Architecture</tag>
-        <tag>Cloud-Native</tag>
-        <tag>Stability/Aailability</tag>
+        <tag>AliCloud</tag>
       </tags>
   </entry>
   <entry>
@@ -461,69 +360,78 @@
       </tags>
   </entry>
   <entry>
-    <title>Kind创建本地Kubernetes集群</title>
-    <url>/2021/10/10/create-kubernetes-kind/</url>
-    <content><![CDATA[<p>在<a href="https://www.mikesay.com/2021/10/06/create-kubernetes-minikube/">Minikube创建本地Kubernetes集群</a>一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用，而通过Hypervisor驱动创建的Kubernetes集群也需要一些额外的配置(端口转发)才能在VPN的情况下使用。Kind是另一款在Docker容器中创建并运行本地Kubernetes集群的工具，比Minikube的Docker驱动更全面，同时也无需额外的配置就可以在VPN的情况下使用。本文将简单介绍下Kind，并在Mac主机上用Kind创建一个本地Kubernetes集群。</p>
+    <title>云计算巨头如何用“软件韧性”重构基础设施</title>
+    <url>/2026/06/19/cloud-base-resiliency/</url>
+    <content><![CDATA[<blockquote>
+<p><strong>“云计算厂商在构建平台时，更多依赖的是韧性思维（Resilience Thinking），而非在硬件层盲目追求极高的可靠性。”</strong></p>
+</blockquote>
+<p>这句话精准地击中了现代云计算最底层的商业与工程逻辑。这不仅是应用开发者的共识，更是 AWS、阿里云、微软 Azure 等巨头得以实现规模化盈利的基石。</p>
 <span id="more"></span>
 
-<h1 id="Kind介绍"><a href="#Kind介绍" class="headerlink" title="Kind介绍"></a>Kind介绍</h1><p>Kind(Kubernetes In Docker)是一个使用Docker容器“节点”运行本地Kubernetes集群的工具。kind 主要是为测试Kubernetes本身而设计的，但也可以用于本地开发或CI。</p>
-<h2 id="集群组件配置能力"><a href="#集群组件配置能力" class="headerlink" title="集群组件配置能力"></a>集群组件配置能力</h2><p>Kind提供了丰富的配置选项，有集群级别的，也有节点级别的。Kind缺省也是使用kubeadm创建和配置Kubernetes集群，通过Kubeadm Config Patches机制提供了针对Kubeadm的各种配置。详细可参考Kind<a href="https://kind.sigs.k8s.io/docs/user/configuration/">配置</a>这一节。</p>
-<h1 id="Kind架构"><a href="#Kind架构" class="headerlink" title="Kind架构"></a>Kind架构</h1><p><img src="/2021/10/10/create-kubernetes-kind/1.png"></p>
-<p>图中的节点就是一个Docker容器，所有Kubernetes集群的组件(Kube API Server，Kube Scheduler，Kube Controller Manager，Kube Proxy，CoreDNS，ETCD)以及用户Pod都以容器的方式运行在这个节点容器中。</p>
-<h1 id="创建Kubernetes集群"><a href="#创建Kubernetes集群" class="headerlink" title="创建Kubernetes集群"></a>创建Kubernetes集群</h1><p>通过以下命令和配置文件创建一个包含一个主节点和三个工作节点的Kubernetes集群。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kind create cluster --config mykind1.yaml</span><br></pre></td></tr></tbody></table></figure>
-
-<p>mykind1.yaml:</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">Cluster</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kind.x-k8s.io/v1alpha4</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">mykind1</span></span><br><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br><span class="line">  <span class="comment"># WARNING: It is _strongly_ recommended that you keep this the default</span></span><br><span class="line">  <span class="comment"># (127.0.0.1) for security reasons. However it is possible to change this.</span></span><br><span class="line">  <span class="attr">apiServerAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># By default the API server listens on a random open port.</span></span><br><span class="line">  <span class="comment"># You may choose a specific port but probably don't need to in most cases.</span></span><br><span class="line">  <span class="comment"># Using a random port makes it easier to spin up multiple clusters.</span></span><br><span class="line">  <span class="attr">apiServerPort:</span> <span class="number">6443</span></span><br><span class="line">  <span class="attr">podSubnet:</span> <span class="string">"10.244.0.0/16"</span></span><br><span class="line">  <span class="attr">serviceSubnet:</span> <span class="string">"10.96.0.0/12"</span></span><br><span class="line">  <span class="attr">kubeProxyMode:</span> <span class="string">"ipvs"</span></span><br><span class="line"><span class="attr">nodes:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">control-plane</span></span><br><span class="line">  <span class="attr">kubeadmConfigPatches:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">    kind: InitConfiguration</span></span><br><span class="line"><span class="string">    nodeRegistration:</span></span><br><span class="line"><span class="string">      kubeletExtraArgs:</span></span><br><span class="line"><span class="string">        node-labels: "ingress-ready=true"</span></span><br><span class="line"><span class="string">    kind: ClusterConfiguration</span></span><br><span class="line"><span class="string">    metadata:</span></span><br><span class="line"><span class="string">      name: config</span></span><br><span class="line"><span class="string">    apiServer:</span></span><br><span class="line"><span class="string">      certSANs:</span></span><br><span class="line"><span class="string">      - localhost</span></span><br><span class="line"><span class="string">      - 127.0.0.1</span></span><br><span class="line"><span class="string">      - kubernetes</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc.cluster.local</span></span><br><span class="line"><span class="string">      - kind</span></span><br><span class="line"><span class="string">      - 0.0.0.0</span></span><br><span class="line"><span class="string"></span>  <span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line">  <span class="attr">extraPortMappings:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br></pre></td></tr></tbody></table></figure>
-
-<p>一些配置参数说明：</p>
-<ul>
-<li><p>禁用默认CNI（”kindnetd”），否则在创建出来的Kubernetes集群无法解析外网域名。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>为主节点添加标签”ingress-ready:true”。Kind提供的Nginx Ingress Controller的部署资源中会通过这个标签选择运行在主节点上。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kubeadmConfigPatches:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">  kind: InitConfiguration</span></span><br><span class="line"><span class="string">  nodeRegistration:</span></span><br><span class="line"><span class="string">    kubeletExtraArgs:</span></span><br><span class="line"><span class="string">      node-labels: "ingress-ready=true"</span></span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>将容器主节点的80，443端口映射到运行Kind的主机(这里是Mac主机)的80,443端口。Kind提供的Nginx Ingress Controller的服务资源会通过NodePort将服务通过容器主节点的80，443暴露出去，这样用户就可以通过访问本地主机的80，443端口访问运行在集群中的Nginx Ingress Controller。</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line"><span class="attr">extraPortMappings:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br></pre></td></tr></tbody></table></figure>
-<blockquote>
-<p>此处的hostPort指的是运行Kind的主机，也就是Mac主机。</p>
-</blockquote>
-</li>
+<p>如果云厂商试图在硬件层面追求绝对的可靠性——比如使用军工级抗震机架或昂贵的专用容错芯片——结果将是灾难性的：<strong>成本会高到无法商业化</strong>，且依然无法对抗地震、海啸或“挖掘机挖断光缆”这类物理世界的不可抗力。</p>
+<p>那么，云计算是如何做到 <strong>既便宜又可靠</strong> 的？<br>答案是：<strong>用“软件定义的韧性”屏蔽“硬件固有的缺陷”。</strong></p>
+<h2 id="一、-云厂商的工程哲学：商用硬件-智能软件"><a href="#一、-云厂商的工程哲学：商用硬件-智能软件" class="headerlink" title="一、 云厂商的工程哲学：商用硬件 + 智能软件"></a>一、 云厂商的工程哲学：商用硬件 + 智能软件</h2><p>云厂商的数据中心由无数商用级（Commodity）、廉价、标准化的硬件组装而成。他们的核心竞争力不在于硬件“不坏”，而在于<strong>当硬件“坏了”的时候，用户感知不到</strong>。</p>
+<p>以下是云厂商在基础设施层（IaaS）构建韧性的 5 个核心具体落地方式：</p>
+<h3 id="1-接入与流量控制层-Gateway-Traffic"><a href="#1-接入与流量控制层-Gateway-Traffic" class="headerlink" title="1. 接入与流量控制层 (Gateway &amp; Traffic)"></a>1. 接入与流量控制层 (Gateway &amp; Traffic)</h3><ul>
+<li><strong>硬件现状</strong>：单台负载均衡器（SLB）或边缘交换机可能因高温或网卡故障随时宕机。</li>
+<li><strong>韧性手段</strong>：<strong>Anycast BGP（任播）与分布式路由</strong>。</li>
+<li><strong>效果</strong>：当某个接入点失效，路由表会在毫秒级自动切换，将用户流量无缝引流至最近的健康节点，全程无感知。</li>
 </ul>
-<h2 id="配置Kubernetes集群"><a href="#配置Kubernetes集群" class="headerlink" title="配置Kubernetes集群"></a>配置Kubernetes集群</h2><h3 id="安装网络插件Calico"><a href="#安装网络插件Calico" class="headerlink" title="安装网络插件Calico"></a>安装网络插件Calico</h3><ul>
-<li>下载Calico安装脚本</li>
+<h3 id="2-控制面治理层-Control-Plane"><a href="#2-控制面治理层-Control-Plane" class="headerlink" title="2. 控制面治理层 (Control Plane)"></a>2. 控制面治理层 (Control Plane)</h3><ul>
+<li><strong>硬件现状</strong>：管理云资源的控制面服务器（如 K8s Master、控制台后端）可能突发 OOM（内存溢出）或硬件损坏。</li>
+<li><strong>韧性手段</strong>：<strong>解耦与无状态化 + Raft 协议</strong>。</li>
+<li><strong>效果</strong>：控制面全面分布式部署，跨机房多活。一台服务器倒下，新的 Leader 秒级选举产生，确保对外 API 持续可用。</li>
 </ul>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">curl https://docs.projectcalico.org/manifests/calico.yaml -O</span><br></pre></td></tr></tbody></table></figure>
-
-<ul>
-<li>设置环境变量FELIX_IGNORELOOSERPF的值为true，禁用Calico检查。</li>
+<h3 id="3-计算编排层-Compute-ECS-VM"><a href="#3-计算编排层-Compute-ECS-VM" class="headerlink" title="3. 计算编排层 (Compute - ECS/VM)"></a>3. 计算编排层 (Compute - ECS/VM)</h3><ul>
+<li><strong>硬件现状</strong>：物理机的主板、内存条经常发生硬件报错（MCE），电源也可能突然损坏。</li>
+<li><strong>韧性手段</strong>：<strong>热迁移（Live Migration）与自动撤离</strong>。</li>
+<li><strong>效果</strong>：监控系统一旦侦测到物理机隐患，在不中断业务的前提下，将整台虚拟机毫秒级“搬家”到健康物理机上。</li>
 </ul>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># Source: calico/templates/calico-node.yaml</span></span><br><span class="line"><span class="comment"># This manifest installs the calico-node container, as well</span></span><br><span class="line"><span class="comment"># as the CNI plugins and network config on</span></span><br><span class="line"><span class="comment"># each master and worker node in a Kubernetes cluster.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DaemonSet</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">updateStrategy:</span></span><br><span class="line">    <span class="attr">type:</span> <span class="string">RollingUpdate</span></span><br><span class="line">    <span class="attr">rollingUpdate:</span></span><br><span class="line">      <span class="attr">maxUnavailable:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="string">...</span></span><br><span class="line">      <span class="attr">initContainers:</span></span><br><span class="line">        <span class="string">....</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="comment"># Runs calico-node container on each Kubernetes node. This</span></span><br><span class="line">        <span class="comment"># container programs network policy and routes on each</span></span><br><span class="line">        <span class="comment"># host.</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">docker.io/calico/node:v3.20.1</span></span><br><span class="line">          <span class="attr">env:</span></span><br><span class="line">            <span class="comment"># Disable the Calico RPF check</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">FELIX_IGNORELOOSERPF</span></span><br><span class="line">              <span class="attr">value:</span> <span class="string">"true"</span></span><br></pre></td></tr></tbody></table></figure>
-
-<blockquote>
-<p>详细参考<a href="https://docs.projectcalico.org/getting-started/kubernetes/self-managed-onprem/onpremises#install-calico-with-kubernetes-api-datastore-50-nodes-or-less">Calico官方安装文档</a>，以及博客文章<a href="https://alexbrand.dev/post/creating-a-kind-cluster-with-calico-networking/">Creating a Kind Cluster With Calico Networking</a>。</p>
-</blockquote>
-<h3 id="安装Ingress-Controller"><a href="#安装Ingress-Controller" class="headerlink" title="安装Ingress Controller"></a>安装Ingress Controller</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml</span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="安装METALLB"><a href="#安装METALLB" class="headerlink" title="安装METALLB"></a>安装METALLB</h3><p>MetalLB是裸机Kubernetes集群的负载均衡实现，使用标准路由协议。</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">export</span> version=v0.12.1</span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/namespace.yaml</span><br><span class="line">kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=<span class="string">"<span class="subst">$(openssl rand -base64 128)</span>"</span> </span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/metallb.yaml</span><br><span class="line">kubectl apply -f metallb-configmap.yaml</span><br></pre></td></tr></tbody></table></figure>
-
-<p>metallb-configmap.yaml：</p>
-<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">metallb-system</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">config</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">config:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    address-pools:</span></span><br><span class="line"><span class="string">    - name: default</span></span><br><span class="line"><span class="string">      protocol: layer2</span></span><br><span class="line"><span class="string">      addresses:</span></span><br><span class="line"><span class="string">      - 172.18.255.150-172.18.255.250</span></span><br></pre></td></tr></tbody></table></figure>
-<p>从节点网段中选取一个IP地址范围设置在metallb-configmap.yaml中用来给LoadBalancer类型服务的IP地址。</p>
-<p>可以通过以下下命令获取node网段：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">$ docker network inspect -f <span class="string">'{{.IPAM.Config}}'</span> kind</span><br><span class="line"></span><br><span class="line">[{172.18.0.0/16  172.18.0.1 map[]} {fc00:f853:ccd:e793::/64  fc00:f853:ccd:e793::1 map[]}]</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="Kind-vs-Minikube"><a href="#Kind-vs-Minikube" class="headerlink" title="Kind vs Minikube"></a>Kind vs Minikube</h1><ul>
-<li><p>Kind没有提供类似于Minikube的插件机制，方便用户快速地部署Kubernetes。</p>
-</li>
-<li><p>Kind并没有提供暂停一个集群的功能。</p>
-</li>
-<li><p>和Minikube相比，Kind比较轻量，就是使用Docker容器创建并运行Kubernetes集群，但比Minikube的Docker驱动更全面。个人认为如果能够把Kind集成到Minikube中作为Docker驱动的实现，应该能更有助于两个项目的发展，用户也不需要学习两个工具了。</p>
-</li>
+<h3 id="4-网络与内部总线-Networking"><a href="#4-网络与内部总线-Networking" class="headerlink" title="4. 网络与内部总线 (Networking)"></a>4. 网络与内部总线 (Networking)</h3><ul>
+<li><strong>硬件现状</strong>：内部高速交换机或光纤可能发生单路中断、老化或丢包。</li>
+<li><strong>韧性手段</strong>：<strong>Clos 架构（多路径网络）</strong>。</li>
+<li><strong>效果</strong>：任何两点间都有无数条冗余路径。单根光纤断裂，数据包瞬间动态重路由（Dynamic Re-routing），自动绕过故障点。</li>
 </ul>
-<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Kind，它的架构以及使用，希望能够帮助读者对Kind有个框架性的了解，从而决定是否需要深入使用。对于Kind更详细的用法，可以参考<a href="https://kind.sigs.k8s.io/">官方文档</a>。</p>
+<h3 id="5-持久化存储层-Storage-OSS-EBS"><a href="#5-持久化存储层-Storage-OSS-EBS" class="headerlink" title="5. 持久化存储层 (Storage - OSS/EBS)"></a>5. 持久化存储层 (Storage - OSS/EBS)</h3><ul>
+<li><strong>硬件现状</strong>：硬盘是数据中心损坏率最高的部件，每天都有成百上千块硬盘报废。</li>
+<li><strong>韧性手段</strong>：<strong>三副本与纠删码（Erasure Coding）</strong>。</li>
+<li><strong>效果</strong>：数据写入时自动切片，分布在不同机架甚至不同机房。硬盘坏了？系统会自动利用剩余分片在后台“自愈”数据，完全不影响前端读写。</li>
+</ul>
+<h2 id="二、-认知的统一：这就解释了什么是“云原生”思维"><a href="#二、-认知的统一：这就解释了什么是“云原生”思维" class="headerlink" title="二、 认知的统一：这就解释了什么是“云原生”思维"></a>二、 认知的统一：这就解释了什么是“云原生”思维</h2><p>当云厂商用软件韧性构建了这套体系后，他们售卖的不再是“永不损坏的物理机”，而是 <strong>“允许局部瞬时故障，但保证整体高可用”</strong> 的云服务。</p>
+<p>这就倒逼了作为用户的我们，必须彻底改变思维模式：</p>
+<table>
+<thead>
+<tr>
+<th align="left">维度</th>
+<th align="left">传统 IT 思维 (Legacy)</th>
+<th align="left">云原生思维 (Cloud Native)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>底层假设</strong></td>
+<td align="left">硬件是可靠的，坏了是重大事故。</td>
+<td align="left"><strong>硬件是会坏的，故障才是常态。</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>硬件依赖</strong></td>
+<td align="left">依赖昂贵的高端存储和小机（Mainframe）。</td>
+<td align="left"><strong>依赖廉价商用硬件 + 软件容错。</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>应用架构</strong></td>
+<td align="left">应用假设底层环境绝对稳定。</td>
+<td align="left"><strong>应用假设底层随时可能发生抖动。</strong></td>
+</tr>
+</tbody></table>
+<h2 id="三、-现代云原生的“套娃式韧性设计”"><a href="#三、-现代云原生的“套娃式韧性设计”" class="headerlink" title="三、 现代云原生的“套娃式韧性设计”"></a>三、 现代云原生的“套娃式韧性设计”</h2><p>理解了上述逻辑，我们就能看清现代云原生体系的演进路径。这其实是一个精妙的 <strong>“三层重构循环”</strong>：</p>
+<ol>
+<li><strong>第一层</strong>：云厂商用<strong>软件韧性</strong>屏蔽底层物理硬件故障。</li>
+<li><strong>第二层</strong>：从不确定性的硬件中，提炼出相对标准、弹性的<strong>云资源</strong>。</li>
+<li><strong>第三层</strong>：用户的业务应用，再用<strong>韧性架构</strong>（如重试、降级、熔断）去屏蔽云资源的偶发性抖动。</li>
+</ol>
+<p>这就是现代云原生体系的 <strong>“套娃式韧性设计”</strong>（Nested Resilience）。</p>
+<p>如果你还在试图向云厂商购买一台“永不宕机”的云服务器，或者在云上试图全盘复刻传统物理机的高可用架构，而不去利用云原生的弹性和容灾特性，那么：<br><strong>你既没有享受到云计算带来的成本红利，也没有真正获得云原生的弹性优势。</strong></p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p><strong>接受失败是常态。</strong><br>放弃对单点绝对可靠的执念，通过分布式协同与软件智慧来解决单点不可靠的问题，这才是云计算真正的技术护城河，也是每一位现代架构师的必修课。</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -544,11 +452,12 @@
           });
       </script>]]></content>
       <categories>
-        <category>Kubernetes</category>
+        <category>架构</category>
       </categories>
       <tags>
-        <tag>Kubernetes</tag>
-        <tag>Kind</tag>
+        <tag>Architecture</tag>
+        <tag>Cloud-Native</tag>
+        <tag>Stability/Aailability</tag>
       </tags>
   </entry>
   <entry>
@@ -818,93 +727,69 @@
       </tags>
   </entry>
   <entry>
-    <title>创建自签名TLS/SSL证书和私钥</title>
-    <url>/2018/12/30/create-self-signed-ssl/</url>
-    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
+    <title>Kind创建本地Kubernetes集群</title>
+    <url>/2021/10/10/create-kubernetes-kind/</url>
+    <content><![CDATA[<p>在<a href="https://www.mikesay.com/2021/10/06/create-kubernetes-minikube/">Minikube创建本地Kubernetes集群</a>一文中提到过用Docker驱动创建的Kubernetes集群既不支持ingress，也不支持LoadBalancer类型的服务，所以基本上不可用，而通过Hypervisor驱动创建的Kubernetes集群也需要一些额外的配置(端口转发)才能在VPN的情况下使用。Kind是另一款在Docker容器中创建并运行本地Kubernetes集群的工具，比Minikube的Docker驱动更全面，同时也无需额外的配置就可以在VPN的情况下使用。本文将简单介绍下Kind，并在Mac主机上用Kind创建一个本地Kubernetes集群。</p>
 <span id="more"></span>
 
-<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
-<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
+<h1 id="Kind介绍"><a href="#Kind介绍" class="headerlink" title="Kind介绍"></a>Kind介绍</h1><p>Kind(Kubernetes In Docker)是一个使用Docker容器“节点”运行本地Kubernetes集群的工具。kind 主要是为测试Kubernetes本身而设计的，但也可以用于本地开发或CI。</p>
+<h2 id="集群组件配置能力"><a href="#集群组件配置能力" class="headerlink" title="集群组件配置能力"></a>集群组件配置能力</h2><p>Kind提供了丰富的配置选项，有集群级别的，也有节点级别的。Kind缺省也是使用kubeadm创建和配置Kubernetes集群，通过Kubeadm Config Patches机制提供了针对Kubeadm的各种配置。详细可参考Kind<a href="https://kind.sigs.k8s.io/docs/user/configuration/">配置</a>这一节。</p>
+<h1 id="Kind架构"><a href="#Kind架构" class="headerlink" title="Kind架构"></a>Kind架构</h1><p><img src="/2021/10/10/create-kubernetes-kind/1.png"></p>
+<p>图中的节点就是一个Docker容器，所有Kubernetes集群的组件(Kube API Server，Kube Scheduler，Kube Controller Manager，Kube Proxy，CoreDNS，ETCD)以及用户Pod都以容器的方式运行在这个节点容器中。</p>
+<h1 id="创建Kubernetes集群"><a href="#创建Kubernetes集群" class="headerlink" title="创建Kubernetes集群"></a>创建Kubernetes集群</h1><p>通过以下命令和配置文件创建一个包含一个主节点和三个工作节点的Kubernetes集群。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kind create cluster --config mykind1.yaml</span><br></pre></td></tr></tbody></table></figure>
+
+<p>mykind1.yaml:</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kind:</span> <span class="string">Cluster</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">kind.x-k8s.io/v1alpha4</span></span><br><span class="line"><span class="attr">name:</span> <span class="string">mykind1</span></span><br><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br><span class="line">  <span class="comment"># WARNING: It is _strongly_ recommended that you keep this the default</span></span><br><span class="line">  <span class="comment"># (127.0.0.1) for security reasons. However it is possible to change this.</span></span><br><span class="line">  <span class="attr">apiServerAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># By default the API server listens on a random open port.</span></span><br><span class="line">  <span class="comment"># You may choose a specific port but probably don't need to in most cases.</span></span><br><span class="line">  <span class="comment"># Using a random port makes it easier to spin up multiple clusters.</span></span><br><span class="line">  <span class="attr">apiServerPort:</span> <span class="number">6443</span></span><br><span class="line">  <span class="attr">podSubnet:</span> <span class="string">"10.244.0.0/16"</span></span><br><span class="line">  <span class="attr">serviceSubnet:</span> <span class="string">"10.96.0.0/12"</span></span><br><span class="line">  <span class="attr">kubeProxyMode:</span> <span class="string">"ipvs"</span></span><br><span class="line"><span class="attr">nodes:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">control-plane</span></span><br><span class="line">  <span class="attr">kubeadmConfigPatches:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">    kind: InitConfiguration</span></span><br><span class="line"><span class="string">    nodeRegistration:</span></span><br><span class="line"><span class="string">      kubeletExtraArgs:</span></span><br><span class="line"><span class="string">        node-labels: "ingress-ready=true"</span></span><br><span class="line"><span class="string">    kind: ClusterConfiguration</span></span><br><span class="line"><span class="string">    metadata:</span></span><br><span class="line"><span class="string">      name: config</span></span><br><span class="line"><span class="string">    apiServer:</span></span><br><span class="line"><span class="string">      certSANs:</span></span><br><span class="line"><span class="string">      - localhost</span></span><br><span class="line"><span class="string">      - 127.0.0.1</span></span><br><span class="line"><span class="string">      - kubernetes</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc</span></span><br><span class="line"><span class="string">      - kubernetes.default.svc.cluster.local</span></span><br><span class="line"><span class="string">      - kind</span></span><br><span class="line"><span class="string">      - 0.0.0.0</span></span><br><span class="line"><span class="string"></span>  <span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line">  <span class="attr">extraPortMappings:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">    <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">    <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">    <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">    <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">    <span class="comment"># TCP is the default</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">role:</span> <span class="string">worker</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>一些配置参数说明：</p>
+<ul>
+<li><p>禁用默认CNI（”kindnetd”），否则在创建出来的Kubernetes集群无法解析外网域名。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="comment"># the default CNI will not be installed</span></span><br><span class="line">  <span class="attr">disableDefaultCNI:</span> <span class="literal">true</span></span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>为主节点添加标签”ingress-ready:true”。Kind提供的Nginx Ingress Controller的部署资源中会通过这个标签选择运行在主节点上。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">kubeadmConfigPatches:</span></span><br><span class="line"><span class="bullet">-</span> <span class="string">|</span></span><br><span class="line"><span class="string">  kind: InitConfiguration</span></span><br><span class="line"><span class="string">  nodeRegistration:</span></span><br><span class="line"><span class="string">    kubeletExtraArgs:</span></span><br><span class="line"><span class="string">      node-labels: "ingress-ready=true"</span></span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>将容器主节点的80，443端口映射到运行Kind的主机(这里是Mac主机)的80,443端口。Kind提供的Nginx Ingress Controller的服务资源会通过NodePort将服务通过容器主节点的80，443暴露出去，这样用户就可以通过访问本地主机的80，443端口访问运行在集群中的Nginx Ingress Controller。</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># port forward 80 on the host to 80 on this node</span></span><br><span class="line"><span class="attr">extraPortMappings:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">80</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="attr">hostPort:</span> <span class="number">443</span></span><br><span class="line">  <span class="comment"># optional: set the bind address on the host</span></span><br><span class="line">  <span class="comment"># 0.0.0.0 is the current default</span></span><br><span class="line">  <span class="attr">listenAddress:</span> <span class="string">"0.0.0.0"</span></span><br><span class="line">  <span class="comment"># optional: set the protocol to one of TCP, UDP, SCTP.</span></span><br><span class="line">  <span class="comment"># TCP is the default</span></span><br><span class="line">  <span class="attr">protocol:</span> <span class="string">TCP</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>此处的hostPort指的是运行Kind的主机，也就是Mac主机。</p>
 </blockquote>
-<p>使用openssl命令生成自签名证书和私钥对：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+</ul>
+<h2 id="配置Kubernetes集群"><a href="#配置Kubernetes集群" class="headerlink" title="配置Kubernetes集群"></a>配置Kubernetes集群</h2><h3 id="安装网络插件Calico"><a href="#安装网络插件Calico" class="headerlink" title="安装网络插件Calico"></a>安装网络插件Calico</h3><ul>
+<li>下载Calico安装脚本</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">curl https://docs.projectcalico.org/manifests/calico.yaml -O</span><br></pre></td></tr></tbody></table></figure>
 
 <ul>
-<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
-<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
-<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
-<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
-<li>-days 365: 设置证书的有效期为1年（365天）。</li>
-<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
-<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
-<li>-out: 告诉openssl生成的自签名证书和路径。</li>
+<li>设置环境变量FELIX_IGNORELOOSERPF的值为true，禁用Calico检查。</li>
 </ul>
-<p>命令会提示以下的一些输入：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
-<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”/etc/nginx/ssl-certs”；</p>
-</li>
-<li><p>编辑”/etc/nginx/sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>重新加载配置文件：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>重启Nginx服务：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
-<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
-</blockquote>
-<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/usr/local/share/ca-certificates”:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/usr/local/share/ca-certificates”中删除证书：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates --fresh</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
-<li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
-<li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>更新CA存储</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
-</ol>
-<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
-
-<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -c <span class="string">"&lt;Common Name of existing certificate&gt;"</span></span><br></pre></td></tr></tbody></table></figure>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># Source: calico/templates/calico-node.yaml</span></span><br><span class="line"><span class="comment"># This manifest installs the calico-node container, as well</span></span><br><span class="line"><span class="comment"># as the CNI plugins and network config on</span></span><br><span class="line"><span class="comment"># each master and worker node in a Kubernetes cluster.</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">DaemonSet</span></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">kube-system</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">  <span class="attr">updateStrategy:</span></span><br><span class="line">    <span class="attr">type:</span> <span class="string">RollingUpdate</span></span><br><span class="line">    <span class="attr">rollingUpdate:</span></span><br><span class="line">      <span class="attr">maxUnavailable:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">k8s-app:</span> <span class="string">calico-node</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="string">...</span></span><br><span class="line">      <span class="attr">initContainers:</span></span><br><span class="line">        <span class="string">....</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="comment"># Runs calico-node container on each Kubernetes node. This</span></span><br><span class="line">        <span class="comment"># container programs network policy and routes on each</span></span><br><span class="line">        <span class="comment"># host.</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">calico-node</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">docker.io/calico/node:v3.20.1</span></span><br><span class="line">          <span class="attr">env:</span></span><br><span class="line">            <span class="comment"># Disable the Calico RPF check</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">FELIX_IGNORELOOSERPF</span></span><br><span class="line">              <span class="attr">value:</span> <span class="string">"true"</span></span><br></pre></td></tr></tbody></table></figure>
 
 <blockquote>
-<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
+<p>详细参考<a href="https://docs.projectcalico.org/getting-started/kubernetes/self-managed-onprem/onpremises#install-calico-with-kubernetes-api-datastore-50-nodes-or-less">Calico官方安装文档</a>，以及博客文章<a href="https://alexbrand.dev/post/creating-a-kind-cluster-with-calico-networking/">Creating a Kind Cluster With Calico Networking</a>。</p>
 </blockquote>
-<p>或者通过证书的SHA-1码来删除：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">"</span></span><br></pre></td></tr></tbody></table></figure>
+<h3 id="安装Ingress-Controller"><a href="#安装Ingress-Controller" class="headerlink" title="安装Ingress Controller"></a>安装Ingress Controller</h3><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml</span><br></pre></td></tr></tbody></table></figure>
 
-<blockquote>
-<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
-</blockquote>
-<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -addstore -f "Root" selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+<h3 id="安装METALLB"><a href="#安装METALLB" class="headerlink" title="安装METALLB"></a>安装METALLB</h3><p>MetalLB是裸机Kubernetes集群的负载均衡实现，使用标准路由协议。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">export</span> version=v0.12.1</span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/namespace.yaml</span><br><span class="line">kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=<span class="string">"<span class="subst">$(openssl rand -base64 128)</span>"</span> </span><br><span class="line">kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/<span class="variable">${version}</span>/manifests/metallb.yaml</span><br><span class="line">kubectl apply -f metallb-configmap.yaml</span><br></pre></td></tr></tbody></table></figure>
 
-<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -delstore "Root" &lt;Cert Serial Number&gt;</span><br></pre></td></tr></tbody></table></figure>
+<p>metallb-configmap.yaml：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">metallb-system</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">config</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">config:</span> <span class="string">|</span></span><br><span class="line"><span class="string">    address-pools:</span></span><br><span class="line"><span class="string">    - name: default</span></span><br><span class="line"><span class="string">      protocol: layer2</span></span><br><span class="line"><span class="string">      addresses:</span></span><br><span class="line"><span class="string">      - 172.18.255.150-172.18.255.250</span></span><br></pre></td></tr></tbody></table></figure>
+<p>从节点网段中选取一个IP地址范围设置在metallb-configmap.yaml中用来给LoadBalancer类型服务的IP地址。</p>
+<p>可以通过以下下命令获取node网段：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">$ docker network inspect -f <span class="string">'{{.IPAM.Config}}'</span> kind</span><br><span class="line"></span><br><span class="line">[{172.18.0.0/16  172.18.0.1 map[]} {fc00:f853:ccd:e793::/64  fc00:f853:ccd:e793::1 map[]}]</span><br></pre></td></tr></tbody></table></figure>
 
-<blockquote>
-<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
-</blockquote>
+<h1 id="Kind-vs-Minikube"><a href="#Kind-vs-Minikube" class="headerlink" title="Kind vs Minikube"></a>Kind vs Minikube</h1><ul>
+<li><p>Kind没有提供类似于Minikube的插件机制，方便用户快速地部署Kubernetes。</p>
+</li>
+<li><p>Kind并没有提供暂停一个集群的功能。</p>
+</li>
+<li><p>和Minikube相比，Kind比较轻量，就是使用Docker容器创建并运行Kubernetes集群，但比Minikube的Docker驱动更全面。个人认为如果能够把Kind集成到Minikube中作为Docker驱动的实现，应该能更有助于两个项目的发展，用户也不需要学习两个工具了。</p>
+</li>
+</ul>
+<h1 id="结束语"><a href="#结束语" class="headerlink" title="结束语"></a>结束语</h1><p>本文旨在简单介绍Kind，它的架构以及使用，希望能够帮助读者对Kind有个框架性的了解，从而决定是否需要深入使用。对于Kind更详细的用法，可以参考<a href="https://kind.sigs.k8s.io/">官方文档</a>。</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -925,11 +810,11 @@
           });
       </script>]]></content>
       <categories>
-        <category>系统管理</category>
+        <category>Kubernetes</category>
       </categories>
       <tags>
-        <tag>System Management</tag>
-        <tag>TLS/SSL</tag>
+        <tag>Kubernetes</tag>
+        <tag>Kind</tag>
       </tags>
   </entry>
   <entry>
@@ -1137,70 +1022,93 @@
       </tags>
   </entry>
   <entry>
-    <title>创建容器化的Azure DevOps Agent</title>
-    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
-    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
+    <title>创建自签名TLS/SSL证书和私钥</title>
+    <url>/2018/12/30/create-self-signed-ssl/</url>
+    <content><![CDATA[<p>TLS(Transport Layer Security)-传输层安全协议，及其前身SSL(Secure Sockets Layer)-安全套接层是一种安全协议，在传输层对网络连接进行加密。TLS协议由两层组成：TLS 记录协议（TLS Record）和 TLS 握手协议（TLS Handshake）。较低的层为 TLS 记录协议，位于某个可靠的传输协议（例如 TCP）上面，与具体的应用无关，所以，一般把TLS协议归为传输层安全协议。TLS握手协议使用该层中的公钥和证书来处理对等用户的认证，以及协商算法和加密实际数据传输的私钥。这个过程是在TLS记录协议的顶部执行的。TLS所采用的证书系统可以确保客户端与服务端传输的数据是被加密的，且服务端是被受信任的，但是前提是TLS所采用的证书是由信任的证书颁发机构(CA)颁发的。基于测试或内部使用的目的，本文将介绍如何创建自签名的TLS/SSL证书，如何配置Nginx使用这个自签名证书和私钥，以及如何在Linux, Windows和Mac客户端安装这个证书。需要说明的是自签名证书无法确认服务端是被受信任的。</p>
 <span id="more"></span>
 
-<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
-<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+<h1 id="生成自签名证书和私钥"><a href="#生成自签名证书和私钥" class="headerlink" title="生成自签名证书和私钥"></a>生成自签名证书和私钥</h1><blockquote>
+<p>本文是在Ubuntu 16.04系统上调用openssl工具生成自签名证书和私钥。</p>
+</blockquote>
+<p>使用openssl命令生成自签名证书和私钥对：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout selfsigned-key.key -out selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>openssl: 基本命令行工具，用来创建和管理OpenSSL证书，私钥和其它文件。</li>
+<li>req: 子命令，主要是用来创建和处理PKCS#10格式的证书请求。它也能创建被用作根证书的自签名证书。</li>
+<li>-x509: 这个选项告诉openssl创建一个自签名证书而不是一个证书请求。</li>
+<li>-nodes: 这个选项告诉openssl不要加密私钥，否则当使用在Nginx上时，每次Nginx启动都要提示输入密码。</li>
+<li>-days 365: 设置证书的有效期为1年（365天）。</li>
+<li>-newkey rsa:2048: 这个选项告诉openssl在生成证书的同时生成私钥。rsa:2048说明创建一个2048比特长的RSA私钥。</li>
+<li>-keyout: 告诉openssl生成的私钥的名字和路径。</li>
+<li>-out: 告诉openssl生成的自签名证书和路径。</li>
+</ul>
+<p>命令会提示以下的一些输入：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">Country Name (2 letter code) [AU]:CN</span><br><span class="line">State or Province Name (full name) [Some-State]:Shanghai</span><br><span class="line">Locality Name (eg, city) []:Shanghai</span><br><span class="line">Organization Name (eg, company) [Internet Widgits Pty Ltd]:&lt;The company name&gt;</span><br><span class="line">Organizational Unit Name (eg, section) []:&lt;The unit name of company&gt;</span><br><span class="line">Common Name (e.g. server FQDN or YOUR name) []:&lt;Domain name or Server IP address&gt;</span><br><span class="line">Email Address []:&lt;xxxx@xxx.xxx&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="配置Nginx使用自签名证书和私钥"><a href="#配置Nginx使用自签名证书和私钥" class="headerlink" title="配置Nginx使用自签名证书和私钥"></a>配置Nginx使用自签名证书和私钥</h1><ol>
+<li><p>将证书和私钥放在Nginx服务器上某个路径下，比如”/etc/nginx/ssl-certs”；</p>
+</li>
+<li><p>编辑”/etc/nginx/sites-enabled”下的配置文件“*.conf”，在头部(server节点之外)加上以下两行：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">ssl_certificate       /etc/nginx/ssl-certs/selfsigned-certificate.crt;</span><br><span class="line">ssl_certificate_key   /etc/nginx/ssl-certs/selfsigned-key.key;</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>重新加载配置文件：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">nginx -s reload</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>重启Nginx服务：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">systemctl restart nginx</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h1 id="在客户端安装自签名证书"><a href="#在客户端安装自签名证书" class="headerlink" title="在客户端安装自签名证书"></a>在客户端安装自签名证书</h1><blockquote>
+<p>当自签名证书安装完后，不同的客户端程序为了能够识别和使用这个证书可能需要做不同的操作，比如docker客户端需要重新启动。</p>
+</blockquote>
+<h2 id="Linux客户端"><a href="#Linux客户端" class="headerlink" title="Linux客户端"></a>Linux客户端</h2><h3 id="Ubuntu-Debian"><a href="#Ubuntu-Debian" class="headerlink" title="Ubuntu, Debian"></a>Ubuntu, Debian</h3><h4 id="添加"><a href="#添加" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“/usr/local/share/ca-certificates”:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /usr/local/share/ca-certificates</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h4 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“/usr/local/share/ca-certificates”中删除证书：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /usr/local/share/ca-certificates/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-certificates --fresh</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h3 id="CentOS-RedHat"><a href="#CentOS-RedHat" class="headerlink" title="CentOS, RedHat"></a>CentOS, RedHat</h3><h4 id="添加-1"><a href="#添加-1" class="headerlink" title="添加"></a>添加</h4><ol>
+<li><p>将证书拷贝到目录“/etc/pki/ca-trust/source/anchors”:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> selfsigned-certificate.crt /etc/pki/ca-trust/source/anchors</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h4 id="删除-1"><a href="#删除-1" class="headerlink" title="删除"></a>删除</h4><ol>
+<li><p>从目录“/etc/pki/ca-trust/source/anchors”中删除证书：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> <span class="built_in">rm</span> /etc/pki/ca-trust/source/anchors/selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>更新CA存储</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> update-ca-trust</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<h2 id="Mac客户端"><a href="#Mac客户端" class="headerlink" title="Mac客户端"></a>Mac客户端</h2><h4 id="添加-2"><a href="#添加-2" class="headerlink" title="添加"></a>添加</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
+
+<h4 id="删除-2"><a href="#删除-2" class="headerlink" title="删除"></a>删除</h4><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -c <span class="string">"&lt;Common Name of existing certificate&gt;"</span></span><br></pre></td></tr></tbody></table></figure>
 
 <blockquote>
-<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
+<p>这里的&lt; Common Name of existing certificate&gt;是指创建证书时提示输入的Common Name (e.g. server FQDN or YOUR name) []: &lt; Domain name or Server IP address&gt;</p>
 </blockquote>
-<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
-<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
-</li>
-<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
-</li>
-</ol>
-<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+<p>或者通过证书的SHA-1码来删除：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> security delete-certificate -Z &lt;SHA-1 Hash&gt;<span class="string">"</span></span><br></pre></td></tr></tbody></table></figure>
 
-<p>环境变量说明：</p>
-<table>
-<thead>
-<tr>
-<th>变量名</th>
-<th>必需</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>AZP_URL</td>
-<td>是</td>
-<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
-</tr>
-<tr>
-<td>AZP_TOKEN</td>
-<td>是</td>
-<td>前面申请的有足够权限的Personal Access Token</td>
-</tr>
-<tr>
-<td>AZP_AGENT_NAME</td>
-<td>是</td>
-<td>显示在Agent Pool中的Agent名字</td>
-</tr>
-<tr>
-<td>AZP_POOL</td>
-<td>是</td>
-<td>Agent pool的名字</td>
-</tr>
-<tr>
-<td>AZP_AGENTPACKAGE_URL</td>
-<td>否</td>
-<td>显式指定Azure Agent包的下载地址</td>
-</tr>
-</tbody></table>
-<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
-<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
+<blockquote>
+<p>通过命令”security find-ceritificate -a -Z -c &lt; Common Name of existing certificate&gt;”可以获得证书的SHA-1码。</p>
+</blockquote>
+<h2 id="Windows客户端"><a href="#Windows客户端" class="headerlink" title="Windows客户端"></a>Windows客户端</h2><h4 id="添加-3"><a href="#添加-3" class="headerlink" title="添加"></a>添加</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -addstore -f "Root" selfsigned-certificate.crt</span><br></pre></td></tr></tbody></table></figure>
 
-<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
-<p>getaddrinfo ENOTFOUND …</p>
-<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+<h4 id="删除-3"><a href="#删除-3" class="headerlink" title="删除"></a>删除</h4><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">certutil -delstore "Root" &lt;Cert Serial Number&gt;</span><br></pre></td></tr></tbody></table></figure>
 
+<blockquote>
+<p>通过命令”certutil -store “Root””可以获得证书的Serial Number。</p>
+</blockquote>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -1221,11 +1129,11 @@
           });
       </script>]]></content>
       <categories>
-        <category>DevOps</category>
+        <category>系统管理</category>
       </categories>
       <tags>
-        <tag>Azure DevOps</tag>
-        <tag>CI/CD</tag>
+        <tag>System Management</tag>
+        <tag>TLS/SSL</tag>
       </tags>
   </entry>
   <entry>
@@ -1351,6 +1259,98 @@
       </categories>
       <tags>
         <tag>CI/CD</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建容器化的Azure DevOps Agent</title>
+    <url>/2019/12/30/docker-agent-for-azure-devops/</url>
+    <content><![CDATA[<p>在一台虚拟机上安装，配置或删除Azure DevOps Agent是需要花费一些步骤和精力的，具体可以参考文档<a href="https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts">https://docs.microsoft.com/en-us/vsts/build-release/actions/agents/v2-linux?view=vsts</a>。好消息是Azure DevOps已经支持容器化的方式运行Agent。本文将详细介绍如何创建和启动一个容器化的Agent。</p>
+<span id="more"></span>
+
+<h1 id="获取Azure-DevOps-Agent的Docker镜像"><a href="#获取Azure-DevOps-Agent的Docker镜像" class="headerlink" title="获取Azure DevOps Agent的Docker镜像"></a>获取Azure DevOps Agent的Docker镜像</h1><h2 id="直接从Docker-Hub上下载"><a href="#直接从Docker-Hub上下载" class="headerlink" title="直接从Docker Hub上下载"></a>直接从Docker Hub上下载</h2><p>在我的Docker Hub空间已经有开箱即用的Docker镜像了。 打开页面<a href="https://hub.docker.com/r/mikejianzhang/azure-agent">https://hub.docker.com/r/mikejianzhang/azure-agent</a>查看详细的下载说明。</p>
+<h2 id="自己构建"><a href="#自己构建" class="headerlink" title="自己构建"></a>自己构建</h2><p>缺省的开箱即用的Docker镜像并没有包含过多的构建工具。如果这不满足你的需求，可以fork代码仓库<a href="https://github.com/mikejianzhang/azure-agent">https://github.com/mikejianzhang/azure-agent</a>到自己的空间，修改Dockerfile添加更多的工具，再通过以下命令构建新的Docker镜像：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">./build.sh azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<blockquote>
+<p>如果你在公司内部构建镜像，并且需要通过代理才能访问互联网，在构建之前你需要设置http代理。构建脚本“build.sh”支持“http_proxy”, “https_proxy” and “no_proxy”。</p>
+</blockquote>
+<h1 id="运行Azure-DevOps-Agent的Docker镜像"><a href="#运行Azure-DevOps-Agent的Docker镜像" class="headerlink" title="运行Azure DevOps Agent的Docker镜像"></a>运行Azure DevOps Agent的Docker镜像</h1><h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
+<li><p>在Azure DevOps上创建Agent Pool<br><img src="/2019/12/30/docker-agent-for-azure-devops/1.png"></p>
+</li>
+<li><p>生成Personal Access Token<br><img src="/2019/12/30/docker-agent-for-azure-devops/2.png"></p>
+</li>
+</ol>
+<h2 id="运行Docker镜像"><a href="#运行Docker镜像" class="headerlink" title="运行Docker镜像"></a>运行Docker镜像</h2><figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>环境变量说明：</p>
+<table>
+<thead>
+<tr>
+<th>变量名</th>
+<th>必需</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AZP_URL</td>
+<td>是</td>
+<td>你的 Azure DevOps server url. i.e. https://<host>/tfs</host></td>
+</tr>
+<tr>
+<td>AZP_TOKEN</td>
+<td>是</td>
+<td>前面申请的有足够权限的Personal Access Token</td>
+</tr>
+<tr>
+<td>AZP_AGENT_NAME</td>
+<td>是</td>
+<td>显示在Agent Pool中的Agent名字</td>
+</tr>
+<tr>
+<td>AZP_POOL</td>
+<td>是</td>
+<td>Agent pool的名字</td>
+</tr>
+<tr>
+<td>AZP_AGENTPACKAGE_URL</td>
+<td>否</td>
+<td>显式指定Azure Agent包的下载地址</td>
+</tr>
+</tbody></table>
+<p>变量“AZP_AGENTPACKAGE_URL”的额外说明：<br>从容器的启动脚本“start.sh”中可以看出，容器在启动时会去某个网址上下载Azure Agent包。如果发现下载比较慢或者根本没法下载导致容器启动慢或者失败，可以提前这个包下载下来并放在内部的某个http服务器上，然后通过变量“AZP_AGENTPACKAGE_URL”把这个http链接地址传进去。</p>
+<p>通过执行“start.sh”中的shell命令可以获得Azure Agent包的地址：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">curl -LsS \</span><br><span class="line">  -u user:&lt;your-azure-devops-pat&gt; \</span><br><span class="line">  -H <span class="string">'Accept:application/json;api-version=3.0-preview'</span> \</span><br><span class="line">  <span class="string">"&lt;your-azure-devops-url&gt;/_apis/distributedtask/packages/agent?platform=linux-x64"</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h1 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h1><p>利用Azure DevOps agent去执行Jenkins Job时经常会遇到下面的问题：</p>
+<p>getaddrinfo ENOTFOUND …</p>
+<p>解决办法是在启动容器时通过参数“–add-host”将Jenkins Server的域名和IP映射关系加到/etc/hosts中。具体如下：</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">$ docker run -it -d --name some-agent \</span><br><span class="line">        --add-host &lt;your jenkins server domain name&gt;:&lt;you jenkins server ip address&gt;</span><br><span class="line">        -e AZP_URL=your-azure-devops-url \</span><br><span class="line">        -e AZP_TOKEN=your-azure-devops-pat \</span><br><span class="line">        -e AZP_AGENT_NAME=some-agent \</span><br><span class="line">        -e AZP_POOL=your-azure-devops-agent-pool \</span><br><span class="line">        -e AZP_AGENTPACKAGE_URL=the-zure-devops-agent-package \</span><br><span class="line">        azure-agent:&lt;tag&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Azure DevOps</tag>
       </tags>
   </entry>
   <entry>
@@ -2368,6 +2368,167 @@
       </tags>
   </entry>
   <entry>
+    <title>Jenkins构建GitHub合并请求(Pull Request)</title>
+    <url>/2020/01/30/jenkins-github-pullrequest/</url>
+    <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
+<span id="more"></span>
+
+<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Github-Pull-Request-Builder插件"><a href="#安装Github-Pull-Request-Builder插件" class="headerlink" title="安装Github Pull Request Builder插件"></a>安装Github Pull Request Builder插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+</li>
+<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/1.png"></p>
+</li>
+<li><p>必要时重启Jenkins让插件生效</p>
+</li>
+</ol>
+<h2 id="配置Github-Pull-Request-Builder插件"><a href="#配置Github-Pull-Request-Builder插件" class="headerlink" title="配置Github Pull Request Builder插件"></a>配置Github Pull Request Builder插件</h2><ol>
+<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
+</li>
+<li><p>定位到”Github Pull Request Builder“插件，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/01/30/jenkins-github-pullrequest/2.png"></p>
+</li>
+<li><p>创建”Username with password”类型的凭证，用户名和密码是有足够权限的Github账号和密码<br><img src="/2020/01/30/jenkins-github-pullrequest/3.png"></p>
+</li>
+<li><p>配置GitHub Server API URL，选择步骤3创建的凭证，可以点击”Connect to API”按钮测试基本连接<br><img src="/2020/01/30/jenkins-github-pullrequest/4.png"></p>
+<p>对于GitHub Server API URL的值，GitHub和GitHub Enterprise是有区别的：</p>
+<table>
+<thead>
+<tr>
+<th>GitHub Server</th>
+<th>API Endpoint</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GitHub Enterprise</td>
+<td>http(s)://[hostname]/api/v3</td>
+<td></td>
+</tr>
+<tr>
+<td>GitHub</td>
+<td><a href="https://api.github.com/">https://api.github.com</a></td>
+<td>Receive the v3 version of the REST API.</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>点击”Save”按钮保存配置</p>
+</li>
+</ol>
+<h1 id="配置Github代码仓库"><a href="#配置Github代码仓库" class="headerlink" title="配置Github代码仓库"></a>配置Github代码仓库</h1><ol>
+<li><p>打开Git仓库设置页面，点击Hooks -&gt; Add webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/5.png"></p>
+</li>
+<li><p>输入Palyload URL(<code>http://jenkins-url/github-webhook/</code>)，选择Content Type为application/json<br><img src="/2020/01/30/jenkins-github-pullrequest/6.png"></p>
+</li>
+<li><p>选择”Let me select individual envents”自定义webhook触发事件<br><img src="/2020/01/30/jenkins-github-pullrequest/7.png"></p>
+</li>
+<li><p>只选择”Pull requests”事件，并点击”Add webhook”保存Webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/8.png"></p>
+</li>
+</ol>
+<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITHUB_URL = <span class="string">"http://xxx.github.xxxx.com"</span></span><br><span class="line">        GITHUB_ORG = <span class="string">"MikeSay"</span></span><br><span class="line">        GITHUB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITHUB_URL}/${GITHUB_ORG}/${GITHUB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                        cat README.md</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">        always {</span><br><span class="line">            junit <span class="attr">allowEmptyResults:</span> <span class="literal">true</span>, <span class="attr">testResults:</span> <span class="string">'codes/build/test-results/test/**/*.xml'</span></span><br><span class="line">            <span class="comment">// send to email</span></span><br><span class="line">            emailext(</span><br><span class="line">                <span class="symbol">subject:</span> <span class="string">'$DEFAULT_SUBJECT'</span>,</span><br><span class="line">                <span class="symbol">body:</span> <span class="string">'$DEFAULT_CONTENT'</span>,</span><br><span class="line">                <span class="symbol">recipientProviders:</span> [</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'CulpritsRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'RequesterRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class :</span> <span class="string">'DevelopersRecipientProvider'</span>]</span><br><span class="line">                ],</span><br><span class="line">                <span class="symbol">replyTo:</span> <span class="string">'$DEFAULT_REPLYTO'</span>,</span><br><span class="line">                <span class="symbol">to:</span> <span class="string">'$DEFAULT_RECIPIENTS'</span></span><br><span class="line">            )</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>30行: 添加refspec获取合并请求(pull/merge request)的分支信息</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span></span><br></pre></td></tr></tbody></table></figure>
+<p>19行: branches选择环境变量”ghprbActualCommit”，它是合并请求(pull/merge request)分支对应的提交号</p>
+<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]]</span><br></pre></td></tr></tbody></table></figure>
+<p>除了”ghprbActualCommit”外，github pull request builder插件还往当前构建中注入了许多变量供构建Job使用，如下表：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>事例值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>sha1</td>
+<td>origin/pr/6/merge</td>
+<td>合并请求(pull/merge request)分支。在构建Job中也可以用${sha1}来代替${ghprbActualCommit}</td>
+</tr>
+<tr>
+<td>ghprbAuthorRepoGitUrl</td>
+<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git</a></td>
+<td>合并请求(pull/merge request)所在仓库的http地址</td>
+</tr>
+<tr>
+<td>ghprbPullId</td>
+<td>6</td>
+<td>合并请求(pull/merge request)的ID号</td>
+</tr>
+<tr>
+<td>ghprbTargetBranch</td>
+<td>master</td>
+<td>合并请求(pull/merge request)的主分支</td>
+</tr>
+<tr>
+<td>ghprbSourceBranch</td>
+<td>test9</td>
+<td>合并请求(pull/merge request)的私有分支</td>
+</tr>
+<tr>
+<td>ghprbPullTitle</td>
+<td>Test9.</td>
+<td>合并请求(pull/merge request)的标题</td>
+</tr>
+<tr>
+<td>ghprbPullLink</td>
+<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6</a></td>
+<td>合并请求(pull/merge request)的http地址</td>
+</tr>
+</tbody></table>
+<p>可以从当前合并请求(pull/merge request)的构建参数中获得所有变量名和当前值：<br><img src="/2020/01/30/jenkins-github-pullrequest/16.png"></p>
+<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
+<li><p>点击”New Item”</p>
+</li>
+<li><p>选择Job类型为”Pipeline”，输入Job的名字”github-preflight”，点击”Ok”按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/9.png"></p>
+</li>
+<li><p>在”GitHub Project”段，输入”Project url”。注，”Project url”是Git仓库的http地址去除”.git”后缀<br><img src="/2020/01/30/jenkins-github-pullrequest/10.png"></p>
+</li>
+<li><p>在”Build Triggers”段，选择”GitHub Pull Request Builder”<br><img src="/2020/01/30/jenkins-github-pullrequest/11.png"></p>
+<ul>
+<li>GitHub API credentials: 之前配置的GitHub API</li>
+<li>Trigger phrase: 在合并请求(pull/merge request)的注释或标题里加入trigger phrase内容会自动触发新的构建</li>
+<li>Skip build phrase: 在合并请求(pull/merge request)的注释或标题里加入skip build phrase内容则不会触发构建</li>
+</ul>
+</li>
+<li><p>如果需要构建每个合并请求(pull/merge request)，勾选”Build every pull request automatically without asking (Dangerous)”，在”Whitelist Target Branches”输入主分支”master”<br><img src="/2020/01/30/jenkins-github-pullrequest/12.png"></p>
+</li>
+<li><p>在”Pipeline”段，引用Jenkinsfile<br><img src="/2020/01/30/jenkins-github-pullrequest/13.png"></p>
+</li>
+</ol>
+<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
+<li><p>Github的合并请求(pull/merge request)<br><img src="/2020/01/30/jenkins-github-pullrequest/14.png"></p>
+</li>
+<li><p>触发的构建<br><img src="/2020/01/30/jenkins-github-pullrequest/15.png"></p>
+</li>
+</ol>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>DevOps</category>
+      </categories>
+      <tags>
+        <tag>CI/CD</tag>
+        <tag>Jenkins</tag>
+        <tag>Github</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Jenkins构建GitLab合并请求(Merge Request)</title>
     <url>/2020/03/09/jenkins-gitlab-pullrequest/</url>
     <content><![CDATA[<p>写了两篇这样的文章，我们大概可以总结出Jenkins构建合并请求(Merge Request)的原理：首先，需要在Jenkins上安装一个插件以便提供一个Webhook接口，配置插件连通对应的代码协作平台以便将构建状态写回代码协作平台(并不是所有的插件都提供这个功能)；其次，在对应的Git仓库中设置Webhook监听Git事件，比如合并请求(Merge Request)的创建、编辑等。当有监听的事件发生时，Webhook触发Jenkins的Webhook接口，Webhook接口解析请求数据，创建一些有用的环境变量，比如合并请求(Merge Request)ID，合并请求(Merge Request)的原分支和目标分支等，并触发对应的Jenkins pipeline；最后，创建一个Jenkins pipeline(目前主要是Pipeline2.0的Jenkinsfile)，设置被触发的条件和如何克隆对应的代码，以及实际的构建逻辑。接前面的系列，本文将继续介绍如何配置Jenkins和GitLab来构建GitLab合并请求(Merge Request)。</p>
@@ -3192,151 +3353,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Podman Rootless下容器访问宿主机服务的底层原理</title>
-    <url>/2026/07/16/podman-rootless-host/</url>
-    <content><![CDATA[<p>本地运行容器的朋友应该都碰到过一个很常见的场景：容器内部部署的应用，需要调用我们电脑本机运行的各类服务。比如我平时搭建本地 AI 环境，会把 Open WebUI 部署在容器里，为了方便使用宿主机的GPU（我的是Mac M3），本地模型服务使用Ollama，并部署在宿主机中。一旦容器没法连通宿主机的 11434 端口，整个 AI 对话、模型调用链路就会直接断掉。在实际使用中，通过域名 <code>host.docker.internal</code> 就能快速实现容器与宿主机的互通，简单又好用。</p>
-<p>用归用，但我之前一直存有疑问：Podman 默认开启 Rootless 非特权模式，容器、虚拟机、宿主机三层网络是完全隔离的，正常情况下根本不允许跨层级通信。那为什么单单这一个域名，就能打破隔离，打通容器到宿主机回环接口的通信通道？</p>
-<p>网上大部分教程，只教大家怎么配置、怎么连通，但少有提及背后的原理。这篇文章将会简单介绍下 Podman Rootless 模式下的宿主机访问原理，同时列出 Mac 和 Windows 平台的差异。</p>
-<span id="more"></span>
-
-<h1 id="一、看似简单的互通，其实存在两类限制"><a href="#一、看似简单的互通，其实存在两类限制" class="headerlink" title="一、看似简单的互通，其实存在两类限制"></a>一、看似简单的互通，其实存在两类限制</h1><p>不管是 Mac 还是 Windows 系统，都没法原生直接运行 Linux 容器。我们日常使用的 Podman 容器环境，本质是依托轻量化虚拟机搭建的运行底座——Mac 依靠系统原生的虚拟化框架，Windows 则依赖 WSL2 环境。</p>
-<p>这种嵌套式的虚拟化架构，从根源上限制了容器与宿主机的直接互通，主要绕不开两类硬性限制。</p>
-<p>第一是网络隔离限制。容器内的 localhost、127.0.0.1 只对应容器自身的网络栈，虚拟机的回环地址也仅适用于虚拟机内部通信，双层隔离之下，数据包根本无法自动穿透到真实的宿主机网络。</p>
-<p>第二是权限限制。Podman 最大的安全亮点就是 Rootless 无特权运行，全程以普通用户权限工作，不会占用系统高危权限。但有利有弊，这也导致容器进程无法创建原始网络套接字，也没有权限操作底层路由规则，这也是 Rootless 容器默认 ping 不通宿主机的核心原因。</p>
-<p>想要在不关闭安全隔离、不提升运行权限的前提下，实现容器访问宿主机服务，Podman 没有用传统的 NAT 转发方案，而是使用了用户态代理机制，整套能力的核心，都依托运行在宿主机中的 <code>gvproxy（gVisor-tap-vsock）</code> 进程来实现。</p>
-<h1 id="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"><a href="#二、核心架构：虚拟机只透传，宿主机全权接管网络转发" class="headerlink" title="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"></a>二、核心架构：虚拟机只透传，宿主机全权接管网络转发</h1><p>很多人对这套转发逻辑都有误区，以为虚拟机承担了核心的代理转发工作。事实恰恰相反：整套网络翻译、数据解包、跨层级通信的核心逻辑，全部运行在真实宿主机上，虚拟机全程只负责转发数据，不会做任何主动的逻辑处理。完整的流量流转链路流程如下：</p>
-<figure class="highlight text"><table><tbody><tr><td class="code"><pre><span class="line">[ OPEN WEBUI 容器 ]</span><br><span class="line">        │</span><br><span class="line">        │ 1. 访问 http://host.docker.internal</span><br><span class="line">        │    内置 DNS 动态解析为 192.168.127.254 (或 .1)</span><br><span class="line">        ▼</span><br><span class="line">[ LINUX 虚拟机内核 ]</span><br><span class="line">        │</span><br><span class="line">        │ 2. TCP 数据包通过被动的 virtio-net / TAP 虚拟网卡发出</span><br><span class="line">        │    （虚拟机内部无任何网络代理进程）</span><br><span class="line">        ▼</span><br><span class="line">==================== 宿主机 / 虚拟机边界 ====================</span><br><span class="line">        │</span><br><span class="line">        │ 3. 虚拟化引擎拦截 TAP 流量，直接映射入 AF_VSOCK 管道</span><br><span class="line">        ▼</span><br><span class="line">[ macOS / Windows 宿主机 (gvproxy 进程) ]</span><br><span class="line">        │</span><br><span class="line">        │ 4. gvproxy 读取 VSOCK 数据，剥离虚拟化封装，提取原始 TCP 载荷</span><br><span class="line">        ▼</span><br><span class="line">[ 宿主机原生回环接口 (127.0.0.1:11434) ]</span><br><span class="line">        │</span><br><span class="line">        │ 5. gvproxy 代表容器向宿主机发起标准的 connect() 调用</span><br><span class="line">        ▼</span><br><span class="line">[ 原生 Ollama 应用程序 ]</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="1-自定义-DNS-解析，伪造虚拟网关地址"><a href="#1-自定义-DNS-解析，伪造虚拟网关地址" class="headerlink" title="1. 自定义 DNS 解析，伪造虚拟网关地址"></a>1. 自定义 DNS 解析，伪造虚拟网关地址</h2><p><code>host.docker.internal</code> 并不是公共互联网可解析的域名，而是 Podman 内置的专属解析规则。只要容器发起相关访问请求，Podman 的内置 DNS 就会直接拦截解析动作，固定返回专属虚拟网关 IP，常见地址为 <code>192.168.127.254</code> 或<code>192.168.127.1</code>。</p>
-<p>容器完全不用感知宿主机的真实 IP 地址，只需向这个虚拟网关发包即可，后续所有的转发、适配、通信逻辑，都由底层组件自动完成，对上层业务应用完全透明，开发者无需额外干预。</p>
-<h2 id="2-虚拟机无感透传，零代理开销"><a href="#2-虚拟机无感透传，零代理开销" class="headerlink" title="2. 虚拟机无感透传，零代理开销"></a>2. 虚拟机无感透传，零代理开销</h2><p>数据包抵达虚拟机内核后，系统会直接把这个虚拟网关当成外部物理设备，不会额外做 NAT 转换、流量过滤等多余操作。</p>
-<p>虚拟机内部全程没有任何转发进程，仅通过 virtio-net、TAP 虚拟网卡，将原始的二层以太网帧完整向外透出。这种极简的透传方式，最大程度保留了原始数据包特征，也彻底规避了虚拟机内部转发带来的性能损耗。</p>
-<h2 id="3-VSOCK-管道跨层通信，绕过传统网络栈"><a href="#3-VSOCK-管道跨层通信，绕过传统网络栈" class="headerlink" title="3. VSOCK 管道跨层通信，绕过传统网络栈"></a>3. VSOCK 管道跨层通信，绕过传统网络栈</h2><p>这也是 Podman 这套网络架构的巧妙之处。传统虚拟机互通大多依靠物理网卡 NAT 转发，不仅延迟偏高，还很容易被系统防火墙、本地网络策略拦截，稳定性很差。</p>
-<p>Podman 直接采用 <code>AF_VSOCK</code> 内核套接字方案，虚拟化引擎拦截虚拟网卡流出的流量后，直接封装送入 VSOCK 内存管道。这种通信方式绕开了物理网卡和繁琐的 TCP/IP 网络栈，直接在内存层面完成虚拟机与宿主机的数据交互，效率和稳定性都远优于传统转发方案。</p>
-<h2 id="4-gvproxy-用户态代理，完成最终流量落地"><a href="#4-gvproxy-用户态代理，完成最终流量落地" class="headerlink" title="4. gvproxy 用户态代理，完成最终流量落地"></a>4. gvproxy 用户态代理，完成最终流量落地</h2><p>宿主机后台常驻的 gvproxy 进程，是整套通信链路的核心枢纽，大家可以直接用进程检索命令查看它的运行状态。所有从 VSOCK 管道流出的数据，都会统一由这个进程接管处理。</p>
-<p>它会自动剥离虚拟化封装的数据包，还原出原始的 TCP 请求信息，精准识别出容器真正的访问目标端口。随后以宿主机普通进程的身份，发起标准的 connect 系统调用，将流量精准转发到宿主机 127.0.0.1 对应的服务端口。</p>
-<p>整个过程对宿主机原生服务完全无感。就拿我常用的 Ollama 来说，它只会判定是本地普通软件发起的连接，完全察觉不到流量是从虚拟机容器中穿透过来的。</p>
-<p>后续响应数据会沿着完全相反的路径，原路返回容器，就此完成一次完整的跨层级通信交互。</p>
-<h1 id="三、Mac-与-Windows-底层差异：安全机制决定转发逻辑"><a href="#三、Mac-与-Windows-底层差异：安全机制决定转发逻辑" class="headerlink" title="三、Mac 与 Windows 底层差异：安全机制决定转发逻辑"></a>三、Mac 与 Windows 底层差异：安全机制决定转发逻辑</h1><p>Mac 和 Windows 两套系统的最终连通效果一致，但底层安全策略差异很大，这也直接导致 <code>host.docker.internal</code> 的实现逻辑各不相同。</p>
-<p>Mac 的虚拟化沙箱管控极其严格，明令禁止虚拟机直接探测、绑定、访问宿主机的回环接口。也正因如此，Mac 环境下所有的跨层流量，<strong>必须 100% 经过 gvproxy 中转</strong>，没有任何旁路方案，转发逻辑最严谨，网络隔离性也最强。</p>
-<p>反观 Windows WSL2，系统网络融合度更高，新版 WSL2 支持镜像网络模式，虚拟机可以直接共享宿主机的完整网络栈。这让 Windows 下的宿主机访问更贴近原生网络效果，转发链路更短、延迟更低，但对应的网络隔离性会比 Mac 弱不少。</p>
-<h1 id="四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性"><a href="#四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性" class="headerlink" title="四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性"></a>四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性</h1><p>很多网上教程会一刀切建议大家把本地服务监听地址改成 <code>0.0.0.0</code>，但这套操作其实不适用于 macOS 下的 Podman Rootless 环境，盲目修改反而会增加端口暴露风险，得不偿失。这里纠正一个绝大多数开发者踩错的关键误区。</p>
-<p><strong>为什么 Podman 不需要绑定 0.0.0.0？</strong></p>
-<p>核心原因还是前文提到的<code>gvproxy</code> 转发机制。这个进程运行在宿主机后台，所有容器发起的访问请求，最终都是由它以<strong>本机身份</strong>向宿主机服务发起连接。简单来说，当我们通过 <code>host.docker.internal</code> 访问本地 Ollama 服务时，Ollama 识别到的请求来源就是纯净的 <code>127.0.0.1</code> 本地回环流量。</p>
-<p>因此在 Podman 这套架构下，即便 Ollama等本地服务默认只监听 <code>127.0.0.1</code>，容器依然可以正常连通，完全不会出现拒绝连接的情况。</p>
-<p><strong>那什么时候才需要绑定 0.0.0.0？</strong></p>
-<p>绑定全网监听地址 <code>0.0.0.0</code> 并非 Podman 环境的刚需，仅适用于特定容器场景。比如使用 Colima、部分旧版 Docker 环境时，容器流量依托虚拟网桥转发，系统会把虚拟机、容器的流量判定为<strong>外部局域网 IP 流量</strong>，而非本地回环流量。</p>
-<p>这种场景下，仅监听 <code>127.0.0.1</code> 会直接拦截外部流量，此时才需要修改为 <code>0.0.0.0</code> 放行请求。</p>
-<p><strong>最终实操结论</strong>：在 macOS 原生 Podman Rootless 架构中，<strong>保持服务默认监听 127.0.0.1 即可正常通信，也是最安全的配置</strong>。无需强行修改为 0.0.0.0，避免将本地服务端口暴露在物理局域网中，带来不必要的安全风险。</p>
-<h1 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h1><p>很多开发者只会熟练使用<code>host.docker.internal</code> 实现连通，却从未深究 Rootless 模式下的底层网络逻辑。看似简单的一行域名配置，背后是 Podman 为了平衡<strong>安全隔离性与开发便捷性</strong>，精心设计的一套用户态代理架构。</p>
-<p>吃透这套 VSOCK+gvproxy 的转发机制，不止能解决本地开发的连通性问题，更能帮我们理清容器安全隔离、权限管控、虚拟化网络的核心设计思路。后续遇到容器网络异常、访问超时、连接拒绝等问题，都能快速定位根因，不用再盲目排查、试错。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>容器</category>
-      </categories>
-      <tags>
-        <tag>Container</tag>
-        <tag>Network</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Git合并请求(Pull/Merge request)的本质</title>
-    <url>/2020/01/29/pullrequest-essential/</url>
-    <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull/merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull/merge request)合并到主分支上。合并请求(pull/merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull/merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull/merget request)的实现来阐明合并请求(pull/merge request)的本质。<span id="more"></span></p>
-<p>实际上，合并请求(pull/merge request)在代码层面上是Git仓库中的一个特殊分支。当开发在代码协作平台上创建并提交合并请求(pull/merge request)后，代码协作平台在服务器端将私有分支和主分支临时合并产生一个合并提交(merge commit)，同时创建一个特殊分支指向这个合并提交(merge commit)。如果临时合并出现冲突，则在Web层面显示有冲突，需要开发提交新的代码到个人分支以消除冲突。</p>
-<p>要真正的理解合并请求(pull/merge request)这一特殊分支，我们需要先理解下Git的分支。</p>
-<h1 id="Git分支"><a href="#Git分支" class="headerlink" title="Git分支"></a>Git分支</h1><p>相对于传统的版本管理工具创建分支的操作，Git的分支方式及其轻巧，分支操作几乎是实时的，并且在分支之前切换也非常快。许多人认为Git这一分支模式算得上是一个“杀手级”功能。下图描述了一个含有三个文件的文件夹，且只有一个提交的Git仓库：</p>
-<p><img src="/2020/01/29/pullrequest-essential/1.png"></p>
-<p>在Git中，数据是以树形结构存储，每个文件对应着一个blob对象，每个文件夹对应着一个tree对象。每一次Git提交(commit)，都会根据文件或路径的变化创建一系列新的blog对象或tree对象，checksum不变的对象会被重复引用，其中最顶层的tree对象由于每次都需要变化，所以每次都会创建新的顶层tree对象，同时会创建一个commit对象指向新的顶层tree对象，整个过程犹如给数据做了个快照，而当前的commit对象则是这个快照的标签。如果要获取这个快照对应的代码，只要git checkout到这个commit对象即可。</p>
-<p>当再次提交时，新创建的commit对象会保存一个指针指向前面的一个commit对象形成一个提交链(快照链)。下图就是Git仓库中的一个提交链：</p>
-<p><img src="/2020/01/29/pullrequest-essential/2.png"></p>
-<p>而Git中的分支则是一个轻量的可移动的指针指向其中一个commit对象。缺省的分支名字叫master，每一次新的提交master分支都会移动并指向到最新的commit对象。下图是Git中的分支和提交历史：</p>
-<p><img src="/2020/01/29/pullrequest-essential/3.png"></p>
-<p>HEAD对象是指针的指针，它指向当前所在的分支。切换分支时，只要将HEAD指向新的分支即可，所以说Git切换分支的操作是相当轻量的。</p>
-<p>所以正如前文所说，合并请求(pull/merge request)也是个分支，也就是指针，它是指向私有分支和主分支临时合并后产生的合并提交(commit)对象。下图是Git中的合并请求(pull/merge request)分支：</p>
-<p><img src="/2020/01/29/pullrequest-essential/4.png"></p>
-<p>如图”defect235”分支是为了修复defect235而创建的私有分支，commit”f40ac”是代码协作平台临时合并分支”defect235”和”master”而创建的合并提交对象，分支”refs/pull/1/merge”则是那个特殊的分支，指向合并提交对象”f40ac”。不过,常规的Git克隆或者拉取是无法获取这个分支信息的，因为常规Git只会认为在缺省路径“refs/heads/“下的分支是Git分支。当开发在Web界面中合并合并请求(pull/merge request)后，私有分支”defect235”和特殊的分支也会被删除掉(通常代码协作平台会提供一些设置来控制是否要删除私有分支和合并请求分支)。下图是Git中合并请求被合并后的分支情况：</p>
-<p><img src="/2020/01/29/pullrequest-essential/5.png"></p>
-<p>不同的代码协作平台在实现合并请求(pull/merget request)的原理上是相同的，但是也有一些细微的差别。</p>
-<h1 id="GitHub合并请求-Pull-Request"><a href="#GitHub合并请求-Pull-Request" class="headerlink" title="GitHub合并请求(Pull Request)"></a>GitHub合并请求(Pull Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  add_test</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/add_test</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/head</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
-<p>origin/pr/1/head: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="GitLab合并请求-Merge-Request"><a href="#GitLab合并请求-Merge-Request" class="headerlink" title="GitLab合并请求(Merge Request)"></a>GitLab合并请求(Merge Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(merge request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/merge-requests/*:refs/remotes/origin/mr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  change2</span><br><span class="line">  change_readme</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/change2</span><br><span class="line">  remotes/origin/change_readme</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/mr/1/head</span><br><span class="line">  remotes/origin/mr/2/head</span><br><span class="line"></span><br><span class="line">  git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure>
-<p>origin/mr/1/head: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/merge-requests/2/*:refs/remotes/origin/mr/2/*</span><br><span class="line">git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="Bitbuckt合并请求-pull-Request"><a href="#Bitbuckt合并请求-pull-Request" class="headerlink" title="Bitbuckt合并请求(pull Request)"></a>Bitbuckt合并请求(pull Request)</h1><ul>
-<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull-requests/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/from</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
-<p>origin/pr/1/from: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
-</li>
-<li><p>仅拉取某个合并请求(pull request)的信息</p>
-<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull-requests/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h1 id="TFS-Git合并请求-pull-Request"><a href="#TFS-Git合并请求-pull-Request" class="headerlink" title="TFS Git合并请求(pull Request)"></a>TFS Git合并请求(pull Request)</h1><ul>
-<li>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</li>
-</ul>
-  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
-
-<p>  origin/pr/1/merge: 指向临时合并的提交对象</p>
-<ul>
-<li>仅拉取某个合并请求(pull request)的信息<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<p>当然，除了上面四个基于Git的代码协作平台外，还有许多优秀的平台，比如国内的码云<a href="https://gitee.com/">https://gitee.com/</a>，各大公有云平台也都提供了自己的代码协作平台。读者可以根据本文的说明自行研究合并请求(pull/merge request)。</p>
-<script>
-        document.querySelectorAll('.github-emoji')
-          .forEach(el => {
-            if (!el.dataset.src) { return; }
-            const img = document.createElement('img');
-            img.style = 'display:none !important;';
-            img.src = el.dataset.src;
-            img.addEventListener('error', () => {
-              img.remove();
-              el.style.color = 'inherit';
-              el.style.backgroundImage = 'none';
-              el.style.background = 'none';
-            });
-            img.addEventListener('load', () => {
-              img.remove();
-            });
-            document.body.appendChild(img);
-          });
-      </script>]]></content>
-      <categories>
-        <category>DevOps</category>
-      </categories>
-      <tags>
-        <tag>Git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Hexo+Gitee(码云)搭建静态博客网站</title>
     <url>/2018/08/17/setup-blog-hexo-gitee/</url>
     <content><![CDATA[<p>直接注册和使用当下比较流行的博客网站比如csdn, oschina, 博客园等等，觉得不是自己专属，而且还有很多广告。选择一款开源或免费的CMS(内容管理系统)，自己买云主机和域名搭建博客，费钱又费时。有时我们只是希望有一个功能不太复杂，自己专属的或者看起来自己专属的（至少没有一堆广告）博客网站来写写和分享自己的文章。不需要花费太多的时间和钱，除非你的博客和文章已经足够热门。基于以上的期望，本文将介绍如何使用Hexo搭建静态博客网站，并将其发布到GITEE(码云)免费提供的静态网页空间里。</p>
@@ -3919,138 +3935,58 @@
       </tags>
   </entry>
   <entry>
-    <title>Jenkins构建GitHub合并请求(Pull Request)</title>
-    <url>/2020/01/30/jenkins-github-pullrequest/</url>
-    <content><![CDATA[<p>在我的文章<a href="http://www.mikesay.com/2020/01/29/pullrequest-essential/">“Git合并请求(pull/merge request)的本质”</a>中已经说明了合并请求(pull/merge request)在代码层面上实际是Git仓库中的一个特殊分支，它指向了私有分支和主分支临时合并后产生的合并提交(merge commit)。如果我们能够在这个合并请求(pull/merge request)被真正合并进主分支之前对它做一次构建，就能尽早发现私有分支上的代码是否有问题，从而将问题拦截在主分支之外，减少主分支上持续交付流水线的失败率。对合并请求(pull/merge request)的构建除了编译代码(必要时可增量编译)和单元测试外，还可以增加更多额外的检查，比如代码的静态扫描。业界把这个放在持续交付流水线之前的检查称为preflight流水线(可参考《Continuous Delivery》这本书第三章67页对preflight构建的详细介绍)。本文将介绍如何配置Jenkins和Github来构建Github合并请求(Pull Request)。</p>
-<span id="more"></span>
-
-<h1 id="配置Jenkins"><a href="#配置Jenkins" class="headerlink" title="配置Jenkins"></a>配置Jenkins</h1><h2 id="安装Github-Pull-Request-Builder插件"><a href="#安装Github-Pull-Request-Builder插件" class="headerlink" title="安装Github Pull Request Builder插件"></a>安装Github Pull Request Builder插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Manage Plugins打开Plugin Manager页面</p>
+    <title>Git合并请求(Pull/Merge request)的本质</title>
+    <url>/2020/01/29/pullrequest-essential/</url>
+    <content><![CDATA[<p>Git以及基于Git的各代码开发协作平台，比如Github, Gitlab, Bitbucket, TFS Git等正逐渐成为首选的代码版本管理工具，而基于Git的基本开发流程则是开发者创建个人的私有分支并在个人的私有分支上提交代码，代码完成后创建合并请求(pull/merge request)到主分支让相关人员做代码评审，评审通过后将合并请求(pull/merge request)合并到主分支上。合并请求(pull/merge request)不是Git本身的特性，而是各代码协作平台提供的特性，它提供的代码评审功能几乎取代了独立的代码评审工具，同时它也方便了分布于世界各地的开源代码贡献者合并自己的代码。那么合并请求(pull/merge request)到底是什么东西？它看的见摸得着吗？本文将通过目前比较流行的代码开发协作平台(Github, Gitlab, Bitbucket, TFS Git)对合并请求(pull/merget request)的实现来阐明合并请求(pull/merge request)的本质。<span id="more"></span></p>
+<p>实际上，合并请求(pull/merge request)在代码层面上是Git仓库中的一个特殊分支。当开发在代码协作平台上创建并提交合并请求(pull/merge request)后，代码协作平台在服务器端将私有分支和主分支临时合并产生一个合并提交(merge commit)，同时创建一个特殊分支指向这个合并提交(merge commit)。如果临时合并出现冲突，则在Web层面显示有冲突，需要开发提交新的代码到个人分支以消除冲突。</p>
+<p>要真正的理解合并请求(pull/merge request)这一特殊分支，我们需要先理解下Git的分支。</p>
+<h1 id="Git分支"><a href="#Git分支" class="headerlink" title="Git分支"></a>Git分支</h1><p>相对于传统的版本管理工具创建分支的操作，Git的分支方式及其轻巧，分支操作几乎是实时的，并且在分支之前切换也非常快。许多人认为Git这一分支模式算得上是一个“杀手级”功能。下图描述了一个含有三个文件的文件夹，且只有一个提交的Git仓库：</p>
+<p><img src="/2020/01/29/pullrequest-essential/1.png"></p>
+<p>在Git中，数据是以树形结构存储，每个文件对应着一个blob对象，每个文件夹对应着一个tree对象。每一次Git提交(commit)，都会根据文件或路径的变化创建一系列新的blog对象或tree对象，checksum不变的对象会被重复引用，其中最顶层的tree对象由于每次都需要变化，所以每次都会创建新的顶层tree对象，同时会创建一个commit对象指向新的顶层tree对象，整个过程犹如给数据做了个快照，而当前的commit对象则是这个快照的标签。如果要获取这个快照对应的代码，只要git checkout到这个commit对象即可。</p>
+<p>当再次提交时，新创建的commit对象会保存一个指针指向前面的一个commit对象形成一个提交链(快照链)。下图就是Git仓库中的一个提交链：</p>
+<p><img src="/2020/01/29/pullrequest-essential/2.png"></p>
+<p>而Git中的分支则是一个轻量的可移动的指针指向其中一个commit对象。缺省的分支名字叫master，每一次新的提交master分支都会移动并指向到最新的commit对象。下图是Git中的分支和提交历史：</p>
+<p><img src="/2020/01/29/pullrequest-essential/3.png"></p>
+<p>HEAD对象是指针的指针，它指向当前所在的分支。切换分支时，只要将HEAD指向新的分支即可，所以说Git切换分支的操作是相当轻量的。</p>
+<p>所以正如前文所说，合并请求(pull/merge request)也是个分支，也就是指针，它是指向私有分支和主分支临时合并后产生的合并提交(commit)对象。下图是Git中的合并请求(pull/merge request)分支：</p>
+<p><img src="/2020/01/29/pullrequest-essential/4.png"></p>
+<p>如图”defect235”分支是为了修复defect235而创建的私有分支，commit”f40ac”是代码协作平台临时合并分支”defect235”和”master”而创建的合并提交对象，分支”refs/pull/1/merge”则是那个特殊的分支，指向合并提交对象”f40ac”。不过,常规的Git克隆或者拉取是无法获取这个分支信息的，因为常规Git只会认为在缺省路径“refs/heads/“下的分支是Git分支。当开发在Web界面中合并合并请求(pull/merge request)后，私有分支”defect235”和特殊的分支也会被删除掉(通常代码协作平台会提供一些设置来控制是否要删除私有分支和合并请求分支)。下图是Git中合并请求被合并后的分支情况：</p>
+<p><img src="/2020/01/29/pullrequest-essential/5.png"></p>
+<p>不同的代码协作平台在实现合并请求(pull/merget request)的原理上是相同的，但是也有一些细微的差别。</p>
+<h1 id="GitHub合并请求-Pull-Request"><a href="#GitHub合并请求-Pull-Request" class="headerlink" title="GitHub合并请求(Pull Request)"></a>GitHub合并请求(Pull Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  add_test</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/add_test</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/head</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
+<p>origin/pr/1/head: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
 </li>
-<li><p>打开Available页面，选择Github Pull Request Builder，点击Install without restart按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/1.png"></p>
-</li>
-<li><p>必要时重启Jenkins让插件生效</p>
-</li>
-</ol>
-<h2 id="配置Github-Pull-Request-Builder插件"><a href="#配置Github-Pull-Request-Builder插件" class="headerlink" title="配置Github Pull Request Builder插件"></a>配置Github Pull Request Builder插件</h2><ol>
-<li><p>点击Jenkins -&gt; Manage Jenkins -&gt; Config System打开系统配置页面</p>
-</li>
-<li><p>定位到”Github Pull Request Builder“插件，点击Add菜单打开创建Jenkins认证信息对话框<br><img src="/2020/01/30/jenkins-github-pullrequest/2.png"></p>
-</li>
-<li><p>创建”Username with password”类型的凭证，用户名和密码是有足够权限的Github账号和密码<br><img src="/2020/01/30/jenkins-github-pullrequest/3.png"></p>
-</li>
-<li><p>配置GitHub Server API URL，选择步骤3创建的凭证，可以点击”Connect to API”按钮测试基本连接<br><img src="/2020/01/30/jenkins-github-pullrequest/4.png"></p>
-<p>对于GitHub Server API URL的值，GitHub和GitHub Enterprise是有区别的：</p>
-<table>
-<thead>
-<tr>
-<th>GitHub Server</th>
-<th>API Endpoint</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>GitHub Enterprise</td>
-<td>http(s)://[hostname]/api/v3</td>
-<td></td>
-</tr>
-<tr>
-<td>GitHub</td>
-<td><a href="https://api.github.com/">https://api.github.com</a></td>
-<td>Receive the v3 version of the REST API.</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>点击”Save”按钮保存配置</p>
-</li>
-</ol>
-<h1 id="配置Github代码仓库"><a href="#配置Github代码仓库" class="headerlink" title="配置Github代码仓库"></a>配置Github代码仓库</h1><ol>
-<li><p>打开Git仓库设置页面，点击Hooks -&gt; Add webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/5.png"></p>
-</li>
-<li><p>输入Palyload URL(<code>http://jenkins-url/github-webhook/</code>)，选择Content Type为application/json<br><img src="/2020/01/30/jenkins-github-pullrequest/6.png"></p>
-</li>
-<li><p>选择”Let me select individual envents”自定义webhook触发事件<br><img src="/2020/01/30/jenkins-github-pullrequest/7.png"></p>
-</li>
-<li><p>只选择”Pull requests”事件，并点击”Add webhook”保存Webhook<br><img src="/2020/01/30/jenkins-github-pullrequest/8.png"></p>
-</li>
-</ol>
-<h1 id="创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request"><a href="#创建Jenkins-pipeline-job用来构建合并请求-pull-merge-request" class="headerlink" title="创建Jenkins pipeline job用来构建合并请求(pull/merge request)"></a>创建Jenkins pipeline job用来构建合并请求(pull/merge request)</h1><h2 id="Jenkinsfile"><a href="#Jenkinsfile" class="headerlink" title="Jenkinsfile"></a>Jenkinsfile</h2><figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">pipeline {</span><br><span class="line">    agent {</span><br><span class="line">        label <span class="string">'common'</span></span><br><span class="line">    }</span><br><span class="line">    environment {</span><br><span class="line">        GITHUB_URL = <span class="string">"http://xxx.github.xxxx.com"</span></span><br><span class="line">        GITHUB_ORG = <span class="string">"MikeSay"</span></span><br><span class="line">        GITHUB_REPO = <span class="string">"mikesay-test-1"</span></span><br><span class="line">    }</span><br><span class="line">    options {</span><br><span class="line">        skipDefaultCheckout()</span><br><span class="line">        ansiColor(<span class="string">'xterm'</span>)</span><br><span class="line">    }</span><br><span class="line">    stages {</span><br><span class="line">        stage(<span class="string">'Checkout'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                script{</span><br><span class="line">                    <span class="keyword">def</span> scmVars =   checkout(</span><br><span class="line">                                        [<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]], </span><br><span class="line">                                        <span class="symbol">doGenerateSubmoduleConfigurations:</span> <span class="literal">false</span>,</span><br><span class="line">                                        <span class="symbol">submoduleCfg:</span> [], </span><br><span class="line">                                        <span class="symbol">extensions:</span> [</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'RelativeTargetDirectory'</span>, <span class="attr">relativeTargetDir:</span> <span class="string">'codes'</span>],</span><br><span class="line">                                            [<span class="attr">$class:</span> <span class="string">'CleanBeforeCheckout'</span>]</span><br><span class="line">                                        ],</span><br><span class="line">                                        <span class="symbol">userRemoteConfigs:</span> [</span><br><span class="line">                                                [</span><br><span class="line">                                                    <span class="symbol">credentialsId:</span> <span class="string">'ghe_account'</span>, </span><br><span class="line">                                                    <span class="symbol">name:</span> <span class="string">'origin'</span>, </span><br><span class="line">                                                    <span class="symbol">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span>, </span><br><span class="line">                                                    <span class="symbol">url:</span> <span class="string">"${GITHUB_URL}/${GITHUB_ORG}/${GITHUB_REPO}.git"</span></span><br><span class="line">                                                ]</span><br><span class="line">                                            ]</span><br><span class="line">                                        ]</span><br><span class="line">                                    )</span><br><span class="line">                    env.GIT_BRANCH = <span class="string">"${scmVars.GIT_BRANCH}"</span></span><br><span class="line">                    env.GIT_COMMIT = <span class="string">"${scmVars.GIT_COMMIT}"</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line">        stage(<span class="string">'Build'</span>) {</span><br><span class="line">            steps {</span><br><span class="line">                dir(<span class="string">'codes'</span>) {</span><br><span class="line">                    sh <span class="string">'''#!/bin/bash -l</span></span><br><span class="line"><span class="string">                        echo "Start building!"</span></span><br><span class="line"><span class="string">                        cat README.md</span></span><br><span class="line"><span class="string">                    '''</span></span><br><span class="line">                }</span><br><span class="line">            }</span><br><span class="line">        }</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    }</span><br><span class="line">    post {</span><br><span class="line">        always {</span><br><span class="line">            junit <span class="attr">allowEmptyResults:</span> <span class="literal">true</span>, <span class="attr">testResults:</span> <span class="string">'codes/build/test-results/test/**/*.xml'</span></span><br><span class="line">            <span class="comment">// send to email</span></span><br><span class="line">            emailext(</span><br><span class="line">                <span class="symbol">subject:</span> <span class="string">'$DEFAULT_SUBJECT'</span>,</span><br><span class="line">                <span class="symbol">body:</span> <span class="string">'$DEFAULT_CONTENT'</span>,</span><br><span class="line">                <span class="symbol">recipientProviders:</span> [</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'CulpritsRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class:</span> <span class="string">'RequesterRecipientProvider'</span>],</span><br><span class="line">                [<span class="attr">$class :</span> <span class="string">'DevelopersRecipientProvider'</span>]</span><br><span class="line">                ],</span><br><span class="line">                <span class="symbol">replyTo:</span> <span class="string">'$DEFAULT_REPLYTO'</span>,</span><br><span class="line">                <span class="symbol">to:</span> <span class="string">'$DEFAULT_RECIPIENTS'</span></span><br><span class="line">            )</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<p>30行: 添加refspec获取合并请求(pull/merge request)的分支信息</p>
-<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line"><span class="attr">refspec:</span> <span class="string">'+refs/pull/*:refs/remotes/origin/pr/*'</span></span><br></pre></td></tr></tbody></table></figure>
-<p>19行: branches选择环境变量”ghprbActualCommit”，它是合并请求(pull/merge request)分支对应的提交号</p>
-<figure class="highlight groovy"><table><tbody><tr><td class="code"><pre><span class="line">[<span class="attr">$class:</span> <span class="string">'GitSCM'</span>, <span class="attr">branches:</span> [[<span class="attr">name:</span> <span class="string">"${ghprbActualCommit}"</span>]]</span><br></pre></td></tr></tbody></table></figure>
-<p>除了”ghprbActualCommit”外，github pull request builder插件还往当前构建中注入了许多变量供构建Job使用，如下表：</p>
-<table>
-<thead>
-<tr>
-<th>变量</th>
-<th>事例值</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>sha1</td>
-<td>origin/pr/6/merge</td>
-<td>合并请求(pull/merge request)分支。在构建Job中也可以用${sha1}来代替${ghprbActualCommit}</td>
-</tr>
-<tr>
-<td>ghprbAuthorRepoGitUrl</td>
-<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1.git</a></td>
-<td>合并请求(pull/merge request)所在仓库的http地址</td>
-</tr>
-<tr>
-<td>ghprbPullId</td>
-<td>6</td>
-<td>合并请求(pull/merge request)的ID号</td>
-</tr>
-<tr>
-<td>ghprbTargetBranch</td>
-<td>master</td>
-<td>合并请求(pull/merge request)的主分支</td>
-</tr>
-<tr>
-<td>ghprbSourceBranch</td>
-<td>test9</td>
-<td>合并请求(pull/merge request)的私有分支</td>
-</tr>
-<tr>
-<td>ghprbPullTitle</td>
-<td>Test9.</td>
-<td>合并请求(pull/merge request)的标题</td>
-</tr>
-<tr>
-<td>ghprbPullLink</td>
-<td><a href="http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6">http://xxxx.github.xxxx.com/MikeSay/mikesay-test-1/pull/6</a></td>
-<td>合并请求(pull/merge request)的http地址</td>
-</tr>
-</tbody></table>
-<p>可以从当前合并请求(pull/merge request)的构建参数中获得所有变量名和当前值：<br><img src="/2020/01/30/jenkins-github-pullrequest/16.png"></p>
-<h2 id="创建Jenkins-job引用Jenkinsfile"><a href="#创建Jenkins-job引用Jenkinsfile" class="headerlink" title="创建Jenkins job引用Jenkinsfile"></a>创建Jenkins job引用Jenkinsfile</h2><ol>
-<li><p>点击”New Item”</p>
-</li>
-<li><p>选择Job类型为”Pipeline”，输入Job的名字”github-preflight”，点击”Ok”按钮<br><img src="/2020/01/30/jenkins-github-pullrequest/9.png"></p>
-</li>
-<li><p>在”GitHub Project”段，输入”Project url”。注，”Project url”是Git仓库的http地址去除”.git”后缀<br><img src="/2020/01/30/jenkins-github-pullrequest/10.png"></p>
-</li>
-<li><p>在”Build Triggers”段，选择”GitHub Pull Request Builder”<br><img src="/2020/01/30/jenkins-github-pullrequest/11.png"></p>
-<ul>
-<li>GitHub API credentials: 之前配置的GitHub API</li>
-<li>Trigger phrase: 在合并请求(pull/merge request)的注释或标题里加入trigger phrase内容会自动触发新的构建</li>
-<li>Skip build phrase: 在合并请求(pull/merge request)的注释或标题里加入skip build phrase内容则不会触发构建</li>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout  -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
 </ul>
+<h1 id="GitLab合并请求-Merge-Request"><a href="#GitLab合并请求-Merge-Request" class="headerlink" title="GitLab合并请求(Merge Request)"></a>GitLab合并请求(Merge Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(merge request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/merge-requests/*:refs/remotes/origin/mr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  change2</span><br><span class="line">  change_readme</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/HEAD -&gt; origin/master</span><br><span class="line">  remotes/origin/change2</span><br><span class="line">  remotes/origin/change_readme</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/mr/1/head</span><br><span class="line">  remotes/origin/mr/2/head</span><br><span class="line"></span><br><span class="line">  git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure>
+<p>origin/mr/1/head: 指向临时合并的提交对象</p>
 </li>
-<li><p>如果需要构建每个合并请求(pull/merge request)，勾选”Build every pull request automatically without asking (Dangerous)”，在”Whitelist Target Branches”输入主分支”master”<br><img src="/2020/01/30/jenkins-github-pullrequest/12.png"></p>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/merge-requests/2/*:refs/remotes/origin/mr/2/*</span><br><span class="line">git checkout -b mr/2 origin/mr/2/head</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="Bitbuckt合并请求-pull-Request"><a href="#Bitbuckt合并请求-pull-Request" class="headerlink" title="Bitbuckt合并请求(pull Request)"></a>Bitbuckt合并请求(pull Request)</h1><ul>
+<li><p>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull-requests/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/from</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
+<p>origin/pr/1/from: 指向当前合并请求(pull request)中的私有分支<br>origin/pr/1/merge: 指向临时合并的提交对象</p>
 </li>
-<li><p>在”Pipeline”段，引用Jenkinsfile<br><img src="/2020/01/30/jenkins-github-pullrequest/13.png"></p>
-</li>
-</ol>
-<h1 id="创建合并请求-pull-merge-request-触发构建"><a href="#创建合并请求-pull-merge-request-触发构建" class="headerlink" title="创建合并请求(pull/merge request)触发构建"></a>创建合并请求(pull/merge request)触发构建</h1><ol>
-<li><p>Github的合并请求(pull/merge request)<br><img src="/2020/01/30/jenkins-github-pullrequest/14.png"></p>
-</li>
-<li><p>触发的构建<br><img src="/2020/01/30/jenkins-github-pullrequest/15.png"></p>
-</li>
-</ol>
+<li><p>仅拉取某个合并请求(pull request)的信息</p>
+<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull-requests/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h1 id="TFS-Git合并请求-pull-Request"><a href="#TFS-Git合并请求-pull-Request" class="headerlink" title="TFS Git合并请求(pull Request)"></a>TFS Git合并请求(pull Request)</h1><ul>
+<li>配置本地Git仓库使得每次执行Git拉取操作都能得到最新合并请求(pull request)的信息</li>
+</ul>
+  <figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">  git config --add remote.origin.fetch +refs/pull/*:refs/remotes/origin/pr/*</span><br><span class="line">  git pull --rebase</span><br><span class="line">  git branch -a</span><br><span class="line"></span><br><span class="line">  fix_defect1</span><br><span class="line">* master</span><br><span class="line">  remotes/origin/fix_defect1</span><br><span class="line">  remotes/origin/master</span><br><span class="line">  remotes/origin/pr/1/merge</span><br><span class="line"></span><br><span class="line">  git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure>
+
+<p>  origin/pr/1/merge: 指向临时合并的提交对象</p>
+<ul>
+<li>仅拉取某个合并请求(pull request)的信息<figure class="highlight sh"><table><tbody><tr><td class="code"><pre><span class="line">git fetch origin +refs/pull/1/*:refs/remotes/origin/pr/1/*</span><br><span class="line">git checkout -b <span class="built_in">pr</span>/1 origin/pr/1/merge</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<p>当然，除了上面四个基于Git的代码协作平台外，还有许多优秀的平台，比如国内的码云<a href="https://gitee.com/">https://gitee.com/</a>，各大公有云平台也都提供了自己的代码协作平台。读者可以根据本文的说明自行研究合并请求(pull/merge request)。</p>
 <script>
         document.querySelectorAll('.github-emoji')
           .forEach(el => {
@@ -4074,9 +4010,73 @@
         <category>DevOps</category>
       </categories>
       <tags>
-        <tag>CI/CD</tag>
-        <tag>Jenkins</tag>
-        <tag>Github</tag>
+        <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Podman Rootless下容器访问宿主机服务的底层原理</title>
+    <url>/2026/07/16/podman-rootless-host/</url>
+    <content><![CDATA[<p>本地运行容器的朋友应该都碰到过一个很常见的场景：容器内部部署的应用，需要调用我们电脑本机运行的各类服务。比如我平时搭建本地 AI 环境，会把 Open WebUI 部署在容器里，为了方便使用宿主机的GPU（我的是Mac M3），本地模型服务使用Ollama，并部署在宿主机中。一旦容器没法连通宿主机的 11434 端口，整个 AI 对话、模型调用链路就会直接断掉。在实际使用中，通过域名 <code>host.docker.internal</code> 就能快速实现容器与宿主机的互通，简单又好用。</p>
+<p>用归用，但我之前一直存有疑问：Podman 默认开启 Rootless 非特权模式，容器、虚拟机、宿主机三层网络是完全隔离的，正常情况下根本不允许跨层级通信。那为什么单单这一个域名，就能打破隔离，打通容器到宿主机回环接口的通信通道？</p>
+<p>网上大部分教程，只教大家怎么配置、怎么连通，但少有提及背后的原理。这篇文章将会简单介绍下 Podman Rootless 模式下的宿主机访问原理，同时列出 Mac 和 Windows 平台的差异。</p>
+<span id="more"></span>
+
+<h1 id="一、看似简单的互通，其实存在两类限制"><a href="#一、看似简单的互通，其实存在两类限制" class="headerlink" title="一、看似简单的互通，其实存在两类限制"></a>一、看似简单的互通，其实存在两类限制</h1><p>不管是 Mac 还是 Windows 系统，都没法原生直接运行 Linux 容器。我们日常使用的 Podman 容器环境，本质是依托轻量化虚拟机搭建的运行底座——Mac 依靠系统原生的虚拟化框架，Windows 则依赖 WSL2 环境。</p>
+<p>这种嵌套式的虚拟化架构，从根源上限制了容器与宿主机的直接互通，主要绕不开两类硬性限制。</p>
+<p>第一是网络隔离限制。容器内的 localhost、127.0.0.1 只对应容器自身的网络栈，虚拟机的回环地址也仅适用于虚拟机内部通信，双层隔离之下，数据包根本无法自动穿透到真实的宿主机网络。</p>
+<p>第二是权限限制。Podman 最大的安全亮点就是 Rootless 无特权运行，全程以普通用户权限工作，不会占用系统高危权限。但有利有弊，这也导致容器进程无法创建原始网络套接字，也没有权限操作底层路由规则，这也是 Rootless 容器默认 ping 不通宿主机的核心原因。</p>
+<p>想要在不关闭安全隔离、不提升运行权限的前提下，实现容器访问宿主机服务，Podman 没有用传统的 NAT 转发方案，而是使用了用户态代理机制，整套能力的核心，都依托运行在宿主机中的 <code>gvproxy（gVisor-tap-vsock）</code> 进程来实现。</p>
+<h1 id="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"><a href="#二、核心架构：虚拟机只透传，宿主机全权接管网络转发" class="headerlink" title="二、核心架构：虚拟机只透传，宿主机全权接管网络转发"></a>二、核心架构：虚拟机只透传，宿主机全权接管网络转发</h1><p>很多人对这套转发逻辑都有误区，以为虚拟机承担了核心的代理转发工作。事实恰恰相反：整套网络翻译、数据解包、跨层级通信的核心逻辑，全部运行在真实宿主机上，虚拟机全程只负责转发数据，不会做任何主动的逻辑处理。完整的流量流转链路流程如下：</p>
+<figure class="highlight text"><table><tbody><tr><td class="code"><pre><span class="line">[ OPEN WEBUI 容器 ]</span><br><span class="line">        │</span><br><span class="line">        │ 1. 访问 http://host.docker.internal</span><br><span class="line">        │    内置 DNS 动态解析为 192.168.127.254 (或 .1)</span><br><span class="line">        ▼</span><br><span class="line">[ LINUX 虚拟机内核 ]</span><br><span class="line">        │</span><br><span class="line">        │ 2. TCP 数据包通过被动的 virtio-net / TAP 虚拟网卡发出</span><br><span class="line">        │    （虚拟机内部无任何网络代理进程）</span><br><span class="line">        ▼</span><br><span class="line">==================== 宿主机 / 虚拟机边界 ====================</span><br><span class="line">        │</span><br><span class="line">        │ 3. 虚拟化引擎拦截 TAP 流量，直接映射入 AF_VSOCK 管道</span><br><span class="line">        ▼</span><br><span class="line">[ macOS / Windows 宿主机 (gvproxy 进程) ]</span><br><span class="line">        │</span><br><span class="line">        │ 4. gvproxy 读取 VSOCK 数据，剥离虚拟化封装，提取原始 TCP 载荷</span><br><span class="line">        ▼</span><br><span class="line">[ 宿主机原生回环接口 (127.0.0.1:11434) ]</span><br><span class="line">        │</span><br><span class="line">        │ 5. gvproxy 代表容器向宿主机发起标准的 connect() 调用</span><br><span class="line">        ▼</span><br><span class="line">[ 原生 Ollama 应用程序 ]</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="1-自定义-DNS-解析，伪造虚拟网关地址"><a href="#1-自定义-DNS-解析，伪造虚拟网关地址" class="headerlink" title="1. 自定义 DNS 解析，伪造虚拟网关地址"></a>1. 自定义 DNS 解析，伪造虚拟网关地址</h2><p><code>host.docker.internal</code> 并不是公共互联网可解析的域名，而是 Podman 内置的专属解析规则。只要容器发起相关访问请求，Podman 的内置 DNS 就会直接拦截解析动作，固定返回专属虚拟网关 IP，常见地址为 <code>192.168.127.254</code> 或<code>192.168.127.1</code>。</p>
+<p>容器完全不用感知宿主机的真实 IP 地址，只需向这个虚拟网关发包即可，后续所有的转发、适配、通信逻辑，都由底层组件自动完成，对上层业务应用完全透明，开发者无需额外干预。</p>
+<h2 id="2-虚拟机无感透传，零代理开销"><a href="#2-虚拟机无感透传，零代理开销" class="headerlink" title="2. 虚拟机无感透传，零代理开销"></a>2. 虚拟机无感透传，零代理开销</h2><p>数据包抵达虚拟机内核后，系统会直接把这个虚拟网关当成外部物理设备，不会额外做 NAT 转换、流量过滤等多余操作。</p>
+<p>虚拟机内部全程没有任何转发进程，仅通过 virtio-net、TAP 虚拟网卡，将原始的二层以太网帧完整向外透出。这种极简的透传方式，最大程度保留了原始数据包特征，也彻底规避了虚拟机内部转发带来的性能损耗。</p>
+<h2 id="3-VSOCK-管道跨层通信，绕过传统网络栈"><a href="#3-VSOCK-管道跨层通信，绕过传统网络栈" class="headerlink" title="3. VSOCK 管道跨层通信，绕过传统网络栈"></a>3. VSOCK 管道跨层通信，绕过传统网络栈</h2><p>这也是 Podman 这套网络架构的巧妙之处。传统虚拟机互通大多依靠物理网卡 NAT 转发，不仅延迟偏高，还很容易被系统防火墙、本地网络策略拦截，稳定性很差。</p>
+<p>Podman 直接采用 <code>AF_VSOCK</code> 内核套接字方案，虚拟化引擎拦截虚拟网卡流出的流量后，直接封装送入 VSOCK 内存管道。这种通信方式绕开了物理网卡和繁琐的 TCP/IP 网络栈，直接在内存层面完成虚拟机与宿主机的数据交互，效率和稳定性都远优于传统转发方案。</p>
+<h2 id="4-gvproxy-用户态代理，完成最终流量落地"><a href="#4-gvproxy-用户态代理，完成最终流量落地" class="headerlink" title="4. gvproxy 用户态代理，完成最终流量落地"></a>4. gvproxy 用户态代理，完成最终流量落地</h2><p>宿主机后台常驻的 gvproxy 进程，是整套通信链路的核心枢纽，大家可以直接用进程检索命令查看它的运行状态。所有从 VSOCK 管道流出的数据，都会统一由这个进程接管处理。</p>
+<p>它会自动剥离虚拟化封装的数据包，还原出原始的 TCP 请求信息，精准识别出容器真正的访问目标端口。随后以宿主机普通进程的身份，发起标准的 connect 系统调用，将流量精准转发到宿主机 127.0.0.1 对应的服务端口。</p>
+<p>整个过程对宿主机原生服务完全无感。就拿我常用的 Ollama 来说，它只会判定是本地普通软件发起的连接，完全察觉不到流量是从虚拟机容器中穿透过来的。</p>
+<p>后续响应数据会沿着完全相反的路径，原路返回容器，就此完成一次完整的跨层级通信交互。</p>
+<h1 id="三、Mac-与-Windows-底层差异：安全机制决定转发逻辑"><a href="#三、Mac-与-Windows-底层差异：安全机制决定转发逻辑" class="headerlink" title="三、Mac 与 Windows 底层差异：安全机制决定转发逻辑"></a>三、Mac 与 Windows 底层差异：安全机制决定转发逻辑</h1><p>Mac 和 Windows 两套系统的最终连通效果一致，但底层安全策略差异很大，这也直接导致 <code>host.docker.internal</code> 的实现逻辑各不相同。</p>
+<p>Mac 的虚拟化沙箱管控极其严格，明令禁止虚拟机直接探测、绑定、访问宿主机的回环接口。也正因如此，Mac 环境下所有的跨层流量，<strong>必须 100% 经过 gvproxy 中转</strong>，没有任何旁路方案，转发逻辑最严谨，网络隔离性也最强。</p>
+<p>反观 Windows WSL2，系统网络融合度更高，新版 WSL2 支持镜像网络模式，虚拟机可以直接共享宿主机的完整网络栈。这让 Windows 下的宿主机访问更贴近原生网络效果，转发链路更短、延迟更低，但对应的网络隔离性会比 Mac 弱不少。</p>
+<h1 id="四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性"><a href="#四、避坑：别盲目绑定-0-0-0-0！Podman-有专属特性" class="headerlink" title="四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性"></a>四、避坑：别盲目绑定 0.0.0.0！Podman 有专属特性</h1><p>很多网上教程会一刀切建议大家把本地服务监听地址改成 <code>0.0.0.0</code>，但这套操作其实不适用于 macOS 下的 Podman Rootless 环境，盲目修改反而会增加端口暴露风险，得不偿失。这里纠正一个绝大多数开发者踩错的关键误区。</p>
+<p><strong>为什么 Podman 不需要绑定 0.0.0.0？</strong></p>
+<p>核心原因还是前文提到的<code>gvproxy</code> 转发机制。这个进程运行在宿主机后台，所有容器发起的访问请求，最终都是由它以<strong>本机身份</strong>向宿主机服务发起连接。简单来说，当我们通过 <code>host.docker.internal</code> 访问本地 Ollama 服务时，Ollama 识别到的请求来源就是纯净的 <code>127.0.0.1</code> 本地回环流量。</p>
+<p>因此在 Podman 这套架构下，即便 Ollama等本地服务默认只监听 <code>127.0.0.1</code>，容器依然可以正常连通，完全不会出现拒绝连接的情况。</p>
+<p><strong>那什么时候才需要绑定 0.0.0.0？</strong></p>
+<p>绑定全网监听地址 <code>0.0.0.0</code> 并非 Podman 环境的刚需，仅适用于特定容器场景。比如使用 Colima、部分旧版 Docker 环境时，容器流量依托虚拟网桥转发，系统会把虚拟机、容器的流量判定为<strong>外部局域网 IP 流量</strong>，而非本地回环流量。</p>
+<p>这种场景下，仅监听 <code>127.0.0.1</code> 会直接拦截外部流量，此时才需要修改为 <code>0.0.0.0</code> 放行请求。</p>
+<p><strong>最终实操结论</strong>：在 macOS 原生 Podman Rootless 架构中，<strong>保持服务默认监听 127.0.0.1 即可正常通信，也是最安全的配置</strong>。无需强行修改为 0.0.0.0，避免将本地服务端口暴露在物理局域网中，带来不必要的安全风险。</p>
+<h1 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h1><p>很多开发者只会熟练使用<code>host.docker.internal</code> 实现连通，却从未深究 Rootless 模式下的底层网络逻辑。看似简单的一行域名配置，背后是 Podman 为了平衡<strong>安全隔离性与开发便捷性</strong>，精心设计的一套用户态代理架构。</p>
+<p>吃透这套 VSOCK+gvproxy 的转发机制，不止能解决本地开发的连通性问题，更能帮我们理清容器安全隔离、权限管控、虚拟化网络的核心设计思路。后续遇到容器网络异常、访问超时、连接拒绝等问题，都能快速定位根因，不用再盲目排查、试错。</p>
+<script>
+        document.querySelectorAll('.github-emoji')
+          .forEach(el => {
+            if (!el.dataset.src) { return; }
+            const img = document.createElement('img');
+            img.style = 'display:none !important;';
+            img.src = el.dataset.src;
+            img.addEventListener('error', () => {
+              img.remove();
+              el.style.color = 'inherit';
+              el.style.backgroundImage = 'none';
+              el.style.background = 'none';
+            });
+            img.addEventListener('load', () => {
+              img.remove();
+            });
+            document.body.appendChild(img);
+          });
+      </script>]]></content>
+      <categories>
+        <category>容器</category>
+      </categories>
+      <tags>
+        <tag>Container</tag>
+        <tag>Network</tag>
       </tags>
   </entry>
 </search>
